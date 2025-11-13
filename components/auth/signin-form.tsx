@@ -24,6 +24,8 @@ import { Input } from "@/components/ui/input";
 import { signInAction } from "@/actions/auth";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
+import { motion } from "framer-motion";
+import { FcGoogle } from "react-icons/fc";
 
 const signInSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -70,78 +72,136 @@ export function SignInForm() {
   }
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader>
-        <CardTitle>Sign in</CardTitle>
-        <CardDescription>
-          {registered
-            ? "Account created successfully. Sign in below."
-            : "Enter your credentials to access your account"}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="w-full max-w-md"
+    >
+      <Card className="border-2 shadow-lg">
+        <CardHeader className="space-y-3 pb-6">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+          >
+            <CardTitle className="font-poppins text-2xl">Welcome back</CardTitle>
+            <CardDescription className="text-base">
+              {registered
+                ? "Account created successfully. Sign in below."
+                : "Sign in to your account to continue"}
+            </CardDescription>
+          </motion.div>
+        </CardHeader>
+        <CardContent className="space-y-6">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="email"
-                      placeholder="john@example.com"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Password</FormLabel>
-                  <FormControl>
-                    <Input type="password" placeholder="••••••••" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium">Email address</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="email"
+                        placeholder="name@example.com"
+                        className="h-11"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium">Password</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="password"
+                        placeholder="Enter your password"
+                        className="h-11"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </motion.div>
             {error && (
-              <div className="text-destructive text-sm">{error}</div>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-destructive/10 text-destructive text-sm p-3 rounded-md border border-destructive/20"
+              >
+                {error}
+              </motion.div>
             )}
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Signing in..." : "Sign in"}
-            </Button>
+            <motion.div
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+            >
+              <Button
+                type="submit"
+                className="w-full h-11 font-medium"
+                disabled={isLoading}
+              >
+                {isLoading ? "Signing in..." : "Sign in"}
+              </Button>
+            </motion.div>
           </form>
         </Form>
 
-        <div className="relative my-4">
+        <div className="relative my-6">
           <div className="absolute inset-0 flex items-center">
             <span className="w-full border-t" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-card px-2 text-muted-foreground">
-              Or continue with
+            <span className="bg-card px-3 text-muted-foreground font-medium">
+              Or
             </span>
           </div>
         </div>
 
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full"
-          onClick={handleGoogleSignIn}
-          disabled={isGoogleLoading}
+        <motion.div
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.99 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.6 }}
         >
-          {isGoogleLoading ? "Loading..." : "Google"}
-        </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full h-11 flex items-center justify-center gap-3 font-medium"
+            onClick={handleGoogleSignIn}
+            disabled={isGoogleLoading}
+          >
+            <FcGoogle className="size-5" />
+            {isGoogleLoading ? "Connecting..." : "Continue with Google"}
+          </Button>
+        </motion.div>
       </CardContent>
     </Card>
+    </motion.div>
   );
 }

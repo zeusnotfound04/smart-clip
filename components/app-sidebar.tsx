@@ -1,6 +1,5 @@
 "use client";
 
-import { Home, Settings, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
@@ -18,6 +17,8 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
+import { HiHome, HiCog, HiLogout } from "react-icons/hi";
+import { motion } from "framer-motion";
 
 interface AppSidebarProps {
   user: {
@@ -28,8 +29,8 @@ interface AppSidebarProps {
 }
 
 const navigation = [
-  { name: "Home", href: "/", icon: Home },
-  { name: "Settings", href: "/settings", icon: Settings },
+  { name: "Home", href: "/", icon: HiHome },
+  { name: "Settings", href: "/settings", icon: HiCog },
 ];
 
 export function AppSidebar({ user }: AppSidebarProps) {
@@ -47,27 +48,42 @@ export function AppSidebar({ user }: AppSidebarProps) {
   return (
     <Sidebar>
       <SidebarHeader>
-        <div className="flex items-center justify-between px-2">
-          <h2 className="text-lg font-semibold">Smart Clip</h2>
+        <motion.div 
+          className="flex items-center justify-between px-2"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <h2 className="text-lg font-semibold font-poppins">Smart Clip</h2>
           <ThemeToggle />
-        </div>
+        </motion.div>
       </SidebarHeader>
 
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
-            <div className="flex flex-col items-center gap-3 px-2 py-4">
-              <Avatar className="size-16">
-                <AvatarImage src={user.image || ""} alt={user.name || ""} />
-                <AvatarFallback>{initials}</AvatarFallback>
-              </Avatar>
+            <motion.div 
+              className="flex flex-col items-center gap-3 px-2 py-4"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.4, delay: 0.1 }}
+            >
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                transition={{ type: "spring", stiffness: 300 }}
+              >
+                <Avatar className="size-16">
+                  <AvatarImage src={user.image || ""} alt={user.name || ""} />
+                  <AvatarFallback>{initials}</AvatarFallback>
+                </Avatar>
+              </motion.div>
               <div className="text-center w-full overflow-hidden">
-                <p className="font-medium text-sm truncate px-2">{user.name}</p>
+                <p className="font-medium text-sm truncate px-2 font-poppins">{user.name}</p>
                 <p className="text-xs text-muted-foreground truncate px-2">
                   {user.email}
                 </p>
               </div>
-            </div>
+            </motion.div>
           </SidebarGroupContent>
         </SidebarGroup>
 
@@ -76,17 +92,24 @@ export function AppSidebar({ user }: AppSidebarProps) {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navigation.map((item) => {
+              {navigation.map((item, index) => {
                 const isActive = pathname === item.href;
                 return (
-                  <SidebarMenuItem key={item.name}>
-                    <SidebarMenuButton asChild isActive={isActive}>
-                      <Link href={item.href}>
-                        <item.icon />
-                        <span>{item.name}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  <motion.div
+                    key={item.name}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: 0.2 + index * 0.1 }}
+                  >
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={isActive}>
+                        <Link href={item.href}>
+                          <item.icon className="size-5" />
+                          <span>{item.name}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  </motion.div>
                 );
               })}
             </SidebarMenu>
@@ -96,12 +119,17 @@ export function AppSidebar({ user }: AppSidebarProps) {
 
       <SidebarFooter>
         <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton onClick={() => signOut()}>
-              <LogOut />
-              <span>Sign Out</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+          <motion.div
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <SidebarMenuItem>
+              <SidebarMenuButton onClick={() => signOut()}>
+                <HiLogout className="size-5" />
+                <span>Sign Out</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </motion.div>
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
