@@ -1,5 +1,5 @@
 import { analyzeVideo } from './ai.service';
-import { s3Service } from '../lib/s3';
+import { downloadFile } from '../lib/s3';
 
 export interface Highlight {
   startTime: number;
@@ -9,7 +9,7 @@ export interface Highlight {
 }
 
 export const detectHighlights = async (videoS3Key: string): Promise<Highlight[]> => {
-  const videoBuffer = await s3Service.downloadFile(videoS3Key);
+  const videoBuffer = await downloadFile(videoS3Key);
   const analysis = await analyzeVideo(videoBuffer);
   
   const highlights: Highlight[] = [];

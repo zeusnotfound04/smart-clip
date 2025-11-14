@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
-import { s3Service } from '../lib/s3';
+import { getPresignedUploadUrl, deleteFile } from '../lib/s3';
 
 interface AuthRequest extends Request {
   userId?: string;
@@ -15,7 +15,7 @@ export const getPresignedUrl = async (req: AuthRequest, res: Response) => {
     }
 
     const s3Key = `videos/${req.userId}/${Date.now()}-${filename}`;
-    const presignedUrl = await s3Service.getPresignedUploadUrl(s3Key, fileType);
+    const presignedUrl = await getPresignedUploadUrl(s3Key, fileType);
 
     res.json({ presignedUrl, s3Key });
   } catch (error) {
@@ -82,7 +82,7 @@ export const deleteVideo = async (req: AuthRequest, res: Response) => {
     }
 
     try {
-      await s3Service.deleteFile(video.filePath);
+      await deleteFile(video.filePath);
     } catch (error) {
       console.log('S3 delete failed, continuing with DB cleanup');
     }

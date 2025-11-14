@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { generateSubtitles, generateSRT } from '../services/auto-subtitles.service';
 import { subtitleQueue } from '../lib/queues';
-import { s3Service } from '../lib/s3';
+import { uploadFile, getSignedDownloadUrl } from '../lib/s3';
 import { z } from 'zod';
 
 interface AuthRequest extends Request {
@@ -135,7 +135,7 @@ export const exportSRT = async (req: AuthRequest, res: Response) => {
     const srtBuffer = Buffer.from(srtContent, 'utf-8');
     const srtKey = `subtitles/${req.userId}/${videoId}.srt`;
     
-    await s3Service.uploadFile(srtKey, srtBuffer, 'text/plain');
+    await uploadFile(srtKey, srtBuffer, 'text/plain');
 
     res.json({ 
       message: 'SRT file generated successfully',
@@ -162,7 +162,7 @@ export const downloadSRT = async (req: AuthRequest, res: Response) => {
     const srtKey = `subtitles/${req.userId}/${videoId}.srt`;
     
     try {
-      const signedUrl = await s3Service.getSignedDownloadUrl(srtKey, 300);
+      const signedUrl = await getSignedDownloadUrl(srtKey, 300);
       res.redirect(signedUrl);
     } catch (error) {
       res.status(404).json({ error: 'SRT file not found' });

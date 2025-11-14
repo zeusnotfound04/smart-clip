@@ -1,7 +1,7 @@
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile } from '@ffmpeg/util';
 import { speechToText } from './ai.service';
-import { s3Service } from '../lib/s3';
+import { downloadFile } from '../lib/s3';
 
 export interface SubtitleSegment {
   text: string;
@@ -23,7 +23,7 @@ const getFFmpeg = async () => {
 export const extractAudioFromVideo = async (videoS3Key: string): Promise<Buffer> => {
   const ffmpegInstance = await getFFmpeg();
   
-  const videoBuffer = await s3Service.downloadFile(videoS3Key);
+  const videoBuffer = await downloadFile(videoS3Key);
   await ffmpegInstance.writeFile('input.mp4', await fetchFile(new Blob([videoBuffer])));
   
   await ffmpegInstance.exec([

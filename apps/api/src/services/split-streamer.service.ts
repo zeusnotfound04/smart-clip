@@ -1,6 +1,6 @@
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile } from '@ffmpeg/util';
-import { s3Service } from '../lib/s3';
+import { downloadFile } from '../lib/s3';
 
 let ffmpeg: FFmpeg | null = null;
 
@@ -15,8 +15,8 @@ const getFFmpeg = async () => {
 export const combineVideos = async (webcamS3Key: string, gameplayS3Key: string): Promise<Buffer> => {
   const ffmpegInstance = await getFFmpeg();
 
-  const webcamBuffer = await s3Service.downloadFile(webcamS3Key);
-  const gameplayBuffer = await s3Service.downloadFile(gameplayS3Key);
+  const webcamBuffer = await downloadFile(webcamS3Key);
+  const gameplayBuffer = await downloadFile(gameplayS3Key);
 
   await ffmpegInstance.writeFile('webcam.mp4', await fetchFile(new Blob([webcamBuffer])));
   await ffmpegInstance.writeFile('gameplay.mp4', await fetchFile(new Blob([gameplayBuffer])));
