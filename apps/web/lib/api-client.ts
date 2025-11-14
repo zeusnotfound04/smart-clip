@@ -96,6 +96,78 @@ class APIClient {
       localStorage.removeItem('token');
     }
   }
+
+  async uploadVideo(file: File): Promise<{ video: any }> {
+    const formData = new FormData();
+    formData.append('video', file);
+
+    const response = await fetch(`${API_BASE_URL}/api/videos/upload`, {
+      method: 'POST',
+      headers: {
+        ...this.getAuthHeader(),
+      },
+      body: formData,
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || 'Upload failed');
+    }
+
+    return result;
+  }
+
+  async getVideos(): Promise<{ videos: any[] }> {
+    const response = await fetch(`${API_BASE_URL}/api/videos`, {
+      headers: {
+        ...this.getAuthHeader(),
+      },
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to fetch videos');
+    }
+
+    return result;
+  }
+
+  async generateSubtitles(videoId: string): Promise<{ message: string; videoId: string }> {
+    const response = await fetch(`${API_BASE_URL}/api/subtitles/generate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...this.getAuthHeader(),
+      },
+      body: JSON.stringify({ videoId }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to generate subtitles');
+    }
+
+    return result;
+  }
+
+  async getSubtitles(videoId: string): Promise<{ subtitles: any[]; status: string }> {
+    const response = await fetch(`${API_BASE_URL}/api/subtitles/${videoId}`, {
+      headers: {
+        ...this.getAuthHeader(),
+      },
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to fetch subtitles');
+    }
+
+    return result;
+  }
 }
 
 export const apiClient = new APIClient();

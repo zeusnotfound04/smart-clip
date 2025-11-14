@@ -2,10 +2,11 @@
   "name": "@smart-clip/api",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js",
+    "start": "node --loader tsx/esm src/index.ts",
     "type-check": "tsc --noEmit",
     "lint": "eslint src --ext ts,tsx",
     "db:generate": "prisma generate",
@@ -13,23 +14,35 @@
     "db:migrate": "prisma migrate dev"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.931.0",
+    "@aws-sdk/s3-request-presigner": "^3.931.0",
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
+    "@google-cloud/speech": "^7.2.1",
+    "@google-cloud/storage": "^7.17.3",
+    "@google-cloud/text-to-speech": "^6.4.0",
+    "@google-cloud/video-intelligence": "^6.2.1",
     "@prisma/client": "^6.19.0",
-    "express": "^4.21.1",
-    "cors": "^2.8.5",
+    "@types/bull": "^4.10.4",
+    "aws-sdk": "^2.1692.0",
     "bcryptjs": "^3.0.3",
+    "bull": "^4.16.5",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
     "jsonwebtoken": "^9.0.2",
-    "zod": "^4.1.12",
-    "dotenv": "^16.4.5"
+    "redis": "^5.9.0",
+    "zod": "^4.1.12"
   },
   "devDependencies": {
-    "@types/express": "^5.0.2",
-    "@types/cors": "^2.8.17",
     "@types/bcryptjs": "^3.0.0",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.2",
     "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^20.17.9",
+    "eslint": "^9.15.0",
     "prisma": "^6.19.0",
     "tsx": "^4.19.2",
-    "typescript": "^5.6.3",
-    "eslint": "^9.15.0"
+    "typescript": "^5.6.3"
   }
 }

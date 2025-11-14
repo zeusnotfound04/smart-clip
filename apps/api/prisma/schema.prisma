@@ -47,6 +47,8 @@ model User {
   image         String?
   accounts      Account[]
   sessions      Session[]
+  videos        Video[]
+  projects      Project[]
 
   @@map("users")
 }
@@ -58,4 +60,58 @@ model VerificationToken {
 
   @@unique([identifier, token])
   @@map("verification_tokens")
+}
+
+model Video {
+  id           String    @id @default(cuid())
+  userId       String    @map("user_id")
+  originalName String    @map("original_name")
+  filePath     String    @map("file_path")
+  thumbnailPath String?  @map("thumbnail_path")
+  duration     Float?
+  size         Int?
+  mimeType     String    @map("mime_type")
+  status       String    @default("uploaded")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projects  Project[]
+  subtitles Subtitle[]
+
+  @@map("videos")
+}
+
+model Project {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  videoId    String?  @map("video_id")
+  name       String
+  type       String
+  config     Json?
+  outputPath String?  @map("output_path")
+  status     String   @default("pending")
+  progress   Int      @default(0)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video Video? @relation(fields: [videoId], references: [id], onDelete: SetNull)
+
+  @@map("projects")
+}
+
+model Subtitle {
+  id         String  @id @default(cuid())
+  videoId    String  @map("video_id")
+  text       String
+  startTime  Float   @map("start_time")
+  endTime    Float   @map("end_time")
+  confidence Float?
+  speaker    String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@map("subtitles")
 }
