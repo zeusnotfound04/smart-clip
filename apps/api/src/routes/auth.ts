@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { hashPassword, comparePassword, generateToken, verifyToken } from '../lib/auth';
 
-const router = Router();
+const router: Router = Router();
 
 const signUpSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
