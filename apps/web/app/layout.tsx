@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
 import { ThemeProvider } from "@/components/theme-provider";
+import { ProcessingStatus } from "@/components/processing-status";
 import { inter, jetbrainsMono, poppins } from "@/lib/fonts";
 
 export const metadata: Metadata = {
@@ -25,7 +26,10 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            {children}
+            <ProcessingStatus />
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>
