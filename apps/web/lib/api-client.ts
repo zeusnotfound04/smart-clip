@@ -1,146 +1,213 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+import axios from 'axios';
 
-interface User {
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+
+// Create axios instance
+const axiosInstance = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 30000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Request interceptor to add auth token
+axiosInstance.interceptors.request.use(
+  (config) => {
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('smartclips_token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Response interceptor for error handling
+axiosInstance.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('smartclips_token');
+        localStorage.removeItem('smartclips_user');
+        window.location.href = '/auth/signin';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
+// Types
+export interface User {
   id: string;
   name: string;
   email: string;
+  image?: string;
+  createdAt: string;
 }
 
-interface AuthResponse {
-  user: User;
-  token: string;
+export interface AuthResponse {
+  success: boolean;
+  data: {
+    user: User;
+    token: string;
+  };
 }
 
-interface SignUpData {
+export interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  message?: string;
+  error?: string;
+}
+
+export interface JobResponse {
+  success: boolean;
+  jobId: string;
+  projectId: string;
+  message: string;
+}
+
+export interface Project {
+  id: string;
   name: string;
-  email: string;
-  password: string;
+  type: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  progress: number;
+  outputPath?: string;
+  config?: any;
+  createdAt: string;
+  updatedAt: string;
 }
 
-interface SignInData {
-  email: string;
-  password: string;
+export interface Video {
+  id: string;
+  originalName: string;
+  filePath: string;
+  thumbnailPath?: string;
+  duration?: number;
+  size?: number;
+  mimeType: string;
+  status: string;
+  createdAt: string;
 }
 
+// API Class
 class APIClient {
-  private getAuthHeader() {
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('token');
-      return token ? { Authorization: `Bearer ${token}` } : {};
+  // Auth methods
+  async signUp(name: string, email: string, password: string): Promise<AuthResponse> {
+    const response = await axiosInstance.post<AuthResponse>('/auth/register', { name, email, password });
+    
+    if (response.data.success && typeof window !== 'undefined') {
+      localStorage.setItem('smartclips_token', response.data.data.token);
+      localStorage.setItem('smartclips_user', JSON.stringify(response.data.data.user));
     }
-    return {};
+    
+    return response.data;
   }
 
-  async signUp(data: SignUpData): Promise<AuthResponse> {
-    const response = await fetch(`${API_BASE_URL}/api/auth/signup`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.error || 'Sign up failed');
+  async signIn(email: string, password: string): Promise<AuthResponse> {
+    const response = await axiosInstance.post<AuthResponse>('/auth/login', { email, password });
+    
+    if (response.data.success && typeof window !== 'undefined') {
+      localStorage.setItem('smartclips_token', response.data.data.token);
+      localStorage.setItem('smartclips_user', JSON.stringify(response.data.data.user));
     }
-
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('token', result.token);
-    }
-
-    return result;
+    
+    return response.data;
   }
 
-  async signIn(data: SignInData): Promise<AuthResponse> {
-    const response = await fetch(`${API_BASE_URL}/api/auth/signin`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.error || 'Sign in failed');
-    }
-
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('token', result.token);
-    }
-
-    return result;
-  }
-
-  async getMe(): Promise<{ user: User }> {
-    const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
-      headers: {
-        ...this.getAuthHeader(),
-      },
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.error || 'Failed to get user');
-    }
-
-    return result;
+  async getMe(): Promise<ApiResponse<User>> {
+    const response = await axiosInstance.get<ApiResponse<User>>('/auth/me');
+    return response.data;
   }
 
   signOut() {
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('token');
+      localStorage.removeItem('smartclips_token');
+      localStorage.removeItem('smartclips_user');
     }
   }
 
-  async uploadVideo(file: File): Promise<{ video: any }> {
-    const formData = new FormData();
-    formData.append('video', file);
-
-    const response = await fetch(`${API_BASE_URL}/api/videos/upload`, {
-      method: 'POST',
-      headers: {
-        ...this.getAuthHeader(),
-      },
-      body: formData,
+  // Video methods
+  async getUploadUrl(fileName: string, fileType: string): Promise<ApiResponse<{ uploadUrl: string; key: string }>> {
+    const response = await axiosInstance.post<ApiResponse<{ uploadUrl: string; key: string }>>('/videos/upload-url', { 
+      fileName, 
+      fileType 
     });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.error || 'Upload failed');
-    }
-
-    return result;
+    return response.data;
   }
 
-  async getVideos(): Promise<{ videos: any[] }> {
-    const response = await fetch(`${API_BASE_URL}/api/videos`, {
-      headers: {
-        ...this.getAuthHeader(),
-      },
-    });
+  async confirmUpload(key: string, originalName: string): Promise<ApiResponse<Video>> {
+    const response = await axiosInstance.post<ApiResponse<Video>>('/videos/confirm-upload', { key, originalName });
+    return response.data;
+  }
 
-    const result = await response.json();
+  async getVideos(): Promise<ApiResponse<Video[]>> {
+    const response = await axiosInstance.get<ApiResponse<Video[]>>('/videos');
+    return response.data;
+  }
 
-    if (!response.ok) {
-      throw new Error(result.error || 'Failed to fetch videos');
+  async deleteVideo(id: string): Promise<ApiResponse> {
+    const response = await axiosInstance.delete<ApiResponse>(`/videos/${id}`);
+    return response.data;
+  }
+
+  // Project methods
+  async getProjects(): Promise<ApiResponse<Project[]>> {
+    const response = await axiosInstance.get<ApiResponse<Project[]>>('/projects');
+    return response.data;
+  }
+
+  async getProject(id: string): Promise<ApiResponse<Project>> {
+    const response = await axiosInstance.get<ApiResponse<Project>>(`/projects/${id}`);
+    return response.data;
+  }
+
+  async deleteProject(id: string): Promise<ApiResponse> {
+    const response = await axiosInstance.delete<ApiResponse>(`/projects/${id}`);
+    return response.data;
+  }
+
+  async uploadVideo(file: File, onProgress?: (progress: number) => void): Promise<any> {
+    try {
+      const response = await axiosInstance.post('/upload', 
+        { video: file },
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+          onUploadProgress: (progressEvent: any) => {
+            if (progressEvent.total) {
+              const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+              onProgress?.(progress);
+            }
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Upload error:', error);
+      throw new Error('Failed to upload video');
     }
-
-    return result;
   }
 
   async generateSubtitles(videoId: string): Promise<{ message: string; videoId: string }> {
+    const authHeader = this.getAuthHeader();
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    
+    if (authHeader.Authorization) {
+      headers.Authorization = authHeader.Authorization;
+    }
+
     const response = await fetch(`${API_BASE_URL}/api/subtitles/generate`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...this.getAuthHeader(),
-      },
+      headers,
       body: JSON.stringify({ videoId }),
     });
 
@@ -154,10 +221,15 @@ class APIClient {
   }
 
   async getSubtitles(videoId: string): Promise<{ subtitles: any[]; status: string }> {
+    const authHeader = this.getAuthHeader();
+    const headers: Record<string, string> = {};
+    
+    if (authHeader.Authorization) {
+      headers.Authorization = authHeader.Authorization;
+    }
+
     const response = await fetch(`${API_BASE_URL}/api/subtitles/${videoId}`, {
-      headers: {
-        ...this.getAuthHeader(),
-      },
+      headers,
     });
 
     const result = await response.json();
@@ -168,7 +240,14 @@ class APIClient {
 
     return result;
   }
+
+  private getAuthHeader(): { Authorization?: string } {
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('smartclips_token');
+      return token ? { Authorization: `Bearer ${token}` } : {};
+    }
+    return {};
+  }
 }
 
 export const apiClient = new APIClient();
-export type { User, AuthResponse, SignUpData, SignInData };
