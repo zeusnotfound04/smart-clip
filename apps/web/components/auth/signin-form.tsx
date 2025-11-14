@@ -1,17 +1,15 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { motion } from 'framer-motion';
+import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Form,
   FormControl,
@@ -19,32 +17,32 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useAuth } from "@/lib/auth-context";
-import { motion } from "framer-motion";
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { useAuth } from '@/lib/auth-context';
+import { scaleIn, staggerContainer, staggerItem } from '@/lib/utils';
 
 const signInSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(1, "Password is required"),
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(1, 'Password is required'),
 });
 
 type SignInFormValues = z.infer<typeof signInSchema>;
 
 export function SignInForm() {
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const registered = searchParams.get("registered");
+  const registered = searchParams.get('registered');
   const { signIn } = useAuth();
 
   const form = useForm<SignInFormValues>({
     resolver: zodResolver(signInSchema),
     defaultValues: {
-      email: "",
-      password: "",
+      email: '',
+      password: '',
     },
   });
 
@@ -54,117 +52,136 @@ export function SignInForm() {
 
     try {
       await signIn(data.email, data.password);
-      router.push("/");
+      router.push('/dashboard');
     } catch (error) {
-      setError(error instanceof Error ? error.message : "Something went wrong");
+      setError(error instanceof Error ? error.message : 'Something went wrong');
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
   }
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="w-full max-w-md"
+      variants={scaleIn}
+      initial="initial"
+      animate="animate"
+      transition={{ delay: 0.3 }}
+      className="w-full"
     >
-      <Card className="border-2 shadow-lg">
-        <CardHeader className="space-y-3 pb-6">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-          >
-            <CardTitle className="font-poppins text-2xl">Welcome back</CardTitle>
-            <CardDescription className="text-base">
-              {registered
-                ? "Account created successfully. Sign in below."
-                : "Sign in to your account to continue"}
-            </CardDescription>
-          </motion.div>
+      <Card className="shadow-2xl border-0 bg-white/80 backdrop-blur-sm">
+        <CardHeader className="space-y-1 text-center">
+          <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
+          <CardDescription>
+            {registered
+              ? 'Account created successfully. Sign in below.'
+              : 'Sign in to your account to continue'}
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3 }}
+        <CardContent>
+          <Form {...form}>
+            <motion.form 
+              onSubmit={form.handleSubmit(onSubmit)} 
+              className="space-y-4"
+              variants={staggerContainer}
+              initial="initial"
+              animate="animate"
             >
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium">Email address</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="email"
-                        placeholder="name@example.com"
-                        className="h-11"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.4 }}
-            >
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium">Password</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="password"
-                        placeholder="Enter your password"
-                        className="h-11"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </motion.div>
-            {error && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="bg-destructive/10 text-destructive text-sm p-3 rounded-md border border-destructive/20"
-              >
-                {error}
+              {error && (
+                <motion.div 
+                  className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  {error}
+                </motion.div>
+              )}
+
+              <motion.div variants={staggerItem}>
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <div className="relative group">
+                          <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                          <Input
+                            type="email"
+                            placeholder="john@example.com"
+                            className="pl-10 h-12 border-2 focus:border-primary transition-all duration-200 hover:border-primary/50"
+                            {...field}
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </motion.div>
-            )}
-            <motion.div
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.99 }}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5 }}
+
+              <motion.div variants={staggerItem}>
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Password</FormLabel>
+                      <FormControl>
+                        <div className="relative group">
+                          <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                          <Input
+                            type={showPassword ? 'text' : 'password'}
+                            placeholder="Enter your password"
+                            className="pl-10 pr-12 h-12 border-2 focus:border-primary transition-all duration-200 hover:border-primary/50"
+                            {...field}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-3 h-4 w-4 text-muted-foreground hover:text-primary transition-colors"
+                          >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </motion.div>
+
+              <motion.div variants={staggerItem}>
+                <Button
+                  type="submit"
+                  className="w-full h-12 bg-linear-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <motion.div
+                      className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    />
+                  ) : (
+                    'Sign In'
+                  )}
+                </Button>
+              </motion.div>
+            </motion.form>
+          </Form>
+
+          <div className="mt-6 text-center text-sm text-muted-foreground">
+            Don't have an account?{' '}
+            <Link 
+              href="/auth/signup" 
+              className="font-medium text-primary hover:text-primary/80 transition-colors"
             >
-              <Button
-                type="submit"
-                className="w-full h-11 font-medium"
-                disabled={isLoading}
-              >
-                {isLoading ? "Signing in..." : "Sign in"}
-              </Button>
-            </motion.div>
-          </form>
-        </Form>
-
-
-      </CardContent>
-    </Card>
+              Sign up
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
     </motion.div>
   );
 }
