@@ -24,7 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const checkUser = async () => {
     try {
       const result = await apiClient.getMe();
-      setUser(result.user);
+      setUser(result.data || null);
     } catch (error) {
       console.error('Auth check failed:', error);
       setUser(null);
@@ -34,13 +34,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signIn = async (email: string, password: string) => {
-    const result = await apiClient.signIn({ email, password });
-    setUser(result.user);
+    const result = await apiClient.signIn(email, password);
+    setUser(result.data.user);
   };
 
   const signUp = async (name: string, email: string, password: string) => {
-    const result = await apiClient.signUp({ name, email, password });
-    setUser(result.user);
+    const result = await apiClient.signUp(name, email, password);
+    setUser(result.data.user);
   };
 
   const signOut = () => {
