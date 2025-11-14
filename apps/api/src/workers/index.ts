@@ -1,4 +1,5 @@
 import { videoProcessingQueue, subtitleQueue, aiQueue } from '../lib/queues';
+import Bull from 'bull';
 import { extractAudioFromVideo, generateSubtitles, generateSRT } from '../services/auto-subtitles.service';
 import { combineVideos } from '../services/split-streamer.service';
 import { detectHighlights } from '../services/smart-clipper.service';
@@ -155,6 +156,70 @@ aiQueue.process('create-conversation', async (job) => {
   } catch (error) {
     await prisma.project.update({
       where: { id: projectId },
+      data: { status: 'failed' }
+    });
+    throw error;
+  }
+});
+
+// Extract clip queue and processor
+export const extractClipQueue = new Bull('extract-clip', {
+  redis: { host: 'localhost', port: 6379 }
+});
+
+// Process clip extraction jobs
+extractClipQueue.process('extract-clip', async (job) => {
+  try {
+    const { projectId, videoUrl, startTime, endTime, highlightType } = job.data;
+    
+    // Update status
+    await prisma.project.update({
+      where: { id: projectId },
+      data: { status: 'processing', progress: 20 }
+    });
+
+    // Extract clip using smart clipper service
+    // First detect highlights if needed
+    let clipSegments = [];
+    if (highlightType === 'auto') {
+      const highlights = await detectHighlights(videoUrl);
+      clipSegments = highlights.filter(h => 
+        h.startTime >= startTime && h.endTime <= endTime
+      );
+    } else {
+      clipSegments = [{ startTime, endTime, confidence: 1.0 }];
+    }
+
+    // Update progress
+    await prisma.project.update({
+      where: { id: projectId },
+      data: { progress: 60 }
+    });
+
+    // Extract the actual clip using FFmpeg
+    const { extractClip } = await import('../services/video-processing.service');
+    const clipUrl = await extractClip(videoUrl, startTime, endTime, projectId);
+    
+    // Update project with results
+    await prisma.project.update({
+      where: { id: projectId },
+      data: { 
+        status: 'completed',
+        progress: 100,
+        outputPath: clipUrl,
+        config: JSON.stringify({ 
+          segments: clipSegments,
+          originalStartTime: startTime,
+          originalEndTime: endTime
+        })
+      }
+    });
+
+    console.log(`Clip extraction completed for project ${projectId}`);
+  } catch (error) {
+    console.error('Clip extraction job failed:', error);
+    await prisma.project.update({
+      where: { id: job.data.projectId },
       data: { status: 'failed' }
     });
     throw error;

@@ -1,7 +1,7 @@
 import { SpeechClient } from '@google-cloud/speech';
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
-import { s3Service } from './s3';
+import { downloadFile } from './s3';
 
 export interface SubtitleSegment {
   text: string;
@@ -41,7 +41,7 @@ class SpeechService {
   async extractAudioFromVideo(s3Key: string): Promise<Buffer> {
     await this.loadFFmpeg();
     
-    const videoBuffer = await s3Service.downloadFile(s3Key);
+    const videoBuffer = await downloadFile(s3Key);
     
     await this.ffmpeg.writeFile('input.mp4', new Uint8Array(videoBuffer));
     
