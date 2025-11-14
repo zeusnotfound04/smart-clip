@@ -4,7 +4,7 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "@/lib/generated/prisma/client";
 import { signIn } from "@/lib/auth";
-import { AuthError } from "next-auth";
+// AuthError is not available in next-auth v4, we'll use a generic error approach
 
 const prisma = new PrismaClient();
 
@@ -44,7 +44,7 @@ export async function signUpAction(data: z.infer<typeof signUpSchema>) {
     return { success: true };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return { success: false, error: error.errors[0].message };
+      return { success: false, error: error.issues[0].message };
     }
     return { success: false, error: "Something went wrong" };
   }
@@ -62,11 +62,12 @@ export async function signInAction(data: z.infer<typeof signInSchema>) {
 
     return { success: true };
   } catch (error) {
-    if (error instanceof AuthError) {
-      return { success: false, error: "Invalid credentials" };
-    }
     if (error instanceof z.ZodError) {
-      return { success: false, error: error.errors[0].message };
+      return { success: false, error: error.issues[0].message };
+    }
+    // Handle auth errors (next-auth v4 doesn't export AuthError)
+    if (error && typeof error === 'object' && 'type' in error) {
+      return { success: false, error: "Invalid credentials" };
     }
     return { success: false, error: "Something went wrong" };
   }
