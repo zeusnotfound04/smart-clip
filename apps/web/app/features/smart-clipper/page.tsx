@@ -109,7 +109,7 @@ export default function SmartClipperPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-linear-to-br from-green-50 to-emerald-50">
+      <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
           <motion.div
             variants={staggerContainer}
@@ -128,8 +128,8 @@ export default function SmartClipperPage() {
 
             <motion.div variants={staggerItem}>
               <div className="text-center space-y-4">
-                <div className="inline-flex items-center gap-3 text-4xl font-bold gradient-text">
-                  <Scissors className="w-10 h-10 text-green-600" />
+                <div className="inline-flex items-center gap-3 text-4xl font-bold">
+                  <Scissors className="w-10 h-10 text-foreground" />
                   Smart Clipper
                 </div>
                 <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
@@ -145,7 +145,7 @@ export default function SmartClipperPage() {
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
-                        <Scissors className="w-5 h-5 text-green-600" />
+                        <Scissors className="w-5 h-5 text-muted-foreground" />
                         Upload Videos for Clipping
                       </CardTitle>
                       <CardDescription>
@@ -249,7 +249,7 @@ export default function SmartClipperPage() {
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
-                        <Settings2 className="w-5 h-5 text-green-600" />
+                        <Settings2 className="w-5 h-5 text-muted-foreground" />
                         Detection Settings
                       </CardTitle>
                     </CardHeader>

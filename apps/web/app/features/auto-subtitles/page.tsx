@@ -69,7 +69,7 @@ export default function AutoSubtitlesPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-linear-to-br from-slate-50 to-blue-50">
+      <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
           <motion.div
             variants={staggerContainer}
@@ -88,13 +88,12 @@ export default function AutoSubtitlesPage() {
 
             <motion.div variants={staggerItem}>
               <div className="text-center space-y-4">
-                <div className="inline-flex items-center gap-3 text-4xl font-bold gradient-text">
-                  <Subtitles className="w-10 h-10 text-blue-600" />
+                <div className="inline-flex items-center gap-3 text-4xl font-bold">
+                  <Subtitles className="w-10 h-10 text-foreground" />
                   Auto Subtitles
                 </div>
                 <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                  Generate accurate subtitles automatically using AI speech recognition. 
-                  Support for multiple languages and export formats.
+                  Generate subtitles automatically using AI speech recognition.
                 </p>
               </div>
             </motion.div>
@@ -103,7 +102,7 @@ export default function AutoSubtitlesPage() {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Subtitles className="w-5 h-5 text-blue-600" />
+                    <Subtitles className="w-5 h-5 text-muted-foreground" />
                     Upload Videos for Subtitle Generation
                   </CardTitle>
                   <CardDescription>
@@ -150,7 +149,7 @@ export default function AutoSubtitlesPage() {
                           </div>
                           <div className="flex items-center gap-2">
                             {video.status === 'processing' && (
-                              <Clock className="w-4 h-4 text-blue-500 animate-spin" />
+                              <Clock className="w-4 h-4 text-muted-foreground animate-spin" />
                             )}
                             {video.status === 'completed' && (
                               <Button size="sm" variant="outline" className="gap-2">
@@ -195,37 +194,7 @@ export default function AutoSubtitlesPage() {
               </motion.div>
             )}
 
-            <motion.div variants={staggerItem}>
-              <div className="grid md:grid-cols-3 gap-6">
-                <Card>
-                  <CardContent className="p-6 text-center">
-                    <Subtitles className="w-8 h-8 text-blue-500 mx-auto mb-3" />
-                    <h3 className="font-semibold mb-2">High Accuracy</h3>
-                    <p className="text-sm text-muted-foreground">
-                      99%+ accuracy with advanced AI speech recognition
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-6 text-center">
-                    <Clock className="w-8 h-8 text-green-500 mx-auto mb-3" />
-                    <h3 className="font-semibold mb-2">Fast Processing</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Generate subtitles in minutes, not hours
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-6 text-center">
-                    <Settings className="w-8 h-8 text-purple-500 mx-auto mb-3" />
-                    <h3 className="font-semibold mb-2">Multiple Formats</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Export as SRT, VTT, or embed directly in video
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-            </motion.div>
+
           </motion.div>
         </div>
       </div>

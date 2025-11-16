@@ -86,7 +86,7 @@ export default function SplitStreamerPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-linear-to-br from-purple-50 to-pink-50">
+      <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
           <motion.div
             variants={staggerContainer}
@@ -105,8 +105,8 @@ export default function SplitStreamerPage() {
 
             <motion.div variants={staggerItem}>
               <div className="text-center space-y-4">
-                <div className="inline-flex items-center gap-3 text-4xl font-bold gradient-text">
-                  <Split className="w-10 h-10 text-purple-600" />
+                <div className="inline-flex items-center gap-3 text-4xl font-bold">
+                  <Split className="w-10 h-10 text-foreground" />
                   Split Streamer
                 </div>
                 <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
@@ -122,7 +122,7 @@ export default function SplitStreamerPage() {
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
-                        <Video className="w-5 h-5 text-purple-600" />
+                        <Video className="w-5 h-5 text-muted-foreground" />
                         Upload Gaming Videos
                       </CardTitle>
                       <CardDescription>
@@ -170,7 +170,7 @@ export default function SplitStreamerPage() {
                               </div>
                               <div className="flex items-center gap-2">
                                 {video.status === 'processing' && (
-                                  <Clock className="w-4 h-4 text-purple-500 animate-spin" />
+                                  <Clock className="w-4 h-4 text-muted-foreground animate-spin" />
                                 )}
                                 {video.status === 'completed' && (
                                   <Button size="sm" variant="outline" className="gap-2">
@@ -203,7 +203,7 @@ export default function SplitStreamerPage() {
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
-                        <Settings2 className="w-5 h-5 text-purple-600" />
+                        <Settings2 className="w-5 h-5 text-muted-foreground" />
                         Output Settings
                       </CardTitle>
                     </CardHeader>

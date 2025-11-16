@@ -107,7 +107,7 @@ Outro: Thanks for watching, and I'll see you in the next video where we'll take 
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-linear-to-br from-orange-50 to-red-50">
+      <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
           <motion.div
             variants={staggerContainer}
@@ -126,8 +126,8 @@ Outro: Thanks for watching, and I'll see you in the next video where we'll take 
 
             <motion.div variants={staggerItem}>
               <div className="text-center space-y-4">
-                <div className="inline-flex items-center gap-3 text-4xl font-bold gradient-text">
-                  <FileText className="w-10 h-10 text-orange-600" />
+                <div className="inline-flex items-center gap-3 text-4xl font-bold">
+                  <FileText className="w-10 h-10 text-foreground" />
                   Script Generator
                 </div>
                 <p className="text-xl text-muted-foreground max-w-2xl mx-auto">

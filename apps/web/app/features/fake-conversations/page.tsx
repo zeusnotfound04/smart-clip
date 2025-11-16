@@ -127,7 +127,7 @@ export default function FakeConversationsPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-linear-to-br from-cyan-50 to-blue-50">
+      <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
           <motion.div
             variants={staggerContainer}
@@ -146,8 +146,8 @@ export default function FakeConversationsPage() {
 
             <motion.div variants={staggerItem}>
               <div className="text-center space-y-4">
-                <div className="inline-flex items-center gap-3 text-4xl font-bold gradient-text">
-                  <MessageCircle className="w-10 h-10 text-cyan-600" />
+                <div className="inline-flex items-center gap-3 text-4xl font-bold">
+                  <MessageCircle className="w-10 h-10 text-foreground" />
                   Fake Conversations
                 </div>
                 <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
@@ -196,7 +196,7 @@ export default function FakeConversationsPage() {
                             </div>
                             <div className="flex items-center gap-2">
                               {conversation.status === 'generating' && (
-                                <Clock className="w-4 h-4 text-blue-500 animate-spin" />
+                                <Clock className="w-4 h-4 text-muted-foreground animate-spin" />
                               )}
                               {conversation.status === 'completed' && (
                                 <Button size="sm" variant="outline">
