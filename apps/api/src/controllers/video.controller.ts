@@ -16,10 +16,9 @@ export const getPresignedUrl = async (req: AuthRequest, res: Response) => {
 
     const s3Key = `videos/${req.userId}/${Date.now()}-${filename}`;
     const presignedUrl = await getPresignedUploadUrl(s3Key, fileType);
-
-    res.json({ presignedUrl, s3Key });
+    const response = { presignedUrl, s3Key };
+    res.json(response);
   } catch (error) {
-    console.error('Presigned URL error:', error);
     res.status(500).json({ error: 'Failed to generate upload URL' });
   }
 };
@@ -43,9 +42,10 @@ export const confirmUpload = async (req: AuthRequest, res: Response) => {
       }
     });
 
-    res.status(201).json({ video });
+    const response = { video };
+    res.status(201).json(response);
   } catch (error) {
-    console.error('Video confirmation error:', error);
+    console.error('Backend: Video confirmation error:', error);
     res.status(500).json({ error: 'Upload confirmation failed' });
   }
 };
@@ -97,3 +97,4 @@ export const deleteVideo = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: 'Failed to delete video' });
   }
 };
+

@@ -1,8 +1,9 @@
+import { uploadtoS3 } from './../lib/s3';
 import { Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { generateSubtitles, generateSRT } from '../services/auto-subtitles.service';
 import { subtitleQueue } from '../lib/queues';
-import { uploadFile, getSignedDownloadUrl } from '../lib/s3';
+import { uploadtoS3, getSignedDownloadUrl } from '../lib/s3';
 import { z } from 'zod';
 
 interface AuthRequest extends Request {
@@ -133,9 +134,9 @@ export const exportSRT = async (req: AuthRequest, res: Response) => {
 
     const srtContent = generateSRT(segments);
     const srtBuffer = Buffer.from(srtContent, 'utf-8');
-    const srtKey = `subtitles/${req.userId}/${videoId}.srt`;
+    const fileName = `${req.userId}-${videoId}`;
     
-    await uploadFile(srtKey, srtBuffer, 'text/plain');
+    await uploadtoS3(srtBuffer, fileName, 'text/plain');
 
     res.json({ 
       message: 'SRT file generated successfully',
