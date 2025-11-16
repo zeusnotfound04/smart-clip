@@ -14,7 +14,7 @@ export default function Home() {
     if (!loading && user) {
       router.push('/dashboard');
     }
-  }, [user, loading, router]);
+  }, [user, loading]); // Remove router from dependencies to prevent infinite re-renders
 
   if (loading) {
     return (

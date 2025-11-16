@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useMemo } from 'react';
 import { apiClient, User } from '@/lib/api-client';
 
 interface AuthContextType {
@@ -17,39 +17,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    checkUser();
-  }, []);
-
-  const checkUser = async () => {
+  const checkUser = useCallback(async () => {
     try {
+      // Check if there's a token before making API call
+      const token = typeof window !== 'undefined' ? localStorage.getItem('smartclips_token') : null;
+      if (!token) {
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+
       const result = await apiClient.getMe();
       setUser(result.data || null);
     } catch (error) {
       console.error('Auth check failed:', error);
       setUser(null);
+      // Clear invalid token
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('smartclips_token');
+        localStorage.removeItem('smartclips_user');
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, []); // No dependencies to prevent recreations
 
-  const signIn = async (email: string, password: string) => {
+  useEffect(() => {
+    checkUser();
+  }, []); // Empty dependency array to run only once on mount
+
+  const signIn = useCallback(async (email: string, password: string) => {
     const result = await apiClient.signIn(email, password);
     setUser(result.data.user);
-  };
+  }, []);
 
-  const signUp = async (name: string, email: string, password: string) => {
+  const signUp = useCallback(async (name: string, email: string, password: string) => {
     const result = await apiClient.signUp(name, email, password);
     setUser(result.data.user);
-  };
+  }, []);
 
-  const signOut = () => {
+  const signOut = useCallback(() => {
     apiClient.signOut();
     setUser(null);
-  };
+  }, []);
+
+  const contextValue = useMemo(() => ({
+    user,
+    loading,
+    signIn,
+    signUp,
+    signOut
+  }), [user, loading, signIn, signUp, signOut]);
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 // Create axios instance
 const axiosInstance = axios.create({
@@ -81,6 +81,11 @@ export interface Project {
   config?: any;
   createdAt: string;
   updatedAt: string;
+  video?: {
+    id: string;
+    originalName: string;
+    duration?: number;
+  };
 }
 
 export interface Video {
@@ -99,30 +104,45 @@ export interface Video {
 class APIClient {
   // Auth methods
   async signUp(name: string, email: string, password: string): Promise<AuthResponse> {
-    const response = await axiosInstance.post<AuthResponse>('/auth/register', { name, email, password });
+    const response = await axiosInstance.post('/api/auth/signup', { name, email, password });
     
-    if (response.data.success && typeof window !== 'undefined') {
-      localStorage.setItem('smartclips_token', response.data.data.token);
-      localStorage.setItem('smartclips_user', JSON.stringify(response.data.data.user));
+    if (response.data.token && typeof window !== 'undefined') {
+      localStorage.setItem('smartclips_token', response.data.token);
+      localStorage.setItem('smartclips_user', JSON.stringify(response.data.user));
     }
     
-    return response.data;
+    return {
+      success: true,
+      data: {
+        user: response.data.user,
+        token: response.data.token
+      }
+    };
   }
 
   async signIn(email: string, password: string): Promise<AuthResponse> {
-    const response = await axiosInstance.post<AuthResponse>('/auth/login', { email, password });
+    const response = await axiosInstance.post('/api/auth/signin', { email, password });
     
-    if (response.data.success && typeof window !== 'undefined') {
-      localStorage.setItem('smartclips_token', response.data.data.token);
-      localStorage.setItem('smartclips_user', JSON.stringify(response.data.data.user));
+    if (response.data.token && typeof window !== 'undefined') {
+      localStorage.setItem('smartclips_token', response.data.token);
+      localStorage.setItem('smartclips_user', JSON.stringify(response.data.user));
     }
     
-    return response.data;
+    return {
+      success: true,
+      data: {
+        user: response.data.user,
+        token: response.data.token
+      }
+    };
   }
 
   async getMe(): Promise<ApiResponse<User>> {
-    const response = await axiosInstance.get<ApiResponse<User>>('/auth/me');
-    return response.data;
+    const response = await axiosInstance.get('/api/auth/me');
+    return {
+      success: true,
+      data: response.data.user
+    };
   }
 
   signOut() {
@@ -134,64 +154,115 @@ class APIClient {
 
   // Video methods
   async getUploadUrl(fileName: string, fileType: string): Promise<ApiResponse<{ uploadUrl: string; key: string }>> {
-    const response = await axiosInstance.post<ApiResponse<{ uploadUrl: string; key: string }>>('/videos/upload-url', { 
-      fileName, 
-      fileType 
-    });
-    return response.data;
+    const requestData = { filename: fileName, fileType };
+    
+    try {
+      const response = await axiosInstance.post('/api/videos/upload-url', requestData);
+      
+      return {
+        success: true,
+        data: {
+          uploadUrl: response.data.presignedUrl || '',
+          key: response.data.s3Key || ''
+        }
+      };
+    } catch (error: any) {
+      throw error;
+    }
   }
 
-  async confirmUpload(key: string, originalName: string): Promise<ApiResponse<Video>> {
-    const response = await axiosInstance.post<ApiResponse<Video>>('/videos/confirm-upload', { key, originalName });
-    return response.data;
+  async confirmUpload(key: string, originalName: string, size?: number, mimeType?: string): Promise<ApiResponse<Video>> {
+    const requestData = { s3Key: key, originalName, size, mimeType };
+    
+    try {
+      const response = await axiosInstance.post('/api/videos/confirm-upload', requestData);
+      
+      return {
+        success: true,
+        data: response.data.video
+      };
+    } catch (error: any) {
+      throw error;
+    }
   }
 
   async getVideos(): Promise<ApiResponse<Video[]>> {
-    const response = await axiosInstance.get<ApiResponse<Video[]>>('/videos');
+    const response = await axiosInstance.get<ApiResponse<Video[]>>('/api/videos');
     return response.data;
   }
 
   async deleteVideo(id: string): Promise<ApiResponse> {
-    const response = await axiosInstance.delete<ApiResponse>(`/videos/${id}`);
+    const response = await axiosInstance.delete<ApiResponse>(`/api/videos/${id}`);
     return response.data;
   }
 
   // Project methods
-  async getProjects(): Promise<ApiResponse<Project[]>> {
-    const response = await axiosInstance.get<ApiResponse<Project[]>>('/projects');
+  async getProjects(): Promise<{ projects: Project[] }> {
+    const response = await axiosInstance.get('/api/projects');
     return response.data;
   }
 
   async getProject(id: string): Promise<ApiResponse<Project>> {
-    const response = await axiosInstance.get<ApiResponse<Project>>(`/projects/${id}`);
+    const response = await axiosInstance.get<ApiResponse<Project>>(`/api/projects/${id}`);
+    return response.data;
+  }
+
+  async createProject(data: {
+    name: string;
+    type: string;
+    videoId?: string;
+    config?: any;
+  }): Promise<{ project: Project }> {
+    const response = await axiosInstance.post('/api/projects', data);
     return response.data;
   }
 
   async deleteProject(id: string): Promise<ApiResponse> {
-    const response = await axiosInstance.delete<ApiResponse>(`/projects/${id}`);
+    const response = await axiosInstance.delete<ApiResponse>(`/api/projects/${id}`);
     return response.data;
   }
 
-  async uploadVideo(file: File, onProgress?: (progress: number) => void): Promise<any> {
+  async uploadVideo(file: File, onProgress?: (progress: number) => void): Promise<Video> {
     try {
-      const response = await axiosInstance.post('/upload', 
-        { video: file },
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-          onUploadProgress: (progressEvent: any) => {
-            if (progressEvent.total) {
-              const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-              onProgress?.(progress);
-            }
-          },
+      const uploadUrlResponse = await this.getUploadUrl(file.name, file.type);
+      if (!uploadUrlResponse.success || !uploadUrlResponse.data) {
+        throw new Error('Failed to get upload URL');
+      }
+
+      const { uploadUrl, key } = uploadUrlResponse.data;
+      
+      // Validate the URL format
+      try {
+        new URL(uploadUrl);
+      } catch (urlError) {
+        throw new Error('Invalid presigned URL format');
+      }
+
+      const response = await fetch(uploadUrl, {
+        method: 'PUT',
+        body: file,
+        headers: {
+          'Content-Type': file.type,
+        },
+      });
+      
+      if (!response.ok) {
+        let errorText = '';
+        try {
+          errorText = await response.text();
+        } catch (readError) {
+          // Ignore read error
         }
-      );
-      return response.data;
-    } catch (error) {
-      console.error('Upload error:', error);
-      throw new Error('Failed to upload video');
+        throw new Error(`S3 upload failed with status ${response.status}: ${errorText || response.statusText}`);
+      }
+      const confirmResponse = await this.confirmUpload(key, file.name, file.size, file.type);
+      if (!confirmResponse.success || !confirmResponse.data) {
+        throw new Error('Failed to confirm upload');
+      }
+
+      return confirmResponse.data;
+    } catch (error: any) {
+      throw new Error('Failed to upload video: ' + (error.response?.data?.message || error.message));
     }
   }
 

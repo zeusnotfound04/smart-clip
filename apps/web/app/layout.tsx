@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
 import { ThemeProvider } from "@/components/theme-provider";
-import { ProcessingStatus } from "@/components/processing-status";
 import { inter, jetbrainsMono, poppins } from "@/lib/fonts";
 
 export const metadata: Metadata = {
@@ -18,7 +17,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${jetbrainsMono.variable} ${poppins.variable} antialiased font-sans`}
+        className={`${inter.variable} ${jetbrainsMono.variable} ${poppins.variable} antialiased font-sans bg-background text-foreground`}
       >
         <ThemeProvider
           attribute="class"
@@ -28,7 +27,6 @@ export default function RootLayout({
         >
           <AuthProvider>
             {children}
-            <ProcessingStatus />
           </AuthProvider>
         </ThemeProvider>
       </body>
