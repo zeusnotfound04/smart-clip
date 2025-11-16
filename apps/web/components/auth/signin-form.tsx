@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -46,7 +46,7 @@ export function SignInForm() {
     },
   });
 
-  async function onSubmit(data: SignInFormValues) {
+  const onSubmit = useCallback(async (data: SignInFormValues) => {
     setIsLoading(true);
     setError(null);
 
@@ -58,7 +58,7 @@ export function SignInForm() {
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [signIn, router]);
 
   return (
     <motion.div
@@ -68,10 +68,10 @@ export function SignInForm() {
       transition={{ delay: 0.3 }}
       className="w-full"
     >
-      <Card className="shadow-2xl border-0 bg-white/80 backdrop-blur-sm">
+      <Card className="shadow-2xl border border-white/20 bg-black/90 backdrop-blur-sm">
         <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-2xl font-bold text-white">Welcome back</CardTitle>
+          <CardDescription className="text-gray-300">
             {registered
               ? 'Account created successfully. Sign in below.'
               : 'Sign in to your account to continue'}
@@ -88,7 +88,7 @@ export function SignInForm() {
             >
               {error && (
                 <motion.div 
-                  className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm"
+                  className="bg-red-900/30 border border-red-600/50 text-red-200 px-4 py-3 rounded-lg text-sm"
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                 >
@@ -102,14 +102,14 @@ export function SignInForm() {
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email</FormLabel>
+                      <FormLabel className="text-white">Email</FormLabel>
                       <FormControl>
                         <div className="relative group">
-                          <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                          <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400 group-focus-within:text-white transition-colors" />
                           <Input
                             type="email"
                             placeholder="john@example.com"
-                            className="pl-10 h-12 border-2 focus:border-primary transition-all duration-200 hover:border-primary/50"
+                            className="pl-10 h-12 border-2 border-gray-600 bg-black/50 text-white placeholder:text-gray-400 focus:border-white transition-all duration-200 hover:border-gray-400"
                             {...field}
                           />
                         </div>
@@ -126,20 +126,20 @@ export function SignInForm() {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Password</FormLabel>
+                      <FormLabel className="text-white">Password</FormLabel>
                       <FormControl>
                         <div className="relative group">
-                          <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                          <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400 group-focus-within:text-white transition-colors" />
                           <Input
                             type={showPassword ? 'text' : 'password'}
                             placeholder="Enter your password"
-                            className="pl-10 pr-12 h-12 border-2 focus:border-primary transition-all duration-200 hover:border-primary/50"
+                            className="pl-10 pr-12 h-12 border-2 border-gray-600 bg-black/50 text-white placeholder:text-gray-400 focus:border-white transition-all duration-200 hover:border-gray-400"
                             {...field}
                           />
                           <button
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-3 top-3 h-4 w-4 text-muted-foreground hover:text-primary transition-colors"
+                            className="absolute right-3 top-3 h-4 w-4 text-gray-400 hover:text-white transition-colors"
                           >
                             {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                           </button>
@@ -154,7 +154,7 @@ export function SignInForm() {
               <motion.div variants={staggerItem}>
                 <Button
                   type="submit"
-                  className="w-full h-12 bg-linear-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg"
+                  className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg"
                   disabled={isLoading}
                 >
                   {isLoading ? (
@@ -171,11 +171,11 @@ export function SignInForm() {
             </motion.form>
           </Form>
 
-          <div className="mt-6 text-center text-sm text-muted-foreground">
+          <div className="mt-6 text-center text-sm text-gray-400">
             Don't have an account?{' '}
             <Link 
               href="/auth/signup" 
-              className="font-medium text-primary hover:text-primary/80 transition-colors"
+              className="font-medium text-white hover:text-gray-300 transition-colors"
             >
               Sign up
             </Link>

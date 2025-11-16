@@ -143,7 +143,7 @@ export function VideoUpload({
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <Card className="border-2 border-dashed transition-colors duration-200 hover:border-primary/50">
+        <Card className="border-2 border-dashed transition-colors duration-200 hover:border-muted-foreground">
           <CardContent className="p-4 sm:p-6 lg:p-8">
             <div
               {...getRootProps()}
@@ -264,7 +264,7 @@ export function VideoUpload({
                                 <HardDrive className="w-4 h-4 text-muted-foreground" />
                               )}
                               {videoFile.status === 'uploading' && (
-                                <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
                               )}
                               {videoFile.status === 'completed' && (
                                 <CheckCircle className="w-4 h-4 text-green-500" />

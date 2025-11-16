@@ -26,7 +26,7 @@ export function LoadingSpinner({ size = 'md', text }: LoadingSpinnerProps) {
           rotate: { duration: 1, repeat: Infinity, ease: "linear" },
           scale: { duration: 0.5, repeat: Infinity, repeatType: "reverse" }
         }}
-        className={`${sizeClasses[size]} text-blue-600`}
+        className={`${sizeClasses[size]} text-muted-foreground`}
       >
         <Zap className="w-full h-full" />
       </motion.div>
@@ -45,7 +45,7 @@ export function LoadingSpinner({ size = 'md', text }: LoadingSpinnerProps) {
 
 export function FullScreenLoading({ text = "Loading..." }: { text?: string }) {
   return (
-    <div className="fixed inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
       <LoadingSpinner size="lg" text={text} />
     </div>
   );

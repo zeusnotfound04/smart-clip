@@ -114,14 +114,14 @@ export function ProcessingStatus() {
   const getJobIcon = (type: string, status: string) => {
     if (status === 'completed') return <CheckCircle className="w-4 h-4 text-green-500" />;
     if (status === 'failed') return <AlertCircle className="w-4 h-4 text-red-500" />;
-    return <Clock className="w-4 h-4 text-blue-500 animate-spin" />;
+    return <Clock className="w-4 h-4 text-muted-foreground animate-spin" />;
   };
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'success': return <CheckCircle className="w-4 h-4 text-green-500" />;
       case 'error': return <AlertCircle className="w-4 h-4 text-red-500" />;
-      default: return <Info className="w-4 h-4 text-blue-500" />;
+      default: return <Info className="w-4 h-4 text-muted-foreground" />;
     }
   };
 
@@ -144,7 +144,7 @@ export function ProcessingStatus() {
             exit={{ opacity: 0, x: 300 }}
             className="w-full md:w-80"
           >
-            <Card className="bg-white/95 backdrop-blur-sm border shadow-lg">
+            <Card className="bg-card/95 backdrop-blur-sm border shadow-lg">
               <CardContent className="p-3 md:p-4">
                 <div className="flex items-start gap-2 md:gap-3">
                   {getJobIcon(job.type, job.status)}
@@ -169,7 +169,7 @@ export function ProcessingStatus() {
         <Button
           variant="outline"
           size="sm"
-          className="relative bg-white/95 backdrop-blur-sm shadow-lg"
+          className="relative bg-card/95 backdrop-blur-sm shadow-lg"
           onClick={() => setShowNotifications(!showNotifications)}
         >
           <Bell className="w-4 h-4" />
@@ -188,7 +188,7 @@ export function ProcessingStatus() {
               exit={{ opacity: 0, y: -10, scale: 0.95 }}
               className="absolute right-0 top-12 w-full md:w-80 max-w-[calc(100vw-2rem)]"
             >
-              <Card className="bg-white/95 backdrop-blur-sm border shadow-lg max-h-96 overflow-hidden">
+              <Card className="bg-card/95 backdrop-blur-sm border shadow-lg max-h-96 overflow-hidden">
                 <div className="p-3 border-b">
                   <div className="flex items-center justify-between">
                     <h3 className="font-medium">Notifications</h3>
@@ -208,7 +208,7 @@ export function ProcessingStatus() {
                         <div
                           key={notification.id}
                           className={`p-3 border-b hover:bg-slate-50 cursor-pointer ${
-                            !notification.read ? 'bg-blue-50' : ''
+                            !notification.read ? 'bg-muted' : ''
                           }`}
                           onClick={() => markAsRead(notification.id)}
                         >
@@ -224,7 +224,7 @@ export function ProcessingStatus() {
                               </p>
                             </div>
                             {!notification.read && (
-                              <div className="w-2 h-2 bg-blue-500 rounded-full mt-2" />
+                              <div className="w-2 h-2 bg-muted-foreground rounded-full mt-2" />
                             )}
                           </div>
                         </div>

@@ -170,10 +170,10 @@ export function VideoPlayer({
 
   const getMarkerColor = (type: string) => {
     switch (type) {
-      case 'highlight': return 'bg-yellow-500';
-      case 'chapter': return 'bg-blue-500';
-      case 'clip': return 'bg-green-500';
-      default: return 'bg-gray-500';
+      case 'highlight': return 'bg-foreground';
+      case 'chapter': return 'bg-muted-foreground';
+      case 'bookmark': return 'bg-border';
+      default: return 'bg-muted';
     }
   };
 
@@ -244,7 +244,7 @@ export function VideoPlayer({
           {/* Controls Overlay */}
           <motion.div
             className={cn(
-              "absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 transition-opacity duration-300",
+              "absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/60 to-transparent p-4 transition-opacity duration-300",
               showControls ? "opacity-100" : "opacity-0"
             )}
           >

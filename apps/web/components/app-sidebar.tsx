@@ -75,9 +75,6 @@ export function AppSidebar({ user }: AppSidebarProps) {
               </motion.div>
               <div className="text-center w-full overflow-hidden">
                 <p className="font-medium text-sm truncate px-2 font-poppins">{user.name}</p>
-                <p className="text-xs text-muted-foreground truncate px-2">
-                  {user.email}
-                </p>
               </div>
             </motion.div>
           </SidebarGroupContent>
