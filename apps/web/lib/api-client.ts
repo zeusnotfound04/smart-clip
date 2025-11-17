@@ -266,7 +266,18 @@ class APIClient {
     }
   }
 
-  async generateSubtitles(videoId: string): Promise<{ message: string; videoId: string }> {
+  async generateSubtitles(videoId: string): Promise<{ 
+    message: string; 
+    videoId: string; 
+    videoWithSubtitles?: string;
+    srtContent?: string;
+    segments?: Array<{
+      text: string;
+      startTime: number;
+      endTime: number;
+      confidence: number;
+    }>;
+  }> {
     const authHeader = this.getAuthHeader();
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
