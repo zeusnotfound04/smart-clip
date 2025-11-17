@@ -76,7 +76,6 @@ export default function DashboardPage() {
   };
 
   const handleCreateProject = () => {
-    console.log('🚀 Dashboard: Navigating to choose-feature page');
     // Navigate directly to choose-feature page (no video upload here)
     window.location.href = '/choose-feature';
   };
