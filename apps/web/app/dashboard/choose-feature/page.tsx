@@ -69,23 +69,14 @@ export default function ChooseFeaturePage() {
   const searchParams = useSearchParams();
   const [hoveredFeature, setHoveredFeature] = useState<string | null>(null);
   const [createProjectLoading, setCreateProjectLoading] = useState(false);
-  // No video state needed - feature selection first
-  useEffect(() => {
-    console.log('🎯 Choose Feature page loaded - ready for feature selection');
-  }, []);
-
   const handleFeatureSelect = async (feature: any) => {
-    console.log('🚀 FEATURE SELECT STARTED:', { feature: feature.id, featureName: feature.title });
-    
     try {
       setCreateProjectLoading(true);
       
-      console.log('🎯 Navigating directly to feature page:', feature.href);
       // Navigate directly to the feature page - video upload will happen there
       router.push(feature.href);
       
     } catch (error: any) {
-      console.error('❌ Failed to navigate to feature:', error);
     } finally {
       setCreateProjectLoading(false);
     }
