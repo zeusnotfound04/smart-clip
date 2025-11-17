@@ -12,7 +12,11 @@ import {
   Clock,
   AlertCircle,
   Subtitles,
-  Sparkles
+  Sparkles,
+  Settings,
+  Palette,
+  Type,
+  Languages
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -21,16 +25,98 @@ import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/lib/auth-context';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { apiClient } from '@/lib/api-client';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 
-type UploadStage = 'idle' | 'uploading' | 'processing' | 'completed' | 'error';
+type UploadStage = 'idle' | 'configuring' | 'uploading' | 'processing' | 'completed' | 'error';
 
 interface VideoData {
   id: string;
   name: string;
   size: number;
-  s3Url: string;
+  filePath: string;
   subtitles?: string;
+  detectedLanguages?: string[];
 }
+
+interface SubtitleStyle {
+  textCase: 'normal' | 'uppercase' | 'lowercase' | 'capitalize';
+  fontFamily: string;
+  fontSize: number;
+  primaryColor: string;
+  outlineColor: string;
+  backgroundColor: string;
+  bold: boolean;
+  italic: boolean;
+}
+
+interface SubtitleOptions {
+  detectAllLanguages: boolean;
+  style: SubtitleStyle;
+}
+
+const FONT_FAMILIES = [
+  { value: 'Arial', label: 'Arial' },
+  { value: 'Helvetica', label: 'Helvetica' },
+  { value: 'Times New Roman', label: 'Times New Roman' },
+  { value: 'Courier New', label: 'Courier New' },
+  { value: 'Verdana', label: 'Verdana' },
+  { value: 'Georgia', label: 'Georgia' },
+  { value: 'Comic Sans MS', label: 'Comic Sans MS' }
+];
+
+const STYLE_THEMES = [
+  {
+    name: 'Classic White',
+    style: {
+      primaryColor: '#FFFFFF',
+      outlineColor: '#000000',
+      backgroundColor: '#000000',
+      fontFamily: 'Arial',
+      fontSize: 20,
+      bold: false,
+      italic: false
+    }
+  },
+  {
+    name: 'Bold Yellow',
+    style: {
+      primaryColor: '#FFFF00',
+      outlineColor: '#000000',
+      backgroundColor: '#000000',
+      fontFamily: 'Arial',
+      fontSize: 22,
+      bold: true,
+      italic: false
+    }
+  },
+  {
+    name: 'Netflix Red',
+    style: {
+      primaryColor: '#E50914',
+      outlineColor: '#FFFFFF',
+      backgroundColor: '#000000',
+      fontFamily: 'Helvetica',
+      fontSize: 24,
+      bold: true,
+      italic: false
+    }
+  },
+  {
+    name: 'Elegant Blue',
+    style: {
+      primaryColor: '#4A90E2',
+      outlineColor: '#FFFFFF',
+      backgroundColor: '#000000',
+      fontFamily: 'Georgia',
+      fontSize: 18,
+      bold: false,
+      italic: true
+    }
+  }
+];
 
 export default function AutoSubtitlesPage() {
   const { user } = useAuth();
@@ -41,6 +127,20 @@ export default function AutoSubtitlesPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [videoData, setVideoData] = useState<VideoData | null>(null);
   const [error, setError] = useState<string>('');
+  
+  const [subtitleOptions, setSubtitleOptions] = useState<SubtitleOptions>({
+    detectAllLanguages: true,
+    style: {
+      textCase: 'normal',
+      fontFamily: 'Arial',
+      fontSize: 20,
+      primaryColor: '#FFFFFF',
+      outlineColor: '#000000',
+      backgroundColor: '#000000',
+      bold: false,
+      italic: false
+    }
+  });
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -48,6 +148,10 @@ export default function AutoSubtitlesPage() {
       setSelectedFile(file);
       setError('');
     }
+  };
+
+  const proceedToConfiguration = () => {
+    setUploadStage('configuring');
   };
 
   const handleUpload = async () => {
@@ -65,7 +169,7 @@ export default function AutoSubtitlesPage() {
         id: video.id,
         name: video.originalName || selectedFile.name,
         size: selectedFile.size,
-        s3Url: video.s3Url || ''
+        filePath: video.filePath
       });
 
       setUploadStage('processing');
@@ -82,12 +186,15 @@ export default function AutoSubtitlesPage() {
         });
       }, 1000);
 
-      // Generate subtitles
-      const subtitleResult = await apiClient.generateSubtitles(video.id);
+      const subtitleResult = await apiClient.generateSubtitles(video.id, subtitleOptions);
       clearInterval(progressInterval);
       setProcessingProgress(100);
 
-      setVideoData(prev => prev ? { ...prev, subtitles: 'Generated successfully' } : null);
+      setVideoData(prev => prev ? { 
+        ...prev, 
+        subtitles: 'Generated successfully',
+        detectedLanguages: subtitleResult.detectedLanguages || []
+      } : null);
       setUploadStage('completed');
 
     } catch (error: any) {
@@ -117,12 +224,23 @@ export default function AutoSubtitlesPage() {
 
   const getStageText = (stage: UploadStage) => {
     switch (stage) {
+      case 'configuring': return 'Configure options';
       case 'uploading': return 'Uploading video...';
       case 'processing': return 'Generating subtitles...';
       case 'completed': return 'Subtitles generated!';
       case 'error': return 'Processing failed';
       default: return 'Ready to process';
     }
+  };
+
+  const applyStyleTheme = (theme: typeof STYLE_THEMES[0]) => {
+    setSubtitleOptions(prev => ({
+      ...prev,
+      style: {
+        ...prev.style,
+        ...theme.style
+      }
+    }));
   };
 
   return (
@@ -144,7 +262,7 @@ export default function AutoSubtitlesPage() {
             animate={{ opacity: 1, x: 0 }}
             className="flex items-center gap-3"
           >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-linear-to-r from-blue-500 to-cyan-500 flex items-center justify-center">
               <Subtitles className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -247,7 +365,6 @@ export default function AutoSubtitlesPage() {
                         </motion.div>
                       </div>
 
-                      {/* Action Buttons */}
                       <div className="flex gap-4 justify-center">
                         <Button 
                           variant="outline" 
@@ -258,22 +375,13 @@ export default function AutoSubtitlesPage() {
                           Change File
                         </Button>
                         <Button 
-                          onClick={handleUpload}
+                          onClick={proceedToConfiguration}
                           disabled={uploadStage === 'uploading' || uploadStage === 'processing'}
                           size="lg"
                           className="bg-blue-600 hover:bg-blue-700 text-white px-8"
                         >
-                          {uploadStage === 'idle' ? (
-                            <>
-                              <Subtitles className="w-5 h-5 mr-2" />
-                              Generate Subtitles
-                            </>
-                          ) : (
-                            <>
-                              {getStageIcon(uploadStage)}
-                              <span className="ml-2">{getStageText(uploadStage)}</span>
-                            </>
-                          )}
+                          <Settings className="w-5 h-5 mr-2" />
+                          Configure Subtitles
                         </Button>
                       </div>
                     </motion.div>
@@ -282,6 +390,308 @@ export default function AutoSubtitlesPage() {
               </CardContent>
             </Card>
           </motion.section>
+
+          {/* Configuration Section */}
+          <AnimatePresence>
+            {uploadStage === 'configuring' && (
+              <motion.section
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.6 }}
+              >
+                <Card className="border-2 border-blue-500/30">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-xl">
+                      <Settings className="w-6 h-6" />
+                      Subtitle Configuration
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-8">
+                    {/* Language Options */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3">
+                        <Languages className="w-5 h-5 text-blue-400" />
+                        <h3 className="text-lg font-semibold">Language Detection</h3>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <Switch
+                          id="detect-all-languages"
+                          checked={subtitleOptions.detectAllLanguages}
+                          onCheckedChange={(checked) => 
+                            setSubtitleOptions(prev => ({ ...prev, detectAllLanguages: checked }))
+                          }
+                        />
+                        <Label htmlFor="detect-all-languages" className="text-sm">
+                          Detect and include all languages in the video
+                        </Label>
+                      </div>
+                      <p className="text-sm text-muted-foreground ml-8">
+                        When enabled, subtitles will be generated for Hindi, Urdu, English and other detected languages
+                      </p>
+                    </div>
+
+                    {/* Text Style Options */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3">
+                        <Type className="w-5 h-5 text-green-400" />
+                        <h3 className="text-lg font-semibold">Text Styling</h3>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-3">
+                          <Label className="text-sm font-medium">Text Case</Label>
+                          <Select
+                            value={subtitleOptions.style.textCase}
+                            onValueChange={(value: 'normal' | 'uppercase' | 'lowercase' | 'capitalize') =>
+                              setSubtitleOptions(prev => ({
+                                ...prev,
+                                style: { ...prev.style, textCase: value }
+                              }))
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="normal">Normal Text</SelectItem>
+                              <SelectItem value="uppercase">UPPERCASE</SelectItem>
+                              <SelectItem value="lowercase">lowercase</SelectItem>
+                              <SelectItem value="capitalize">Capitalize Words</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-3">
+                          <Label className="text-sm font-medium">Font Family</Label>
+                          <Select
+                            value={subtitleOptions.style.fontFamily}
+                            onValueChange={(value) =>
+                              setSubtitleOptions(prev => ({
+                                ...prev,
+                                style: { ...prev.style, fontFamily: value }
+                              }))
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {FONT_FAMILIES.map((font) => (
+                                <SelectItem key={font.value} value={font.value}>
+                                  {font.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-3">
+                          <Label className="text-sm font-medium">Font Size</Label>
+                          <Input
+                            type="number"
+                            min="12"
+                            max="48"
+                            value={subtitleOptions.style.fontSize}
+                            onChange={(e) =>
+                              setSubtitleOptions(prev => ({
+                                ...prev,
+                                style: { ...prev.style, fontSize: parseInt(e.target.value) || 20 }
+                              }))
+                            }
+                            className="w-full"
+                          />
+                        </div>
+
+                        <div className="space-y-3">
+                          <Label className="text-sm font-medium">Style Options</Label>
+                          <div className="flex gap-4">
+                            <div className="flex items-center space-x-2">
+                              <Switch
+                                id="bold"
+                                checked={subtitleOptions.style.bold}
+                                onCheckedChange={(checked) =>
+                                  setSubtitleOptions(prev => ({
+                                    ...prev,
+                                    style: { ...prev.style, bold: checked }
+                                  }))
+                                }
+                              />
+                              <Label htmlFor="bold" className="text-sm">Bold</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Switch
+                                id="italic"
+                                checked={subtitleOptions.style.italic}
+                                onCheckedChange={(checked) =>
+                                  setSubtitleOptions(prev => ({
+                                    ...prev,
+                                    style: { ...prev.style, italic: checked }
+                                  }))
+                                }
+                              />
+                              <Label htmlFor="italic" className="text-sm">Italic</Label>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Color Options */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3">
+                        <Palette className="w-5 h-5 text-purple-400" />
+                        <h3 className="text-lg font-semibold">Colors & Themes</h3>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                        {STYLE_THEMES.map((theme, index) => (
+                          <Button
+                            key={index}
+                            variant="outline"
+                            size="sm"
+                            onClick={() => applyStyleTheme(theme)}
+                            className="h-auto p-3 flex flex-col items-center gap-2 hover:bg-white/10"
+                          >
+                            <div className="w-8 h-8 rounded" style={{ backgroundColor: theme.style.primaryColor }} />
+                            <span className="text-xs">{theme.name}</span>
+                          </Button>
+                        ))}
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Text Color</Label>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="color"
+                              value={subtitleOptions.style.primaryColor}
+                              onChange={(e) =>
+                                setSubtitleOptions(prev => ({
+                                  ...prev,
+                                  style: { ...prev.style, primaryColor: e.target.value }
+                                }))
+                              }
+                              className="w-12 h-8 p-0 border-none"
+                            />
+                            <Input
+                              type="text"
+                              value={subtitleOptions.style.primaryColor}
+                              onChange={(e) =>
+                                setSubtitleOptions(prev => ({
+                                  ...prev,
+                                  style: { ...prev.style, primaryColor: e.target.value }
+                                }))
+                              }
+                              className="flex-1"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Outline Color</Label>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="color"
+                              value={subtitleOptions.style.outlineColor}
+                              onChange={(e) =>
+                                setSubtitleOptions(prev => ({
+                                  ...prev,
+                                  style: { ...prev.style, outlineColor: e.target.value }
+                                }))
+                              }
+                              className="w-12 h-8 p-0 border-none"
+                            />
+                            <Input
+                              type="text"
+                              value={subtitleOptions.style.outlineColor}
+                              onChange={(e) =>
+                                setSubtitleOptions(prev => ({
+                                  ...prev,
+                                  style: { ...prev.style, outlineColor: e.target.value }
+                                }))
+                              }
+                              className="flex-1"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Background</Label>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="color"
+                              value={subtitleOptions.style.backgroundColor}
+                              onChange={(e) =>
+                                setSubtitleOptions(prev => ({
+                                  ...prev,
+                                  style: { ...prev.style, backgroundColor: e.target.value }
+                                }))
+                              }
+                              className="w-12 h-8 p-0 border-none"
+                            />
+                            <Input
+                              type="text"
+                              value={subtitleOptions.style.backgroundColor}
+                              onChange={(e) =>
+                                setSubtitleOptions(prev => ({
+                                  ...prev,
+                                  style: { ...prev.style, backgroundColor: e.target.value }
+                                }))
+                              }
+                              className="flex-1"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Preview */}
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium">Preview</Label>
+                      <div className="bg-black p-6 rounded-lg text-center relative">
+                        <span 
+                          style={{
+                            fontFamily: subtitleOptions.style.fontFamily,
+                            fontSize: `${subtitleOptions.style.fontSize}px`,
+                            color: subtitleOptions.style.primaryColor,
+                            fontWeight: subtitleOptions.style.bold ? 'bold' : 'normal',
+                            fontStyle: subtitleOptions.style.italic ? 'italic' : 'normal',
+                            textShadow: `1px 1px 1px ${subtitleOptions.style.outlineColor}`,
+                            backgroundColor: subtitleOptions.style.backgroundColor + '40',
+                            padding: '4px 8px',
+                            borderRadius: '4px'
+                          }}
+                        >
+                          Sample Subtitle Text
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-4 justify-center pt-4">
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setUploadStage('idle')}
+                        className="px-6"
+                      >
+                        <ArrowLeft className="w-4 h-4 mr-2" />
+                        Back
+                      </Button>
+                      <Button 
+                        onClick={handleUpload}
+                        size="lg"
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-8"
+                      >
+                        <Subtitles className="w-5 h-5 mr-2" />
+                        Generate Subtitles
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.section>
+            )}
+          </AnimatePresence>
 
           {/* Progress Section */}
           <AnimatePresence>
@@ -367,6 +777,14 @@ export default function AutoSubtitlesPage() {
                             <span className="text-muted-foreground">Status:</span>
                             <span className="text-green-400">Processing Complete</span>
                           </div>
+                          {videoData.detectedLanguages && videoData.detectedLanguages.length > 0 && (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Detected Languages:</span>
+                              <span className="text-blue-400">
+                                {videoData.detectedLanguages.join(', ')}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
                       

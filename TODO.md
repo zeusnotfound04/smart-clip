@@ -1,46 +1,15 @@
 # SmartClips Development Roadmap
 
-## 📊 **Progress Overview (Updated: Nov 14, 2025)**
+<!-- Own Todo -->
+<!-- 
+    - Auto Subtitle
+    + fix the caps and small words issue.
+    + multi-language support
+    + add theme in the subtitle
+    + enhance preview and fix download button
 
-### ✅ **COMPLETED**
-- **Foundation & Infrastructure** - Full auth system, S3 direct uploads, database schema
-- **Function-Based Architecture** - Converted from class-based to modern function exports
-- **All 5 Feature Backend Services** - Auto Subtitles, Split Streamer, Smart Clipper, AI Script Generator, Fake Conversations
-- **Google Cloud Integration** - Speech-to-Text, Video Intelligence, Gemini AI, Text-to-Speech
-- **AWS S3 Integration** - Direct uploads with presigned URLs (no multer dependency)
+ -->
 
-### 🚧 **IN PROGRESS**  
-- **Frontend Development** - All 5 features need UI implementation
-
-### ✅ **BACKEND 100% COMPLETE**
-- **All 5 AI Features** - Auto Subtitles, Split Streamer, Smart Clipper, Script Generator, Fake Conversations
-- **Video Processing Pipeline** - FFmpeg integration with comprehensive services  
-- **All API Endpoints** - 25+ endpoints with job queues and status tracking
-- **Production Infrastructure** - Error handling, security, health monitoring, documentation
-- **Environment Setup** - Google Cloud, AWS S3, Redis, Database all configured
-
-### 🎯 **IMMEDIATE NEXT STEPS:**
-
-#### **1. Frontend Foundation** 🔥 (START HERE)
-- **Setup Next.js Structure** - Pages, components, layouts, routing
-- **Authentication System** - Login/register UI + protected routes  
-- **Main Dashboard** - Navigation + project overview
-- **API Integration** - Axios client + error handling
-
-#### **2. Core Components** 🔥 (HIGH PRIORITY)
-- **Video Upload** - Drag & drop + S3 direct upload + progress
-- **Job Status Tracker** - Real-time updates for long-running tasks
-- **Video Player** - Preview with timeline and controls
-- **Project Manager** - List, create, delete projects
-
-#### **3. Feature Pages** (Build after foundation)
-- **Auto Subtitles Page** - Upload video → Generate subtitles → Edit → Export
-- **Split Streamer Page** - Upload 2 videos → Compose → Preview → Export  
-- **Smart Clipper Page** - Upload video → AI analysis → Select clips → Export
-- **Script Generator Page** - Enter topic → AI generation → Edit → Export
-- **Fake Conversations Page** - Build conversation → Select theme → Generate video
-
-### 📈 **Progress**: Backend 100% ✅ | Frontend 0% ⏳ | **Ready to start frontend!**
 
 ## Phase 1: Foundation & Infrastructure ✅ (COMPLETED)
 

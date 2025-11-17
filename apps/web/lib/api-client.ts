@@ -266,16 +266,18 @@ class APIClient {
     }
   }
 
-  async generateSubtitles(videoId: string): Promise<{ 
+  async generateSubtitles(videoId: string, options?: any): Promise<{ 
     message: string; 
     videoId: string; 
     videoWithSubtitles?: string;
     srtContent?: string;
+    detectedLanguages?: string[];
     segments?: Array<{
       text: string;
       startTime: number;
       endTime: number;
       confidence: number;
+      language?: string;
     }>;
   }> {
     const authHeader = this.getAuthHeader();
@@ -290,7 +292,7 @@ class APIClient {
     const response = await fetch(`${API_BASE_URL}/api/subtitles/generate`, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ videoId }),
+      body: JSON.stringify({ videoId, options }),
     });
 
     const result = await response.json();
