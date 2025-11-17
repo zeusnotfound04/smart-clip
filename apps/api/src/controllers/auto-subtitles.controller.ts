@@ -8,7 +8,20 @@ interface AuthRequest extends Request {
 }
 
 const generateSchema = z.object({
-  videoId: z.string()
+  videoId: z.string(),
+  options: z.object({
+    detectAllLanguages: z.boolean().default(true),
+    style: z.object({
+      textCase: z.enum(['normal', 'uppercase', 'lowercase', 'capitalize']).default('normal'),
+      fontFamily: z.string().default('Arial'),
+      fontSize: z.number().default(20),
+      primaryColor: z.string().default('#FFFFFF'),
+      outlineColor: z.string().default('#000000'),
+      backgroundColor: z.string().default('#000000'),
+      bold: z.boolean().default(false),
+      italic: z.boolean().default(false)
+    })
+  }).optional()
 });
 
 const updateSchema = z.object({
@@ -17,7 +30,7 @@ const updateSchema = z.object({
 
 export const generate = async (req: AuthRequest, res: Response) => {
   try {
-    const { videoId } = generateSchema.parse(req.body);
+    const { videoId, options } = generateSchema.parse(req.body);
     
     const video = await prisma.video.findFirst({
       where: { id: videoId, userId: req.userId }
@@ -32,7 +45,7 @@ export const generate = async (req: AuthRequest, res: Response) => {
       data: { status: 'processing' }
     });
 
-    const result = await generateVideoWithSubtitles(videoId, video.filePath);
+    const result = await generateVideoWithSubtitles(videoId, video.filePath, options);
 
     // Update video with subtitled video URL and mark as completed
     await prisma.video.update({
@@ -52,6 +65,7 @@ export const generate = async (req: AuthRequest, res: Response) => {
           startTime: segment.startTime,
           endTime: segment.endTime,
           confidence: segment.confidence,
+          speaker: null
         }
       });
     }
@@ -62,6 +76,7 @@ export const generate = async (req: AuthRequest, res: Response) => {
       videoWithSubtitles: result.subtitledVideoUrl,
       srtContent: result.srtContent,
       segments: result.segments,
+      detectedLanguages: result.detectedLanguages,
       srtS3Key: result.srtS3Key,
       audioS3Key: result.audioS3Key,
       message: 'Subtitles generated successfully and all files saved to S3'
