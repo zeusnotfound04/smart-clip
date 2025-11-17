@@ -1,9 +1,6 @@
-import { uploadtoS3 } from './../lib/s3';
 import { Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
-import { generateSubtitles, generateSRT } from '../services/auto-subtitles.service';
-import { subtitleQueue } from '../lib/queues';
-import { uploadtoS3, getSignedDownloadUrl } from '../lib/s3';
+import { generateVideoWithSubtitles, generateSRT } from '../services/auto-subtitles.service';
 import { z } from 'zod';
 
 interface AuthRequest extends Request {
@@ -30,21 +27,54 @@ export const generate = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Video not found' });
     }
 
-    const job = await subtitleQueue.add('generate-subtitles', {
-      videoId,
-      s3Key: video.filePath
+    await prisma.video.update({
+      where: { id: videoId },
+      data: { status: 'processing' }
     });
 
-    res.json({ 
-      message: 'Subtitle generation started',
-      jobId: job.id,
-      status: 'queued'
+    const result = await generateVideoWithSubtitles(videoId, video.filePath);
+
+    // Update video with subtitled video URL and mark as completed
+    await prisma.video.update({
+      where: { id: videoId },
+      data: { 
+        status: 'completed',
+        subtitledVideoUrl: result.subtitledVideoUrl
+      }
     });
-  } catch (error) {
+
+    // Save subtitle segments to database
+    for (const segment of result.segments) {
+      await prisma.subtitle.create({
+        data: {
+          videoId,
+          text: segment.text,
+          startTime: segment.startTime,
+          endTime: segment.endTime,
+          confidence: segment.confidence,
+        }
+      });
+    }
+
+    res.json({
+      success: true,
+      videoId,
+      videoWithSubtitles: result.subtitledVideoUrl,
+      srtContent: result.srtContent,
+      segments: result.segments,
+      srtS3Key: result.srtS3Key,
+      audioS3Key: result.audioS3Key,
+      message: 'Subtitles generated successfully and all files saved to S3'
+    });
+  } catch (error: any) {
+    await prisma.video.update({
+      where: { id: req.body.videoId },
+      data: { status: 'failed' }
+    });
+
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.issues[0].message });
     }
-    console.error('Generate subtitles error:', error);
     res.status(500).json({ error: 'Failed to generate subtitles' });
   }
 };
@@ -133,17 +163,11 @@ export const exportSRT = async (req: AuthRequest, res: Response) => {
     }));
 
     const srtContent = generateSRT(segments);
-    const srtBuffer = Buffer.from(srtContent, 'utf-8');
-    const fileName = `${req.userId}-${videoId}`;
     
-    await uploadtoS3(srtBuffer, fileName, 'text/plain');
-
-    res.json({ 
-      message: 'SRT file generated successfully',
-      downloadUrl: `/api/subtitles/download/${videoId}`
-    });
+    res.setHeader('Content-Type', 'text/plain');
+    res.setHeader('Content-Disposition', `attachment; filename="subtitles_${videoId}.srt"`);
+    res.send(srtContent);
   } catch (error) {
-    console.error('Export subtitles error:', error);
     res.status(500).json({ error: 'Failed to export subtitles' });
   }
 };
@@ -152,24 +176,109 @@ export const downloadSRT = async (req: AuthRequest, res: Response) => {
   try {
     const { videoId } = req.params;
     
+    const subtitles = await prisma.subtitle.findMany({
+      where: { 
+        videoId,
+        video: { userId: req.userId }
+      },
+      orderBy: { startTime: 'asc' }
+    });
+
+    if (subtitles.length === 0) {
+      return res.status(404).json({ error: 'Subtitles not found' });
+    }
+
+    const segments = subtitles.map(sub => ({
+      text: sub.text,
+      startTime: sub.startTime,
+      endTime: sub.endTime,
+      confidence: sub.confidence || 0
+    }));
+
+    const srtContent = generateSRT(segments);
+    
+    res.setHeader('Content-Type', 'text/plain');
+    res.setHeader('Content-Disposition', `attachment; filename="subtitles_${videoId}.srt"`);
+    res.send(srtContent);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to download SRT' });
+  }
+};
+
+export const getDetailedSubtitles = async (req: AuthRequest, res: Response) => {
+  try {
+    const { videoId } = req.params;
+    
     const video = await prisma.video.findFirst({
-      where: { id: videoId, userId: req.userId }
+      where: { id: videoId, userId: req.userId },
+      include: {
+        subtitles: {
+          orderBy: { startTime: 'asc' }
+        }
+      }
     });
 
     if (!video) {
       return res.status(404).json({ error: 'Video not found' });
     }
 
-    const srtKey = `subtitles/${req.userId}/${videoId}.srt`;
-    
-    try {
-      const signedUrl = await getSignedDownloadUrl(srtKey, 300);
-      res.redirect(signedUrl);
-    } catch (error) {
-      res.status(404).json({ error: 'SRT file not found' });
-    }
+    // Calculate timing information
+    const detailedSubtitles = video.subtitles.map((subtitle, index) => {
+      const duration = subtitle.endTime - subtitle.startTime;
+      const wordsPerMinute = subtitle.text.split(' ').length / (duration / 60);
+      
+      return {
+        id: subtitle.id,
+        index: index + 1,
+        text: subtitle.text,
+        startTime: subtitle.startTime,
+        endTime: subtitle.endTime,
+        duration: duration,
+        confidence: subtitle.confidence,
+        wordCount: subtitle.text.split(' ').length,
+        wordsPerMinute: Math.round(wordsPerMinute),
+        formattedStartTime: formatTime(subtitle.startTime),
+        formattedEndTime: formatTime(subtitle.endTime),
+        formattedDuration: formatTime(duration),
+        createdAt: subtitle.createdAt
+      };
+    });
+
+    // Calculate overall statistics
+    const stats = {
+      totalSegments: detailedSubtitles.length,
+      totalDuration: video.duration || (detailedSubtitles.length > 0 ? Math.max(...detailedSubtitles.map(s => s.endTime)) : 0),
+      totalWords: detailedSubtitles.reduce((sum, s) => sum + s.wordCount, 0),
+      averageConfidence: detailedSubtitles.length > 0 
+        ? (detailedSubtitles.reduce((sum, s) => sum + (s.confidence || 0), 0) / detailedSubtitles.length)
+        : 0,
+      averageSegmentDuration: detailedSubtitles.length > 0
+        ? (detailedSubtitles.reduce((sum, s) => sum + s.duration, 0) / detailedSubtitles.length)
+        : 0
+    };
+
+    res.json({
+      video: {
+        id: video.id,
+        originalName: video.originalName,
+        status: video.status,
+        subtitledVideoUrl: video.subtitledVideoUrl,
+        duration: video.duration
+      },
+      subtitles: detailedSubtitles,
+      statistics: stats
+    });
   } catch (error) {
-    console.error('Download SRT error:', error);
-    res.status(500).json({ error: 'Failed to download SRT' });
+    console.error('Get detailed subtitles error:', error);
+    res.status(500).json({ error: 'Failed to get detailed subtitles' });
   }
+};
+
+// Helper function to format time in MM:SS.mmm format
+const formatTime = (seconds: number): string => {
+  const minutes = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  const milliseconds = Math.floor((seconds % 1) * 1000);
+  
+  return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${milliseconds.toString().padStart(3, '0')}`;
 };
