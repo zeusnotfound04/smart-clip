@@ -15,6 +15,7 @@ export interface SubtitleSegment {
   startTime: number;
   endTime: number;
   confidence: number;
+  language?: string;
   words?: Array<{
     word: string;
     startTime: number;
@@ -24,12 +25,29 @@ export interface SubtitleSegment {
   rawTranscript?: string;
 }
 
+export interface SubtitleStyle {
+  textCase: 'normal' | 'uppercase' | 'lowercase' | 'capitalize';
+  fontFamily: string;
+  fontSize: number;
+  primaryColor: string;
+  outlineColor: string;
+  backgroundColor: string;
+  bold: boolean;
+  italic: boolean;
+}
+
+export interface SubtitleOptions {
+  detectAllLanguages: boolean;
+  style: SubtitleStyle;
+}
+
 export interface VideoWithSubtitlesResult {
   success: boolean;
   videoId: string;
   subtitledVideoUrl: string;
   srtContent: string;
   segments: SubtitleSegment[];
+  detectedLanguages: string[];
   srtS3Key?: string;
   audioS3Key?: string;
 }
@@ -89,7 +107,7 @@ const extractAudioFromVideo = async (videoPath: string, videoId: string): Promis
   });
 };
 
-const transcribeAudio = async (audioPath: string): Promise<any[]> => {
+const transcribeAudio = async (audioPath: string, options?: SubtitleOptions): Promise<{ results: any[], detectedLanguages: string[] }> => {
   const audioBuffer = readFileSync(audioPath);
   
   const languageConfigs = [
@@ -115,6 +133,8 @@ const transcribeAudio = async (audioPath: string): Promise<any[]> => {
     }
   ];
 
+  const allResults: any[] = [];
+  const detectedLanguages: string[] = [];
   let bestResult = null;
   let bestConfidence = 0;
 
@@ -144,6 +164,19 @@ const transcribeAudio = async (audioPath: string): Promise<any[]> => {
       if (results.length > 0) {
         const confidence = results[0].alternatives?.[0]?.confidence || 0;
         
+        if (confidence > 0.3) {
+          detectedLanguages.push(config.languageCode);
+          
+          if (options?.detectAllLanguages) {
+            results.forEach(result => {
+              if (result.alternatives?.[0]) {
+                (result.alternatives[0] as any).detectedLanguage = config.languageCode;
+              }
+            });
+            allResults.push(...results);
+          }
+        }
+        
         if (confidence > bestConfidence) {
           bestConfidence = confidence;
           bestResult = {
@@ -159,11 +192,21 @@ const transcribeAudio = async (audioPath: string): Promise<any[]> => {
     }
   }
 
-  return bestResult ? bestResult.results : [];
+  const finalResults = options?.detectAllLanguages && allResults.length > 0 ? allResults : (bestResult ? bestResult.results : []);
+  return { results: finalResults, detectedLanguages };
 };
 
-const processTranscriptionToSegments = (results: any[]): SubtitleSegment[] => {
+const processTranscriptionToSegments = (results: any[], options?: SubtitleOptions): SubtitleSegment[] => {
   const segments: SubtitleSegment[] = [];
+  
+  const applyTextCase = (text: string, caseType: string): string => {
+    switch (caseType) {
+      case 'uppercase': return text.toUpperCase();
+      case 'lowercase': return text.toLowerCase();
+      case 'capitalize': return text.replace(/\b\w/g, l => l.toUpperCase());
+      default: return text;
+    }
+  };
 
   results.forEach((result: any, resultIndex: number) => {
     if (result.alternatives && result.alternatives[0]) {
@@ -200,11 +243,14 @@ const processTranscriptionToSegments = (results: any[]): SubtitleSegment[] => {
             const endTime = parseFloat(String(word.endTime?.seconds || '0')) + 
                            parseFloat(String(word.endTime?.nanos || '0')) / 1000000000;
             
+            const processedText = options?.style ? applyTextCase(currentSegment.trim(), options.style.textCase) : currentSegment.trim();
+            
             const segment: SubtitleSegment = {
-              text: currentSegment.trim(),
+              text: processedText,
               startTime,
               endTime,
               confidence: alternative.confidence || 0,
+              language: (alternative as any).detectedLanguage || 'unknown',
               words: [...currentWords],
               rawTranscript: alternative.transcript
             };
@@ -217,11 +263,14 @@ const processTranscriptionToSegments = (results: any[]): SubtitleSegment[] => {
           }
         });
       } else if (alternative.transcript && alternative.transcript.trim()) {
+        const processedText = options?.style ? applyTextCase(alternative.transcript.trim(), options.style.textCase) : alternative.transcript.trim();
+        
         segments.push({
-          text: alternative.transcript.trim(),
+          text: processedText,
           startTime: 0,
           endTime: 5,
           confidence: alternative.confidence || 0,
+          language: (alternative as any).detectedLanguage || 'unknown',
           rawTranscript: alternative.transcript
         });
       }
@@ -277,7 +326,7 @@ const saveSubtitlesToDatabase = async (videoId: string, segments: SubtitleSegmen
   }
 };
 
-export const generateVideoWithSubtitles = async (videoId: string, s3Key: string): Promise<VideoWithSubtitlesResult> => {
+export const generateVideoWithSubtitles = async (videoId: string, s3Key: string, options?: SubtitleOptions): Promise<VideoWithSubtitlesResult> => {
   let videoPath: string | null = null;
   let audioPath: string | null = null;
   let subtitledVideoPath: string | null = null;
@@ -292,9 +341,9 @@ export const generateVideoWithSubtitles = async (videoId: string, s3Key: string)
     const audioResult = await extractAudioFromVideo(videoPath, videoId);
     audioPath = audioResult.audioPath;
     
-    const transcriptionResults = await transcribeAudio(audioPath);
-    const segments = processTranscriptionToSegments(transcriptionResults);
-    const srtContent = generateSRT(segments);
+    const { results: transcriptionResults, detectedLanguages } = await transcribeAudio(audioPath, options);
+    const segments = processTranscriptionToSegments(transcriptionResults, options);
+    const srtContent = generateSRT(segments, options);
     
     await saveSubtitlesToDatabase(videoId, segments);
     
@@ -302,7 +351,7 @@ export const generateVideoWithSubtitles = async (videoId: string, s3Key: string)
       unlinkSync(audioPath);
     }
     
-    const burnResult = await burnSubtitlesIntoVideo(videoPath, srtContent, videoId);
+    const burnResult = await burnSubtitlesIntoVideo(videoPath, srtContent, videoId, options);
     subtitledVideoPath = burnResult.videoPath;
     
     const subtitledVideoUrl = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${burnResult.videoS3Key}`;
@@ -313,6 +362,7 @@ export const generateVideoWithSubtitles = async (videoId: string, s3Key: string)
       subtitledVideoUrl,
       srtContent,
       segments,
+      detectedLanguages,
       srtS3Key: burnResult.srtS3Key,
       audioS3Key: audioResult.s3Key
     };
@@ -359,7 +409,8 @@ export const generateVideoWithSubtitles = async (videoId: string, s3Key: string)
 const burnSubtitlesIntoVideo = async (
   videoPath: string,
   srtContent: string,
-  videoId: string
+  videoId: string,
+  options?: SubtitleOptions
 ): Promise<{ videoPath: string; srtS3Key: string; videoS3Key: string }> => {
   return new Promise(async (resolve, reject) => {
     const outputFilename = `${videoId}_out.mp4`;
@@ -385,7 +436,7 @@ const burnSubtitlesIntoVideo = async (
         throw new Error("No subtitle content generated - transcription may have failed");
       }
 
-      const assContent = convertSRTToASS(srtContent);
+      const assContent = convertSRTToASS(srtContent, options?.style);
       const assPath = join(tempDir, `${videoId}.ass`);
       writeFileSync(assPath, assContent, "utf8");
 
@@ -493,7 +544,7 @@ const formatSRTTime = (seconds: number): string => {
   return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')},${milliseconds.toString().padStart(3, '0')}`;
 };
 
-export const generateSRT = (segments: SubtitleSegment[]): string => {
+export const generateSRT = (segments: SubtitleSegment[], options?: SubtitleOptions): string => {
   let srt = '';
   
   segments.forEach((segment, index) => {
@@ -517,9 +568,30 @@ const formatASSTime = (seconds: number): string => {
   return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${centiseconds.toString().padStart(2, '0')}`;
 };
 
-export const convertSRTToASS = (srtContent: string): string => {
+export const convertSRTToASS = (srtContent: string, style?: SubtitleStyle): string => {
   const lines = srtContent.trim().split('\n');
-  let assContent = `[Script Info]\nTitle: SmartClip Subtitles\nScriptType: v4.00+\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Default,Arial,20,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2,0,2,10,10,10,1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`;
+  
+  const defaultStyle = {
+    fontFamily: 'Arial',
+    fontSize: 20,
+    primaryColor: '&H00FFFFFF',
+    outlineColor: '&H00000000',
+    backgroundColor: '&H80000000',
+    bold: false,
+    italic: false
+  };
+  
+  const finalStyle = style ? {
+    fontFamily: style.fontFamily,
+    fontSize: style.fontSize,
+    primaryColor: style.primaryColor.startsWith('&H') ? style.primaryColor : `&H00${style.primaryColor.replace('#', '')}`,
+    outlineColor: style.outlineColor.startsWith('&H') ? style.outlineColor : `&H00${style.outlineColor.replace('#', '')}`,
+    backgroundColor: style.backgroundColor.startsWith('&H') ? style.backgroundColor : `&H80${style.backgroundColor.replace('#', '')}`,
+    bold: style.bold ? 1 : 0,
+    italic: style.italic ? 1 : 0
+  } : defaultStyle;
+  
+  let assContent = `[Script Info]\nTitle: SmartClip Subtitles\nScriptType: v4.00+\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Default,${finalStyle.fontFamily},${finalStyle.fontSize},${finalStyle.primaryColor},&H000000FF,${finalStyle.outlineColor},${finalStyle.backgroundColor},${finalStyle.bold},${finalStyle.italic},0,0,100,100,0,0,1,2,0,2,10,10,10,1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`;
   
   let i = 0;
   while (i < lines.length) {
