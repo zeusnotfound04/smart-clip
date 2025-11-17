@@ -45,11 +45,6 @@ export default function AutoSubtitlesPage() {
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      console.log('📁 Auto-Subtitles: File selected:', {
-        name: file.name,
-        size: file.size,
-        type: file.type
-      });
       setSelectedFile(file);
       setError('');
     }
@@ -92,12 +87,10 @@ export default function AutoSubtitlesPage() {
       clearInterval(progressInterval);
       setProcessingProgress(100);
 
-      console.log('✅ Subtitles generated successfully:', subtitleResult);
       setVideoData(prev => prev ? { ...prev, subtitles: 'Generated successfully' } : null);
       setUploadStage('completed');
 
     } catch (error: any) {
-      console.error('❌ Auto-Subtitles error:', error);
       setError(error.message || 'Failed to process video');
       setUploadStage('error');
     }
