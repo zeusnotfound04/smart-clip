@@ -70,17 +70,9 @@ export default function ChooseFeaturePage() {
   const [createProjectLoading, setCreateProjectLoading] = useState(false);
 
   // No video required - feature selection first
-  useEffect(() => {
-    console.log('🎯 Choose Feature page loaded - ready for feature selection');
-  }, []);
-
   const handleFeatureSelect = async (feature: any) => {
-    console.log('🚀 FEATURE SELECT STARTED:', { feature: feature.id, featureName: feature.title });
-    
     try {
       setCreateProjectLoading(true);
-      
-      console.log('🎯 Navigating directly to feature page:', feature.href);
       // Navigate directly to the feature page - video upload will happen there
       router.push(feature.href);
       
