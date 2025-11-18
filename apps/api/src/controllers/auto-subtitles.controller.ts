@@ -17,15 +17,35 @@ const generateSchema = z.object({
       fontSize: z.number().default(20),
       primaryColor: z.string().default('#FFFFFF'),
       outlineColor: z.string().default('#000000'),
-      backgroundColor: z.string().default('#000000'),
+      shadowColor: z.string().default('#000000'),
       bold: z.boolean().default(false),
-      italic: z.boolean().default(false)
+      italic: z.boolean().default(false),
+      alignment: z.enum(['left', 'center', 'right']).default('center'),
+      showShadow: z.boolean().default(true)
     })
   }).optional()
 });
 
 const updateSchema = z.object({
   text: z.string()
+});
+
+const configSchema = z.object({
+  options: z.object({
+    detectAllLanguages: z.boolean().default(true),
+    style: z.object({
+      textCase: z.enum(['normal', 'uppercase', 'lowercase', 'capitalize']).default('normal'),
+      fontFamily: z.string().default('Arial'),
+      fontSize: z.number().default(20),
+      primaryColor: z.string().default('#FFFFFF'),
+      outlineColor: z.string().default('#000000'),
+      shadowColor: z.string().default('#000000'),
+      bold: z.boolean().default(false),
+      italic: z.boolean().default(false),
+      alignment: z.enum(['left', 'center', 'right']).default('center'),
+      showShadow: z.boolean().default(true)
+    })
+  })
 });
 
 export const generate = async (req: AuthRequest, res: Response) => {
@@ -286,6 +306,56 @@ export const getDetailedSubtitles = async (req: AuthRequest, res: Response) => {
   } catch (error) {
     console.error('Get detailed subtitles error:', error);
     res.status(500).json({ error: 'Failed to get detailed subtitles' });
+  }
+};
+
+export const updateConfiguration = async (req: AuthRequest, res: Response) => {
+  try {
+    const { videoId } = req.params;
+    const { options } = configSchema.parse(req.body);
+    
+    const video = await prisma.video.findFirst({
+      where: { id: videoId, userId: req.userId }
+    });
+
+    if (!video) {
+      return res.status(404).json({ error: 'Video not found' });
+    }
+
+    // Regenerate the video with new subtitle configuration
+    try {
+      const result = await generateVideoWithSubtitles(videoId, video.filePath, options);
+      
+      // Update video with new subtitled video URL
+      await prisma.video.update({
+        where: { id: videoId },
+        data: { 
+          subtitledVideoUrl: result.subtitledVideoUrl
+        }
+      });
+
+      console.log('Successfully updated subtitle configuration and regenerated video:', videoId);
+
+    // Optionally, regenerate video with new subtitle styling
+    // This would be done asynchronously in a production environment
+      console.log('Successfully updated subtitle configuration and regenerated video:', videoId);
+
+      res.json({
+        success: true,
+        message: 'Subtitle configuration updated and video regenerated successfully',
+        videoId,
+        subtitledVideoUrl: result.subtitledVideoUrl
+      });
+    } catch (regenerateError: any) {
+      console.error('Failed to regenerate video with new configuration:', regenerateError);
+      res.status(500).json({ error: 'Failed to regenerate video with new subtitle configuration' });
+    }
+  } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.issues[0].message });
+    }
+    console.error('Update configuration error:', error);
+    res.status(500).json({ error: 'Failed to update subtitle configuration' });
   }
 };
 
