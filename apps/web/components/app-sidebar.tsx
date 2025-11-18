@@ -51,7 +51,10 @@ export function AppSidebar({ user }: AppSidebarProps) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
         >
-          <h2 className="text-lg font-semibold font-poppins">Smart Clip</h2>
+          <div className="flex items-center gap-2">
+            <img src="/logo.png" alt="SmartClip" className="w-6 h-6" />
+            <h2 className="text-lg font-semibold font-poppins">Smart Clip</h2>
+          </div>
           <ThemeToggle />
         </motion.div>
       </SidebarHeader>

@@ -69,7 +69,7 @@ export function SignUpForm() {
       transition={{ delay: 0.3 }}
       className="w-full"
     >
-      <Card className="shadow-2xl border border-white/20 bg-black/90 backdrop-blur-sm">
+      <Card className="shadow-2xl border border-white/20 bg-black/20 backdrop-blur-sm">
         <CardHeader className="space-y-1 text-center">
           <CardTitle className="text-2xl font-bold text-white">Create your account</CardTitle>
           <CardDescription className="text-gray-300">
@@ -104,7 +104,7 @@ export function SignUpForm() {
                       <FormLabel className="text-white">Full Name</FormLabel>
                       <FormControl>
                         <div className="relative group">
-                          <User className="absolute left-3 top-3 h-4 w-4 text-gray-400 group-focus-within:text-white transition-colors" />
+                          <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-white transition-colors" />
                           <Input
                             placeholder="John Doe"
                             className="pl-10 h-12 border-2 border-gray-600 bg-black/50 text-white placeholder:text-gray-400 focus:border-white transition-all duration-200 hover:border-gray-400"
@@ -127,7 +127,7 @@ export function SignUpForm() {
                       <FormLabel className="text-white">Email</FormLabel>
                       <FormControl>
                         <div className="relative group">
-                          <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400 group-focus-within:text-white transition-colors" />
+                          <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-white transition-colors" />
                           <Input
                             type="email"
                             placeholder="john@example.com"
@@ -151,7 +151,7 @@ export function SignUpForm() {
                       <FormLabel className="text-white">Password</FormLabel>
                       <FormControl>
                         <div className="relative group">
-                          <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400 group-focus-within:text-white transition-colors" />
+                          <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-white transition-colors" />
                           <Input
                             type={showPassword ? 'text' : 'password'}
                             placeholder="Create a secure password"
@@ -161,7 +161,7 @@ export function SignUpForm() {
                           <button
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-3 top-3 h-4 w-4 text-gray-400 hover:text-white transition-colors"
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-white transition-colors"
                           >
                             {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                           </button>
