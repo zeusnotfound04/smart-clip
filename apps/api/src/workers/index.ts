@@ -45,7 +45,7 @@ subtitleQueue.process('generate-subtitles', async (job) => {
       data: { status: 'processing' }
     });
 
-    const audioBuffer = await extractAudioFromVideo(s3Key);
+    const audioResult = await extractAudioFromVideo(s3Key, videoId);
     const subtitles = await generateSubtitles(s3Key);
     
     for (const subtitle of subtitles) {
