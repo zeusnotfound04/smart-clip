@@ -31,9 +31,11 @@ export interface SubtitleStyle {
   fontSize: number;
   primaryColor: string;
   outlineColor: string;
-  backgroundColor: string;
+  shadowColor: string;
   bold: boolean;
   italic: boolean;
+  alignment: 'left' | 'center' | 'right';
+  showShadow: boolean;
 }
 
 export interface SubtitleOptions {
@@ -576,22 +578,47 @@ export const convertSRTToASS = (srtContent: string, style?: SubtitleStyle): stri
     fontSize: 20,
     primaryColor: '&H00FFFFFF',
     outlineColor: '&H00000000',
-    backgroundColor: '&H80000000',
+    shadowColor: '&H00000000',
+    backgroundColor: '&H00000000',
     bold: false,
     italic: false
   };
   
+  // Map alignment to ASS alignment values (1=left, 2=center, 3=right)
+  const getAlignment = (alignment?: string) => {
+    switch (alignment) {
+      case 'left': return 1;
+      case 'right': return 3;
+      default: return 2; // center
+    }
+  };
+  
+  // Convert hex color to ASS BGR format
+  const hexToAssBgr = (hexColor: string, alpha: string = '00'): string => {
+    const hex = hexColor.replace('#', '').toUpperCase();
+    if (hex.length === 6) {
+      const r = hex.substring(0, 2);
+      const g = hex.substring(2, 4);
+      const b = hex.substring(4, 6);
+      return `&H${alpha}${b}${g}${r}`; // ASS uses BGR format
+    }
+    return `&H${alpha}FFFFFF`; // Default to white
+  };
+
   const finalStyle = style ? {
     fontFamily: style.fontFamily,
     fontSize: style.fontSize,
-    primaryColor: style.primaryColor.startsWith('&H') ? style.primaryColor : `&H00${style.primaryColor.replace('#', '')}`,
-    outlineColor: style.outlineColor.startsWith('&H') ? style.outlineColor : `&H00${style.outlineColor.replace('#', '')}`,
-    backgroundColor: style.backgroundColor.startsWith('&H') ? style.backgroundColor : `&H80${style.backgroundColor.replace('#', '')}`,
+    primaryColor: style.primaryColor.startsWith('&H') ? style.primaryColor : hexToAssBgr(style.primaryColor),
+    outlineColor: style.outlineColor.startsWith('&H') ? style.outlineColor : hexToAssBgr(style.outlineColor),
+    shadowColor: style.shadowColor.startsWith('&H') ? style.shadowColor : hexToAssBgr(style.shadowColor),
+    backgroundColor: '&H00000000', // Always transparent background
     bold: style.bold ? 1 : 0,
-    italic: style.italic ? 1 : 0
-  } : defaultStyle;
+    italic: style.italic ? 1 : 0,
+    alignment: getAlignment(style.alignment),
+    shadow: style.showShadow ? 3 : 0 // Shadow depth
+  } : {...defaultStyle, alignment: 2, shadow: 0};
   
-  let assContent = `[Script Info]\nTitle: SmartClip Subtitles\nScriptType: v4.00+\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Default,${finalStyle.fontFamily},${finalStyle.fontSize},${finalStyle.primaryColor},&H000000FF,${finalStyle.outlineColor},${finalStyle.backgroundColor},${finalStyle.bold},${finalStyle.italic},0,0,100,100,0,0,1,2,0,2,10,10,10,1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`;
+  let assContent = `[Script Info]\nTitle: SmartClip Subtitles\nScriptType: v4.00+\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Default,${finalStyle.fontFamily},${finalStyle.fontSize},${finalStyle.primaryColor},&H000000FF,${finalStyle.outlineColor},${finalStyle.backgroundColor},${finalStyle.bold},${finalStyle.italic},0,0,100,100,0,0,1,2,${finalStyle.shadow},${finalStyle.alignment},10,10,10,1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`;
   
   let i = 0;
   while (i < lines.length) {

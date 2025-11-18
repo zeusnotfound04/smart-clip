@@ -325,6 +325,71 @@ class APIClient {
     return result;
   }
 
+  async updateSubtitleConfiguration(videoId: string, options: any): Promise<{ success: boolean; message: string; subtitledVideoUrl?: string }> {
+    const authHeader = this.getAuthHeader();
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    
+    if (authHeader.Authorization) {
+      headers.Authorization = authHeader.Authorization;
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/subtitles/config/${videoId}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify({ options }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to update subtitle configuration');
+    }
+
+    return result;
+  }
+
+  async downloadSubtitledVideo(videoId: string): Promise<Blob> {
+    const authHeader = this.getAuthHeader();
+    const headers: Record<string, string> = {};
+    
+    if (authHeader.Authorization) {
+      headers.Authorization = authHeader.Authorization;
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/subtitles/download/${videoId}`, {
+      headers,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to download subtitled video');
+    }
+
+    return response.blob();
+  }
+
+  async downloadSubtitleFile(videoId: string, format: 'srt' | 'vtt' = 'srt'): Promise<Blob> {
+    const authHeader = this.getAuthHeader();
+    const headers: Record<string, string> = {};
+    
+    if (authHeader.Authorization) {
+      headers.Authorization = authHeader.Authorization;
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/subtitles/download/${videoId}/file?format=${format}`, {
+      headers,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to download subtitle file');
+    }
+
+    return response.blob();
+  }
+
   private getAuthHeader(): { Authorization?: string } {
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('smartclips_token');

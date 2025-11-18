@@ -95,7 +95,7 @@ export default function DashboardPage() {
             <motion.h1 
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-2xl font-bold"
+              className="text-3xl font-bold"
             >
               Welcome back, {user?.name || 'User'}!
             </motion.h1>

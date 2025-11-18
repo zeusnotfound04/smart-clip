@@ -90,8 +90,8 @@ export default function ChooseFeaturePage() {
         <LightRays
           raysOrigin="top-center"
           raysColor="#3b82f6"
-          raysSpeed={0.8}
-          lightSpread={0.8}
+          raysSpeed={0.9}
+          lightSpread={0.9}
           rayLength={4}
           pulsating={true}
           fadeDistance={1.2}
@@ -106,7 +106,7 @@ export default function ChooseFeaturePage() {
 
       <div className="min-h-screen bg-background/20 text-foreground relative z-10 flex flex-col">
         {/* Header */}
-        <header className="text-center py-12 px-4">
+        <header className="text-center py-14 px-4">
           <motion.div
             initial={{ opacity: 0, y: -30 }}
             animate={{ opacity: 1, y: 0 }}

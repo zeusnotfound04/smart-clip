@@ -69,6 +69,7 @@ model Video {
   filePath       String    @map("file_path")
   thumbnailPath  String?   @map("thumbnail_path")
   subtitledVideoUrl String? @map("subtitled_video_url")
+  subtitleConfig Json?     @map("subtitle_config")
   duration       Float?
   size           Int?
   mimeType       String    @map("mime_type")
