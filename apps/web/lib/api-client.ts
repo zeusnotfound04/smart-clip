@@ -390,6 +390,116 @@ class APIClient {
     return response.blob();
   }
 
+  // Split Streamer methods
+  async combineVideos(webcamVideoId: string, gameplayVideoId: string, layoutConfig: any): Promise<{
+    projectId: string;
+    jobId: string;
+    status: string;
+    outputUrl?: string;
+  }> {
+    const authHeader = this.getAuthHeader();
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    
+    if (authHeader.Authorization) {
+      headers.Authorization = authHeader.Authorization;
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/split-streamer/combine`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        webcamVideoId,
+        gameplayVideoId,
+        layoutConfig,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to combine videos');
+    }
+
+    return result;
+  }
+
+  async updateVideoLayout(projectId: string, layoutConfig: any): Promise<{
+    success: boolean;
+    outputUrl?: string;
+  }> {
+    const authHeader = this.getAuthHeader();
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    
+    if (authHeader.Authorization) {
+      headers.Authorization = authHeader.Authorization;
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/split-streamer/update-layout/${projectId}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify({ layoutConfig }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to update layout');
+    }
+
+    return result;
+  }
+
+  async downloadCombinedVideo(projectId: string): Promise<Blob> {
+    const authHeader = this.getAuthHeader();
+    const headers: Record<string, string> = {};
+    
+    if (authHeader.Authorization) {
+      headers.Authorization = authHeader.Authorization;
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/split-streamer/download/${projectId}`, {
+      headers,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to download combined video');
+    }
+
+    return response.blob();
+  }
+
+  async getSplitStreamerProject(projectId: string): Promise<{
+    id: string;
+    name: string;
+    status: string;
+    outputUrl?: string;
+    config: any;
+  }> {
+    const authHeader = this.getAuthHeader();
+    const headers: Record<string, string> = {};
+    
+    if (authHeader.Authorization) {
+      headers.Authorization = authHeader.Authorization;
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/split-streamer/project/${projectId}`, {
+      headers,
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to get project details');
+    }
+
+    return result;
+  }
+
   private getAuthHeader(): { Authorization?: string } {
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('smartclips_token');
