@@ -28,7 +28,7 @@ export default function SignInPage() {
           transition={{ delay: 0.2 }}
         >
           <div className="inline-flex items-center gap-2 text-2xl font-bold mb-2">
-            <Sparkles className="w-8 h-8 text-foreground" />
+            <Zap className="w-8 h-8 text-foreground" />
             SmartClips
           </div>
           <p className="text-muted-foreground">Welcome back to the future of video editing</p>
