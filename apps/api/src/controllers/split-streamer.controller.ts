@@ -8,23 +8,37 @@ interface AuthRequest extends Request {
 }
 
 export const combine = async (req: AuthRequest, res: Response) => {
+  const requestId = `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  
   try {
+    console.log(`[${requestId}] Starting video combination`);
+    
     const { webcamVideoId, gameplayVideoId, layoutConfig } = req.body;
     
     if (!webcamVideoId || !gameplayVideoId || !req.userId) {
+      console.error(`[${requestId}] Missing required parameters`);
       return res.status(400).json({ error: 'Both webcam and gameplay video IDs are required' });
     }
 
     // Get video details from database
+    console.log(`[${requestId}] Fetching video details...`);
+    const dbStart = Date.now();
+    
     const [webcamVideo, gameplayVideo] = await Promise.all([
       prisma.video.findUnique({ where: { id: webcamVideoId } }),
       prisma.video.findUnique({ where: { id: gameplayVideoId } })
     ]);
+    
+    console.log(`[${requestId}] Database query completed (${Date.now() - dbStart}ms)`);
 
     if (!webcamVideo || !gameplayVideo) {
+      console.error(`[${requestId}] One or both videos not found in database`);
       return res.status(404).json({ error: 'One or both videos not found' });
     }
 
+    console.log(`[${requestId}] Creating project record...`);
+    const projectStart = Date.now();
+    
     const project = await prisma.project.create({
       data: {
         userId: req.userId,
@@ -48,14 +62,29 @@ export const combine = async (req: AuthRequest, res: Response) => {
         status: 'processing'
       }
     });
+    
+    console.log(`[${requestId}] Project created (${Date.now() - projectStart}ms), ID: ${project.id}`);
 
-    // Process videos directly (for now, can be moved to queue later)
+    // Process videos directly
     try {
+      console.log(`[${requestId}] Starting video combination...`);
+      const combineStart = Date.now();
+      
       const outputBuffer = await combineVideos(webcamVideo.filePath, gameplayVideo.filePath, layoutConfig);
       
-      // In a real implementation, you would upload the output to S3 and save the URL
-      const outputUrl = `https://smart-clip-temp.s3.ap-south-1.amazonaws.com/combined/${project.id}_combined.mp4`;
+      console.log(`[${requestId}] Video combination completed (${Date.now() - combineStart}ms)`);
       
+      // Upload combined video to S3
+      console.log(`[${requestId}] Uploading to S3...`);
+      const uploadStart = Date.now();
+      
+      const { uploadFile, generateKey } = await import('../lib/s3');
+      const outputKey = generateKey(req.userId, `${project.id}_combined.mp4`, 'video');
+      
+      const outputUrl = await uploadFile(outputKey, outputBuffer, 'video/mp4');
+      console.log(`[${requestId}] S3 upload completed (${Date.now() - uploadStart}ms)`);
+      
+      console.log(`💾 [${requestId}] Updating project status to completed...`);
       await prisma.project.update({
         where: { id: project.id },
         data: { 
@@ -63,6 +92,9 @@ export const combine = async (req: AuthRequest, res: Response) => {
           outputPath: outputUrl
         }
       });
+      
+      const totalTime = Date.now() - projectStart;
+      console.log(`[${requestId}] Process completed (${totalTime}ms)`);
 
       res.json({
         message: 'Video combination completed',
@@ -71,20 +103,26 @@ export const combine = async (req: AuthRequest, res: Response) => {
         outputUrl
       });
     } catch (processingError) {
+      console.error(`[${requestId}] Processing error:`, processingError);
+      
       await prisma.project.update({
         where: { id: project.id },
         data: { status: 'failed' }
       });
+      
       throw processingError;
     }
   } catch (error) {
-    console.error('Error combining videos:', error);
+    console.error(`[${requestId}] Fatal error:`, error);
     res.status(500).json({ error: 'Failed to combine videos' });
   }
 };
 
 export const updateLayout = async (req: AuthRequest, res: Response) => {
+  const requestId = `update-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  
   try {
+    console.log(`[${requestId}] Starting layout update`);
     const { projectId } = req.params;
     const { layoutConfig } = req.body;
     
@@ -120,7 +158,10 @@ export const updateLayout = async (req: AuthRequest, res: Response) => {
     // Regenerate video with new layout
     const outputBuffer = await combineVideos(webcamVideo.filePath, gameplayVideo.filePath, layoutConfig);
     
-    const outputUrl = `https://smart-clip-temp.s3.ap-south-1.amazonaws.com/combined/${project.id}_combined.mp4`;
+    // Upload updated video to S3
+    const { uploadFile, generateKey } = await import('../lib/s3');
+    const outputKey = generateKey(req.userId!, `${project.id}_combined_updated.mp4`, 'video');
+    const outputUrl = await uploadFile(outputKey, outputBuffer, 'video/mp4');
     
     await prisma.project.update({
       where: { id: projectId },
