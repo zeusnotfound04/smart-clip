@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
@@ -49,6 +49,8 @@ model User {
   sessions      Session[]
   videos        Video[]
   projects      Project[]
+  smartClipperProjects SmartClipperProject[]
+  segmentFeedback      SegmentFeedback[]
 
   @@map("users")
 }
@@ -80,6 +82,7 @@ model Video {
   user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   projects  Project[]
   subtitles Subtitle[]
+  smartClipperProjects SmartClipperProject[]
 
   @@map("videos")
 }
@@ -116,4 +119,144 @@ model Subtitle {
   video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
 
   @@map("subtitles")
+}
+
+model SmartClipperProject {
+  id                    String    @id @default(cuid())
+  userId                String    @map("user_id")
+  videoId               String    @map("video_id")
+  contentType           String    @map("content_type")
+  status                String    @default("analyzing")
+  config                Json
+  analysisResults       Json?     @map("analysis_results")
+  processingStage       String?   @default("preprocessing") @map("processing_stage")
+  geminiFlashResults    Json?     @map("gemini_flash_results")
+  geminiProResults      Json?     @map("gemini_pro_results")
+  embeddingScores       Json?     @map("embedding_scores")
+  scoringResults        Json?     @map("scoring_results")
+  totalSegmentsFound    Int?      @default(0) @map("total_segments_found")
+  estimatedCost         Decimal?  @map("estimated_cost") @db.Decimal(10,4)
+  actualCost            Decimal?  @map("actual_cost") @db.Decimal(10,4)
+  errorMessage          String?   @map("error_message")
+  lastFeedbackProcessed DateTime? @map("last_feedback_processed")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video              Video              @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  highlightSegments  HighlightSegment[]
+  geminiApiUsage     GeminiApiUsage[]
+
+  @@index([userId])
+  @@index([videoId])
+  @@index([status])
+  @@map("smart_clipper_projects")
+}
+
+model HighlightSegment {
+  id                   String    @id @default(cuid())
+  projectId            String    @map("project_id")
+  startTime            Float     @map("start_time")
+  endTime              Float     @map("end_time")
+  duration             Float
+  flashScore           Int?      @map("flash_score")
+  proScore             Int       @map("pro_score")
+  embeddingScore       Float?    @map("embedding_score")
+  finalScore           Int       @map("final_score")
+  confidenceLevel      Float     @map("confidence_level")
+  highlightType        String?   @map("highlight_type")
+  reasoning            String
+  geminiClassification String?   @map("gemini_classification")
+  contentTags          String[]  @map("content_tags")
+  audioEnergyAvg       Float?    @map("audio_energy_avg")
+  silenceRatio         Float?    @map("silence_ratio")
+  sceneChanges         Int?      @map("scene_changes")
+  status               String    @default("pending")
+  userApproval         String?   @map("user_approval")
+  customStartTime      Float?    @map("custom_start_time")
+  customEndTime        Float?    @map("custom_end_time")
+  outputPath           String?   @map("output_path")
+  generatedAt          DateTime? @map("generated_at")
+  errorMessage         String?   @map("error_message")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  project         SmartClipperProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  segmentFeedback SegmentFeedback[]
+
+  @@index([projectId])
+  @@index([finalScore])
+  @@index([status])
+  @@map("highlight_segments")
+}
+
+model ContentTypeConfig {
+  id                        String   @id @default(cuid())
+  type                      String   @unique
+  name                      String
+  description               String
+  icon                      String?
+  audioEnergyWeight         Float    @default(0.5) @map("audio_energy_weight")
+  visualMotionWeight        Float    @default(0.5) @map("visual_motion_weight")
+  speechPatternWeight       Float    @default(0.5) @map("speech_pattern_weight")
+  sceneChangeWeight         Float    @default(0.5) @map("scene_change_weight")
+  excitementKeywords        String[] @map("excitement_keywords")
+  actionKeywords            String[] @map("action_keywords")
+  emotionalKeywords         String[] @map("emotional_keywords")
+  technicalKeywords         String[] @map("technical_keywords")
+  minClipLength             Int      @default(15) @map("min_clip_length")
+  maxClipLength             Int      @default(90) @map("max_clip_length")
+  preferredClipLength       Int      @default(45) @map("preferred_clip_length")
+  maxSegments               Int      @default(10) @map("max_segments")
+  minimumConfidence         Float    @default(0.6) @map("minimum_confidence")
+  geminiFlashPromptTemplate String   @map("gemini_flash_prompt_template")
+  geminiProPromptTemplate   String   @map("gemini_pro_prompt_template")
+  embeddingQueryTemplate    String   @map("embedding_query_template")
+  isActive                  Boolean  @default(true) @map("is_active")
+  createdAt                 DateTime @default(now()) @map("created_at")
+  updatedAt                 DateTime @updatedAt @map("updated_at")
+
+  @@map("content_type_configs")
+}
+
+model SegmentFeedback {
+  id                      String  @id @default(cuid())
+  segmentId               String  @map("segment_id")
+  userId                  String  @map("user_id")
+  feedbackType            String  @map("feedback_type")
+  rating                  Int?
+  customStartTime         Float?  @map("custom_start_time")
+  customEndTime           Float?  @map("custom_end_time")
+  feedbackNotes           String? @map("feedback_notes")
+  improvementSuggestions  String? @map("improvement_suggestions")
+  createdAt               DateTime @default(now()) @map("created_at")
+
+  segment HighlightSegment @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([segmentId])
+  @@index([userId])
+  @@map("segment_feedback")
+}
+
+model GeminiApiUsage {
+  id                   String   @id @default(cuid())
+  projectId            String   @map("project_id")
+  modelName            String   @map("model_name")
+  operationType        String   @map("operation_type")
+  inputTokens          Int?     @map("input_tokens")
+  outputTokens         Int?     @map("output_tokens")
+  videoDurationSeconds Float?   @map("video_duration_seconds")
+  costUsd              Decimal? @map("cost_usd") @db.Decimal(10,6)
+  responseTimeMs       Int?     @map("response_time_ms")
+  success              Boolean  @default(true)
+  errorMessage         String?  @map("error_message")
+  createdAt            DateTime @default(now()) @map("created_at")
+
+  project SmartClipperProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([modelName])
+  @@index([createdAt])
+  @@map("gemini_api_usage")
 }
