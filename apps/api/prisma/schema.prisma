@@ -53,6 +53,7 @@ model User {
   segmentFeedback      SegmentFeedback[]
   scriptProjects       ScriptProject[]
   conversationProjects ConversationProject[]
+  library       Library[]
 
   @@map("users")
 }
@@ -459,4 +460,33 @@ model ConversationApiUsage {
   @@index([modelName])
   @@index([createdAt])
   @@map("conversation_api_usage")
+}
+
+model Library {
+  id                String    @id @default(cuid())
+  userId            String    @map("user_id")
+  title             String
+  description       String?
+  videoUrl          String    @map("video_url")
+  thumbnailUrl      String?   @map("thumbnail_url")
+  duration          Float?
+  fileSize          Int?      @map("file_size")
+  mimeType          String?   @map("mime_type")
+  category          String?   @default("gameplay")
+  tags              String[]  @default([])
+  isPublic          Boolean   @default(false) @map("is_public")
+  uploadSource      String?   @default("upload") @map("upload_source")
+  metadata          Json?
+  status            String    @default("active")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([category])
+  @@index([status])
+  @@index([isPublic])
+  @@index([createdAt])
+  @@map("library")
 }
