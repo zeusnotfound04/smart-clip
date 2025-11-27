@@ -18,6 +18,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { HiHome, HiCog, HiLogout } from "react-icons/hi";
+import { HiSparkles, HiChatBubbleLeftRight } from "react-icons/hi2";
 import { motion } from "framer-motion";
 import { User } from "@/lib/api-client";
 
@@ -27,6 +28,8 @@ interface AppSidebarProps {
 
 const navigation = [
   { name: "Home", href: "/", icon: HiHome },
+  { name: "AI Script Generator", href: "/ai-script-generator", icon: HiSparkles },
+  { name: "Fake Conversations", href: "/fake-conversations", icon: HiChatBubbleLeftRight },
   { name: "Settings", href: "/settings", icon: HiCog },
 ];
 

@@ -5,7 +5,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 // Create axios instance
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000,
+  timeout: 300000, // 5 minutes timeout for video operations
   headers: {
     'Content-Type': 'application/json',
   },
@@ -30,7 +30,12 @@ axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      if (typeof window !== 'undefined') {
+      // Only redirect on authentication check or user profile endpoints
+      const isAuthEndpoint = error.config?.url?.includes('/me') || 
+                             error.config?.url?.includes('/auth/') ||
+                             error.config?.url?.includes('/profile');
+      
+      if (isAuthEndpoint && typeof window !== 'undefined') {
         localStorage.removeItem('smartclips_token');
         localStorage.removeItem('smartclips_user');
         window.location.href = '/auth/signin';
@@ -154,33 +159,43 @@ class APIClient {
 
   // Video methods
   async getUploadUrl(fileName: string, fileType: string): Promise<ApiResponse<{ uploadUrl: string; key: string }>> {
+    console.log('🔗 [API_CLIENT] getUploadUrl called:', { fileName, fileType });
     const requestData = { filename: fileName, fileType };
     
     try {
+      console.log('📤 Sending request to /api/videos/upload-url...');
       const response = await axiosInstance.post('/api/videos/upload-url', requestData);
+      console.log('📥 Upload URL response:', response.status, response.statusText);
       
-      return {
+      const result = {
         success: true,
         data: {
           uploadUrl: response.data.presignedUrl || '',
           key: response.data.s3Key || ''
         }
       };
+      console.log('✅ Upload URL generated successfully');
+      return result;
     } catch (error: any) {
       throw error;
     }
   }
 
   async confirmUpload(key: string, originalName: string, size?: number, mimeType?: string): Promise<ApiResponse<Video>> {
+    console.log('💾 [API_CLIENT] confirmUpload called:', { key, originalName, size, mimeType });
     const requestData = { s3Key: key, originalName, size, mimeType };
     
     try {
+      console.log('📤 Sending request to /api/videos/confirm-upload...');
       const response = await axiosInstance.post('/api/videos/confirm-upload', requestData);
+      console.log('📥 Confirmation response:', response.status, response.statusText);
       
-      return {
+      const result = {
         success: true,
         data: response.data.video
       };
+      console.log('✅ Upload confirmed successfully:', result.data?.id);
+      return result;
     } catch (error: any) {
       throw error;
     }
@@ -223,21 +238,31 @@ class APIClient {
   }
 
   async uploadVideo(file: File, onProgress?: (progress: number) => void): Promise<Video> {
+    console.log('🟢 [API_CLIENT] uploadVideo started');
+    console.log('📁 File details:', { name: file.name, size: file.size, type: file.type });
+    
     try {
+      console.log('🔗 Step 1: Getting upload URL...');
       const uploadUrlResponse = await this.getUploadUrl(file.name, file.type);
+      console.log('📡 Upload URL response:', { success: uploadUrlResponse.success, hasData: !!uploadUrlResponse.data });
+      
       if (!uploadUrlResponse.success || !uploadUrlResponse.data) {
         throw new Error('Failed to get upload URL');
       }
 
       const { uploadUrl, key } = uploadUrlResponse.data;
+      console.log('🔑 Received S3 key:', key);
       
       // Validate the URL format
       try {
         new URL(uploadUrl);
+        console.log('✅ Upload URL format is valid');
       } catch (urlError) {
+        console.error('❌ Invalid upload URL format:', uploadUrl);
         throw new Error('Invalid presigned URL format');
       }
 
+      console.log('📤 Step 2: Uploading to S3...');
       const response = await fetch(uploadUrl, {
         method: 'PUT',
         body: file,
@@ -246,6 +271,8 @@ class APIClient {
         },
       });
       
+      console.log('📥 S3 upload response:', { status: response.status, ok: response.ok });
+      
       if (!response.ok) {
         let errorText = '';
         try {
@@ -253,15 +280,24 @@ class APIClient {
         } catch (readError) {
           // Ignore read error
         }
+        console.error('❌ S3 upload failed:', { status: response.status, statusText: response.statusText, errorText });
         throw new Error(`S3 upload failed with status ${response.status}: ${errorText || response.statusText}`);
       }
+      
+      console.log('✅ S3 upload successful, confirming upload...');
+      console.log('💾 Step 3: Confirming upload in database...');
+      
       const confirmResponse = await this.confirmUpload(key, file.name, file.size, file.type);
+      console.log('📋 Confirmation response:', { success: confirmResponse.success, hasData: !!confirmResponse.data });
+      
       if (!confirmResponse.success || !confirmResponse.data) {
         throw new Error('Failed to confirm upload');
       }
 
+      console.log('🎉 Upload complete!', confirmResponse.data);
       return confirmResponse.data;
     } catch (error: any) {
+      console.error('❌ [API_CLIENT] Upload failed:', error);
       throw new Error('Failed to upload video: ' + (error.response?.data?.message || error.message));
     }
   }
@@ -498,6 +534,27 @@ class APIClient {
     }
 
     return result;
+  }
+
+  // Generic HTTP methods
+  async get<T = any>(url: string, config?: any): Promise<{ data: T }> {
+    const response = await axiosInstance.get(url, config);
+    return response;
+  }
+
+  async post<T = any>(url: string, data?: any, config?: any): Promise<{ data: T }> {
+    const response = await axiosInstance.post(url, data, config);
+    return response;
+  }
+
+  async put<T = any>(url: string, data?: any, config?: any): Promise<{ data: T }> {
+    const response = await axiosInstance.put(url, data, config);
+    return response;
+  }
+
+  async delete<T = any>(url: string, config?: any): Promise<{ data: T }> {
+    const response = await axiosInstance.delete(url, config);
+    return response;
   }
 
   private getAuthHeader(): { Authorization?: string } {
