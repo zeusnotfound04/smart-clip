@@ -8,6 +8,7 @@ import subtitleRoutes from './routes/subtitles';
 import splitStreamerRoutes from './routes/split-streamer.routes';
 import smartClipperRoutes from './routes/smart-clipper.routes';
 import scriptGeneratorRoutes from './routes/script-generator.routes';
+import aiScriptGeneratorRoutes from './routes/ai-script-generator.routes';
 import fakeConversationsRoutes from './routes/fake-conversations.routes';
 import statusRoutes from './routes/status.routes';
 import thumbnailRoutes from './routes/thumbnail.routes';
@@ -22,11 +23,12 @@ import {
   securityHeaders 
 } from './middleware/error.middleware';
 import './workers';
+import { smartClipperQueue, videoProcessingQueue, subtitleQueue, aiQueue } from './lib/queues';
 
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001; // Changed to avoid conflicts
 
 // Security and logging middleware
 app.use(securityHeaders);
@@ -48,6 +50,7 @@ app.use('/api/subtitles', subtitleRoutes);
 app.use('/api/split-streamer', splitStreamerRoutes);
 app.use('/api/smart-clipper', smartClipperRoutes);
 app.use('/api/script-generator', scriptGeneratorRoutes);
+app.use('/api/ai-script-generator', aiScriptGeneratorRoutes);
 app.use('/api/fake-conversations', fakeConversationsRoutes);
 app.use('/api/status', statusRoutes);
 app.use('/api/thumbnails', thumbnailRoutes);
@@ -60,9 +63,77 @@ app.use('/api/docs', docsRoutes);
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-app.listen(PORT, () => {
-  console.log(`🚀 SmartClips API Server running on port ${PORT}`);
-  console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
-  console.log(`📈 Detailed health: http://localhost:${PORT}/api/health/detailed`);
-  console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
+// Initialize Redis connections
+async function initializeRedisConnections() {
+  console.log('🔄 Initializing Redis connections...');
+  
+  const queues = [
+    { name: 'Smart Clipper Queue', queue: smartClipperQueue },
+    { name: 'Video Processing Queue', queue: videoProcessingQueue },
+    { name: 'Subtitle Queue', queue: subtitleQueue },
+    { name: 'AI Queue', queue: aiQueue }
+  ];
+
+  for (const { name, queue } of queues) {
+    try {
+      console.log(`🔍 Testing ${name} connection...`);
+      await queue.isReady();
+      const stats = await queue.getJobCounts();
+      console.log(`✅ ${name} connected - Jobs: waiting(${stats.waiting}) active(${stats.active}) completed(${stats.completed}) failed(${stats.failed})`);
+    } catch (error) {
+      console.error(`❌ ${name} connection failed:`, error instanceof Error ? error.message : String(error));
+      console.error('🚨 Redis connection required for queue operations. Please ensure Redis is running.');
+      process.exit(1);
+    }
+  }
+  
+  console.log('🎉 All Redis connections established successfully!');
+}
+
+async function startServer() {
+  try {
+    // Initialize Redis first
+    await initializeRedisConnections();
+    
+    // Start the server
+    app.listen(PORT, () => {
+      console.log('\n🚀 SmartClips API Server started successfully!');
+      console.log(`📍 Server: http://localhost:${PORT}`);
+      console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
+      console.log(`📈 Detailed health: http://localhost:${PORT}/api/health/detailed`);
+      console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log('✅ Ready to accept requests\n');
+    });
+  } catch (error) {
+    console.error('💥 Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('\n🛑 SIGTERM received, shutting down gracefully...');
+  await Promise.all([
+    smartClipperQueue.close(),
+    videoProcessingQueue.close(),
+    subtitleQueue.close(),
+    aiQueue.close()
+  ]);
+  console.log('✅ All queues closed');
+  process.exit(0);
 });
+
+process.on('SIGINT', async () => {
+  console.log('\n🛑 SIGINT received, shutting down gracefully...');
+  await Promise.all([
+    smartClipperQueue.close(),
+    videoProcessingQueue.close(),
+    subtitleQueue.close(),
+    aiQueue.close()
+  ]);
+  console.log('✅ All queues closed');
+  process.exit(0);
+});
+
+// Start the server
+startServer();

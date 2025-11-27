@@ -21,5 +21,21 @@ services:
       timeout: 10s
       retries: 3
 
+  redis:
+    image: redis:7.2-alpine
+    container_name: smart-clip-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
 volumes:
   postgres_data:
+  redis-data:

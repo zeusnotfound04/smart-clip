@@ -1,6 +1,8 @@
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Readable } from 'stream';
+import * as fs from 'fs';
+import * as path from 'path';
 
 const s3Client = new S3Client({
   region: process.env.AWS_REGION || 'ap-south-1',
@@ -132,6 +134,28 @@ export const deleteFile = async (key: string): Promise<void> => {
   });
 
   await s3Client.send(command);
+};
+
+export const uploadClip = async (filePath: string, userId: string, segmentId: string, projectId: string): Promise<string> => {
+  // Read the clip file
+  const fileBuffer = fs.readFileSync(filePath);
+  const fileName = path.basename(filePath);
+  
+  // Generate S3 key for the clip
+  const key = `clips/${userId}/${projectId}/${segmentId}-${fileName}`;
+  
+  // Upload to S3
+  const command = new PutObjectCommand({
+    Bucket: bucketName,
+    Key: key,
+    Body: fileBuffer,
+    ContentType: 'video/mp4',
+  });
+
+  await s3Client.send(command);
+  
+  // Return S3 URL
+  return `https://${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
 };
 
 export const generateKey = (userId: string, originalName: string, type: 'video' | 'audio' | 'subtitle' = 'video'): string => {
