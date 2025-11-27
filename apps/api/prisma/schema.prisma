@@ -51,6 +51,8 @@ model User {
   projects      Project[]
   smartClipperProjects SmartClipperProject[]
   segmentFeedback      SegmentFeedback[]
+  scriptProjects       ScriptProject[]
+  conversationProjects ConversationProject[]
 
   @@map("users")
 }
@@ -176,6 +178,7 @@ model HighlightSegment {
   customStartTime      Float?    @map("custom_start_time")
   customEndTime        Float?    @map("custom_end_time")
   outputPath           String?   @map("output_path")
+  s3Url                String?   @map("s3_url")
   generatedAt          DateTime? @map("generated_at")
   errorMessage         String?   @map("error_message")
   createdAt            DateTime  @default(now()) @map("created_at")
@@ -259,4 +262,201 @@ model GeminiApiUsage {
   @@index([modelName])
   @@index([createdAt])
   @@map("gemini_api_usage")
+}
+
+model ScriptProject {
+  id               String            @id @default(cuid())
+  userId           String            @map("user_id")
+  title            String
+  originalPrompt   String            @map("original_prompt")
+  targetAudience   String?           @map("target_audience")
+  scriptLength     String?           @map("script_length")
+  tone             String?           
+  format           String?           
+  status           String            @default("generating")
+  estimatedCost    Decimal?          @map("estimated_cost") @db.Decimal(10,4)
+  actualCost       Decimal?          @map("actual_cost") @db.Decimal(10,4)
+  errorMessage     String?           @map("error_message")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  generatedScripts GeneratedScript[]
+  scriptApiUsage   ScriptApiUsage[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("script_projects")
+}
+
+model GeneratedScript {
+  id                String        @id @default(cuid())
+  projectId         String        @map("project_id")
+  version           Int           @default(1)
+  content           String        @db.Text
+  structuredContent Json?         @map("structured_content")
+  hook              String?       @db.Text
+  keyPoints         String[]      @map("key_points")
+  conclusion        String?       @db.Text
+  wordCount         Int?          @map("word_count")
+  estimatedDuration Int?          @map("estimated_duration")
+  confidence        Float?        
+  userRating        Int?          @map("user_rating")
+  userFeedback      String?       @map("user_feedback")
+  isActive          Boolean       @default(true) @map("is_active")
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+
+  project           ScriptProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([version])
+  @@index([isActive])
+  @@map("generated_scripts")
+}
+
+model ScriptApiUsage {
+  id                   String        @id @default(cuid())
+  projectId            String        @map("project_id")
+  modelName            String        @map("model_name")
+  operationType        String        @map("operation_type")
+  inputTokens          Int?          @map("input_tokens")
+  outputTokens         Int?          @map("output_tokens")
+  promptLength         Int?          @map("prompt_length")
+  responseLength       Int?          @map("response_length")
+  costUsd              Decimal?      @map("cost_usd") @db.Decimal(10,6)
+  responseTimeMs       Int?          @map("response_time_ms")
+  success              Boolean       @default(true)
+  errorMessage         String?       @map("error_message")
+  createdAt            DateTime      @default(now()) @map("created_at")
+
+  project              ScriptProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([modelName])
+  @@index([createdAt])
+  @@map("script_api_usage")
+}
+
+model ConversationProject {
+  id               String                 @id @default(cuid())
+  userId           String                 @map("user_id")
+  title            String
+  description      String?
+  conversationType String                 @map("conversation_type")
+  chatStyle        String                 @default("iphone") @map("chat_style")
+  backgroundType   String?                @map("background_type")
+  backgroundUrl    String?                @map("background_url")
+  videoSettings    Json?                  @map("video_settings")
+  audioSettings    Json?                  @map("audio_settings")
+  status           String                 @default("draft")
+  estimatedCost    Decimal?               @map("estimated_cost") @db.Decimal(10,4)
+  actualCost       Decimal?               @map("actual_cost") @db.Decimal(10,4)
+  videoOutputPath  String?                @map("video_output_path")
+  videoDuration    Float?                 @map("video_duration")
+  errorMessage     String?                @map("error_message")
+  createdAt        DateTime               @default(now()) @map("created_at")
+  updatedAt        DateTime               @updatedAt @map("updated_at")
+
+  user             User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  characters       ConversationCharacter[]
+  messages         ConversationMessage[]
+  generations      ConversationGeneration[]
+  conversationApiUsage ConversationApiUsage[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("conversation_projects")
+}
+
+model ConversationCharacter {
+  id          String   @id @default(cuid())
+  projectId   String   @map("project_id")
+  name        String
+  displayName String?  @map("display_name")
+  avatarUrl   String?  @map("avatar_url")
+  voiceId     String?  @map("voice_id")
+  voiceName   String?  @map("voice_name")
+  voiceConfig Json?    @map("voice_config")
+  messageColor String? @map("message_color")
+  isUser      Boolean  @default(false) @map("is_user")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  project  ConversationProject  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  messages ConversationMessage[]
+
+  @@index([projectId])
+  @@index([sortOrder])
+  @@map("conversation_characters")
+}
+
+model ConversationMessage {
+  id           String   @id @default(cuid())
+  projectId    String   @map("project_id")
+  characterId  String   @map("character_id")
+  content      String   @db.Text
+  messageType  String   @default("text") @map("message_type")
+  delay        Int      @default(1000)
+  duration     Float?
+  animationType String? @map("animation_type")
+  sortOrder    Int      @map("sort_order")
+  isVisible    Boolean  @default(true) @map("is_visible")
+  timestamp    DateTime? 
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  project   ConversationProject   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  character ConversationCharacter @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([sortOrder])
+  @@index([characterId])
+  @@map("conversation_messages")
+}
+
+model ConversationGeneration {
+  id             String   @id @default(cuid())
+  projectId      String   @map("project_id")
+  version        Int      @default(1)
+  prompt         String   @db.Text
+  generatedContent Json   @map("generated_content")
+  messageCount   Int      @map("message_count")
+  estimatedDuration Float? @map("estimated_duration")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  project ConversationProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([version])
+  @@index([isActive])
+  @@map("conversation_generations")
+}
+
+model ConversationApiUsage {
+  id                   String              @id @default(cuid())
+  projectId            String              @map("project_id")
+  modelName            String              @map("model_name")
+  operationType        String              @map("operation_type")
+  inputTokens          Int?                @map("input_tokens")
+  outputTokens         Int?                @map("output_tokens")
+  promptLength         Int?                @map("prompt_length")
+  responseLength       Int?                @map("response_length")
+  costUsd              Decimal?            @map("cost_usd") @db.Decimal(10,6)
+  responseTimeMs       Int?                @map("response_time_ms")
+  success              Boolean             @default(true)
+  errorMessage         String?             @map("error_message")
+  createdAt            DateTime            @default(now()) @map("created_at")
+
+  project              ConversationProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([modelName])
+  @@index([createdAt])
+  @@map("conversation_api_usage")
 }
