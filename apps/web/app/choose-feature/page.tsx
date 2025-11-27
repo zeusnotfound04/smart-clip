@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Video, 
@@ -41,7 +41,7 @@ const coreFeatures = [
     title: 'Smart Clipper',
     description: 'Extract highlights and key moments using AI',
     icon: Scissors,
-    href: '/dashboard/features/smart-clipper',
+    href: '/dashboard/smart-clipper',
     gradient: 'from-green-500 to-teal-500'
   },
   {
@@ -49,7 +49,7 @@ const coreFeatures = [
     title: 'Script Generator',
     description: 'Create engaging scripts for your videos',
     icon: FileText,
-    href: '/dashboard/features/script-generator',
+    href: '/dashboard/ai-script-generator',
     gradient: 'from-orange-500 to-red-500'
   },
   {
@@ -57,12 +57,12 @@ const coreFeatures = [
     title: 'Fake Conversations',
     description: 'Generate realistic chat conversations',
     icon: MessageCircle,
-    href: '/dashboard/features/fake-conversations',
+    href: '/dashboard/fake-conversations',
     gradient: 'from-indigo-500 to-purple-500'
   }
 ];
 
-export default function ChooseFeaturePage() {
+function ChooseFeaturePageContent() {
   const { user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -258,5 +258,20 @@ export default function ChooseFeaturePage() {
         </main>
       </div>
     </>
+  );
+}
+
+export default function ChooseFeaturePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-4 text-lg text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <ChooseFeaturePageContent />
+    </Suspense>
   );
 }
