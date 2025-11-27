@@ -32,6 +32,8 @@ import {
   Briefcase,
   Zap,
   ChevronRight,
+  MessageCircle,
+  Wand2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -49,6 +51,18 @@ const navigationItems = [
     url: "/dashboard/auto-subtitles",
     icon: FileText,
     badge: "New",
+  },
+  {
+    title: "AI Script Generator",
+    url: "/dashboard/ai-script-generator",
+    icon: Wand2,
+    badge: "AI",
+  },
+  {
+    title: "Fake Conversations",
+    url: "/dashboard/fake-conversations",
+    icon: MessageCircle,
+    badge: "AI",
   },
   {
     title: "Smart Clipper",
