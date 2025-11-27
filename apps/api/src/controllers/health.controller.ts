@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
+import { smartClipperQueue, videoProcessingQueue, subtitleQueue, aiQueue } from '../lib/queues';
 
 /**
  * Basic health check
@@ -29,10 +30,10 @@ export async function healthDetailed(req: Request, res: Response): Promise<void>
         'video-processing': true
       },
       queues: {
-        'video-processing': true,
-        'subtitle-generation': true,
-        'ai-processing': true,
-        'clip-extraction': true
+        'video-processing': false,
+        'subtitle-generation': false,
+        'ai-processing': false,
+        'smart-clipper': false
       },
       external: {
         's3': false,
@@ -61,6 +62,18 @@ export async function healthDetailed(req: Request, res: Response): Promise<void>
       checks.external['google-cloud'] = !!process.env.GOOGLE_CLOUD_PROJECT_ID;
     } catch (error) {
       console.error('Google Cloud health check failed:', error);
+    }
+
+    // Check Redis queue connectivity
+    try {
+      await Promise.allSettled([
+        smartClipperQueue.isReady().then(() => { checks.queues['smart-clipper'] = true; }),
+        videoProcessingQueue.isReady().then(() => { checks.queues['video-processing'] = true; }),
+        subtitleQueue.isReady().then(() => { checks.queues['subtitle-generation'] = true; }),
+        aiQueue.isReady().then(() => { checks.queues['ai-processing'] = true; })
+      ]);
+    } catch (error) {
+      console.error('Queue health checks failed:', error);
     }
 
     // Overall status
