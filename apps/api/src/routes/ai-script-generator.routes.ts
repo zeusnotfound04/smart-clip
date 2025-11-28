@@ -12,10 +12,7 @@ import {
   generateGameplayScript,
   generateNarration,
   combineVideoWithNarration,
-  getProcessingStatus,
-  addToLibrary,
-  updateLibraryItem,
-  deleteLibraryItem
+  getProcessingStatus
 } from '../controllers/ai-script-generator.controller';
 
 const router: Router = Router();
@@ -38,11 +35,8 @@ router.put('/scripts/:scriptId/feedback', updateScriptFeedback);
 // Templates and utilities
 router.get('/templates', getScriptTemplates);
 
-// Video library endpoints
+// Global video library endpoint (read-only for users)
 router.get('/library', getVideoLibrary);
-router.post('/library', addToLibrary);
-router.put('/library/:libraryId', updateLibraryItem);
-router.delete('/library/:libraryId', deleteLibraryItem);
 
 // Gameplay script generation workflow
 router.post('/gameplay/generate-script', generateGameplayScript);
