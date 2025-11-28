@@ -4,26 +4,81 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { Loader2, Copy, RefreshCw, Star, Clock, Type, Wand2, Sparkles, Play, Video, Headphones, Subtitles, CheckCircle, Upload } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { 
+  Loader2, Copy, RefreshCw, Star, Clock, Type, Wand2, Sparkles, 
+  FileText, Mic, Video, ArrowRight, ArrowLeft, CheckCircle, 
+  Download, Play, Pause 
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiClient } from "@/lib/api-client";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { motion } from "framer-motion";
+import { useAuth } from '@/lib/auth-context';
 
-interface ScriptTemplate {
-  id: string;
-  name: string;
-  description: string;
-  prompt: string;
-  defaultOptions: {
-    tone?: string;
-    format?: string;
-    targetAudience?: string;
-    scriptLength?: string;
+// API Base URL
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+
+// Types
+type VideoGenerationPhase = 'script' | 'voice' | 'video' | 'processing' | 'complete';
+
+interface VideoGenerationProject {
+  id?: string;
+  projectId?: string;
+  projectName?: string;
+  script?: string;
+  scriptWordCount?: number;
+  scriptDuration?: number;
+  voiceConfig?: {
+    name: string;
+    languageCode: string;
+    ssmlGender: 'MALE' | 'FEMALE' | 'NEUTRAL';
+    audioEncoding: string;
+    speed?: number;
+    pitch?: number;
   };
+  audioUrl?: string;
+  audioDuration?: number;
+  selectedVideo?: {
+    id: string;
+    name: string;
+    url: string;
+    duration: number;
+  };
+  finalVideoUrl?: string;
+  isMockVideo?: boolean;
+  isMockAudio?: boolean;
+  status: 'idle' | 'generating' | 'completed' | 'failed';
+  createdAt?: string;
+}
+
+interface VoiceOption {
+  name: string;
+  languageCode: string;
+  ssmlGender: 'MALE' | 'FEMALE' | 'NEUTRAL';
+  naturalSampleRateHertz: number;
+  displayName: string;
+  category: string;
+}
+
+interface VideoLibraryItem {
+  id: string;
+  title: string;
+  description?: string;
+  filename?: string;
+  duration: number;
+  thumbnailUrl?: string;
+  s3Url?: string;
+  url?: string;
+  createdAt: string;
+  fileSize?: number;
+  mimeType?: string;
+  category?: string;
+  tags?: string[];
 }
 
 interface GeneratedScript {
@@ -35,221 +90,370 @@ interface GeneratedScript {
   wordCount: number;
 }
 
-interface ScriptProject {
-  id: string;
-  title: string;
-  originalPrompt: string;
-  targetAudience?: string;
-  scriptLength?: string;
-  tone?: string;
-  format?: string;
-  status: string;
-  createdAt: string;
-  generatedScripts: any[];
-}
-
-interface VideoLibraryItem {
-  id: string;
-  title: string;
-  description?: string;
-  filename: string;
-  duration: number;
-  thumbnailUrl?: string;
-  s3Url?: string;
-  createdAt: string;
-  fileSize?: number;
-  mimeType?: string;
-  category?: string;
-  tags?: string[];
-}
-
-interface NarrationJob {
-  id: string;
-  status: 'pending' | 'processing' | 'completed' | 'failed';
-  audioPath?: string;
-  progress?: number;
-}
-
-interface WorkflowStep {
-  id: string;
-  title: string;
-  description: string;
-  completed: boolean;
-  active: boolean;
+interface ScriptGenerationOptions {
+  targetAudience?: 'casual' | 'formal' | 'educational' | 'entertainment' | 'marketing';
+  scriptLength?: 'short' | 'medium' | 'long';
+  tone?: 'dramatic' | 'conversational' | 'professional' | 'humorous' | 'mysterious';
+  format?: 'tiktok' | 'youtube' | 'instagram' | 'marketing' | 'educational';
 }
 
 export default function AIScriptGenerator() {
-  const [prompt, setPrompt] = useState("");
-  const [targetAudience, setTargetAudience] = useState("casual");
-  const [scriptLength, setScriptLength] = useState("very-short");
-  const [tone, setTone] = useState("conversational");
-  const [format, setFormat] = useState("tiktok");
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedScript, setGeneratedScript] = useState<GeneratedScript | null>(null);
-  const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
-  const [templates, setTemplates] = useState<ScriptTemplate[]>([]);
-  const [recentProjects, setRecentProjects] = useState<ScriptProject[]>([]);
-  const [selectedTemplate, setSelectedTemplate] = useState<string>("");
+  const { user } = useAuth();
+  const { toast } = useToast();
   
-  // New workflow states
-  const [activeTab, setActiveTab] = useState<'script' | 'library' | 'narration' | 'subtitles'>('script');
+  // Phase management
+  const [currentPhase, setCurrentPhase] = useState<VideoGenerationPhase>('script');
+  const [project, setProject] = useState<VideoGenerationProject>({ status: 'idle' });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Phase 1: Script Generation
+  const [scriptPrompt, setScriptPrompt] = useState<string>('');
+  const [projectName, setProjectName] = useState<string>('');
+  const [scriptOptions, setScriptOptions] = useState<ScriptGenerationOptions>({
+    targetAudience: 'casual',
+    scriptLength: 'medium',
+    tone: 'conversational',
+    format: 'youtube'
+  });
+  
+  // Phase 2: Voice Selection
+  const [availableVoices, setAvailableVoices] = useState<VoiceOption[]>([
+    {
+      name: 'en-US-Neural2-J',
+      languageCode: 'en-US',
+      ssmlGender: 'MALE',
+      naturalSampleRateHertz: 24000,
+      displayName: 'Journey (Male, Dramatic)',
+      category: 'neural'
+    },
+    {
+      name: 'en-US-Neural2-F',
+      languageCode: 'en-US', 
+      ssmlGender: 'FEMALE',
+      naturalSampleRateHertz: 24000,
+      displayName: 'Luna (Female, Professional)',
+      category: 'neural'
+    },
+    {
+      name: 'en-US-Neural2-A',
+      languageCode: 'en-US',
+      ssmlGender: 'MALE',
+      naturalSampleRateHertz: 24000,
+      displayName: 'Alex (Male, Conversational)',
+      category: 'neural'
+    },
+    {
+      name: 'en-US-Neural2-C',
+      languageCode: 'en-US',
+      ssmlGender: 'FEMALE',
+      naturalSampleRateHertz: 24000,
+      displayName: 'Clara (Female, Casual)',
+      category: 'neural'
+    }
+  ]);
+  const [selectedVoice, setSelectedVoice] = useState<VoiceOption | null>({
+    name: 'en-US-Neural2-J',
+    languageCode: 'en-US',
+    ssmlGender: 'MALE',
+    naturalSampleRateHertz: 24000,
+    displayName: 'Journey (Male, Dramatic)',
+    category: 'neural'
+  });
+  const [voiceSpeed, setVoiceSpeed] = useState<number>(1.0);
+  const [voicePitch, setVoicePitch] = useState<number>(0);
+  const [generatingAudio, setGeneratingAudio] = useState(false);
+  
+  // Phase 3: Video Selection
   const [videoLibrary, setVideoLibrary] = useState<VideoLibraryItem[]>([]);
   const [selectedVideo, setSelectedVideo] = useState<VideoLibraryItem | null>(null);
-  const [isLoadingLibrary, setIsLoadingLibrary] = useState(false);
-  const [narrationJob, setNarrationJob] = useState<NarrationJob | null>(null);
-  const [isGeneratingNarration, setIsGeneratingNarration] = useState(false);
-  const [selectedVoice, setSelectedVoice] = useState("en-US-Neural2-J");
-  const [narrationSpeed, setNarrationSpeed] = useState(1.0);
-  const [addSubtitles, setAddSubtitles] = useState(true);
-  const [isProcessingFinal, setIsProcessingFinal] = useState(false);
-  const [workflowSteps, setWorkflowSteps] = useState<WorkflowStep[]>([
-    { id: 'video', title: 'Select Video', description: 'Choose gameplay clip from library', completed: false, active: false },
-    { id: 'script', title: 'Generate Script', description: 'AI creates 10-15s story', completed: false, active: true },
-    { id: 'narration', title: 'Add Narration', description: 'Convert script to speech', completed: false, active: false },
-    { id: 'combine', title: 'Final Video', description: 'Combine video + narration + subtitles', completed: false, active: false }
-  ]);
-
-  const { toast } = useToast();
+  const [loadingVideos, setLoadingVideos] = useState(false);
+  const [preparingVideo, setPreparingVideo] = useState(false);
 
   useEffect(() => {
-    loadTemplates();
-    loadRecentProjects();
+    console.log('Loading voices and video library...');
+    loadAvailableVoices();
     loadVideoLibrary();
   }, []);
 
-  useEffect(() => {
-    // Update workflow steps based on current progress
-    updateWorkflowProgress();
-  }, [selectedVideo, generatedScript, narrationJob]);
-
-  const loadTemplates = async () => {
+  const loadAvailableVoices = async () => {
+    // Voices are already initialized in state, but we can try to load from API if available
+    console.log('Current available voices:', availableVoices.length);
+    
+    // Try to load from API, but don't replace if it fails
     try {
-      const response = await apiClient.get('/ai-script-generator/templates');
-      if (response.data.success) {
-        setTemplates(response.data.templates);
-      }
-    } catch (error) {
-      console.error('Error loading templates:', error);
-    }
-  };
-
-  const loadRecentProjects = async () => {
-    try {
-      const response = await apiClient.get('/ai-script-generator/projects');
-      if (response.data.success) {
-        setRecentProjects(response.data.scripts.slice(0, 5)); // Show only recent 5
-      }
-    } catch (error) {
-      console.error('Error loading recent projects:', error);
-    }
-  };
-
-  const handleTemplateSelect = (templateId: string) => {
-    const template = templates.find(t => t.id === templateId);
-    if (template) {
-      setSelectedTemplate(templateId);
-      setPrompt(template.prompt.replace('[TOPIC]', ''));
-      
-      // Apply template defaults
-      if (template.defaultOptions.tone) setTone(template.defaultOptions.tone);
-      if (template.defaultOptions.format) setFormat(template.defaultOptions.format);
-      if (template.defaultOptions.targetAudience) setTargetAudience(template.defaultOptions.targetAudience);
-      if (template.defaultOptions.scriptLength) setScriptLength(template.defaultOptions.scriptLength);
-
-      toast({
-        title: "Template Applied",
-        description: `${template.name} template has been applied. Fill in your topic and generate!`,
+      const response = await fetch(`${API_BASE_URL}/api/ai-script-generator/voices`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('smartclips_token')}`,
+        }
       });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.voices && data.voices.length > 0) {
+          setAvailableVoices(data.voices);
+          setSelectedVoice(data.voices[0]);
+        }
+      }
+    } catch (error) {
+      console.log('Using default voices since API is not available');
     }
   };
 
-  const generateScript = async () => {
-    if (!prompt.trim()) {
+  const loadVideoLibrary = async () => {
+    setLoadingVideos(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/ai-script-generator/library`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('smartclips_token')}`,
+        }
+      });
+
+      if (!response.ok) {
+        console.warn('Video library API not available, using empty library');
+        setVideoLibrary([]);
+        return;
+      }
+
+      const data = await response.json();
+      setVideoLibrary(data.videos || []);
+    } catch (error) {
+      console.warn('Error loading library videos, using empty library:', error);
+      setVideoLibrary([]);
+    } finally {
+      setLoadingVideos(false);
+    }
+  };
+
+  // Phase 1: Generate Script
+  const handleGenerateScript = async () => {
+    if (!scriptPrompt.trim()) {
       toast({
         title: "Prompt Required",
-        description: "Please enter a topic or prompt for your script.",
+        description: "Please enter a script prompt",
         variant: "destructive",
       });
       return;
     }
 
-    setIsGenerating(true);
-    setGeneratedScript(null);
-
+    setLoading(true);
+    setError(null);
+    
     try {
-      const response = await apiClient.post('/ai-script-generator/generate', {
-        prompt: prompt.trim(),
-        targetAudience,
-        scriptLength,
-        tone,
-        format,
+      const response = await fetch(`${API_BASE_URL}/api/ai-script-generator/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('smartclips_token')}`,
+        },
+        body: JSON.stringify({
+          prompt: scriptPrompt,
+          targetAudience: scriptOptions.targetAudience,
+          scriptLength: scriptOptions.scriptLength,
+          tone: scriptOptions.tone,
+          format: scriptOptions.format
+        }),
       });
 
-      if (response.data.success) {
-        setGeneratedScript(response.data.script);
-        setCurrentProjectId(response.data.projectId);
-        
-        toast({
-          title: "Script Generated!",
-          description: `Your ${scriptLength} ${format} script is ready with ${response.data.script.wordCount} words.`,
-        });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to generate script');
+      }
 
-        // Refresh recent projects
-        loadRecentProjects();
-      }
-    } catch (error: any) {
-      console.error('Error generating script:', error);
+      const result = await response.json();
       
-      let errorMessage = "Failed to generate script. Please try again.";
-      
-      if (error.response?.status === 429) {
-        errorMessage = "Rate limit exceeded. Please try again later.";
-      } else if (error.response?.status === 503) {
-        errorMessage = "AI service is temporarily unavailable. Please try again later.";
-      } else if (error.response?.data?.details) {
-        errorMessage = error.response.data.details;
-      }
+      setProject(prev => ({
+        ...prev,
+        projectId: result.projectId,
+        projectName: projectName || 'Untitled Project',
+        script: result.script?.fullScript || result.script?.content || 'Script generated',
+        scriptWordCount: result.script?.wordCount || 0,
+        scriptDuration: result.script?.estimatedDuration || 30,
+        status: 'generating'
+      }));
 
       toast({
+        title: "Script Generated!",
+        description: "Your script has been generated successfully.",
+      });
+      setCurrentPhase('voice');
+      
+    } catch (error) {
+      console.error('Script generation error:', error);
+      setError(error instanceof Error ? error.message : 'Failed to generate script');
+      toast({
         title: "Generation Failed",
-        description: errorMessage,
+        description: "Failed to generate script. Please try again.",
         variant: "destructive",
       });
     } finally {
-      setIsGenerating(false);
+      setLoading(false);
     }
   };
 
-  const regenerateScript = async () => {
-    if (!currentProjectId) return;
+  // Phase 2: Generate Audio
+  const handleGenerateAudio = async () => {
+    if (!selectedVoice) {
+      toast({
+        title: "Voice Required",
+        description: "Please select a voice",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    setIsGenerating(true);
-
+    setGeneratingAudio(true);
+    setError(null);
+    
     try {
-      const response = await apiClient.post(`/ai-script-generator/${currentProjectId}/regenerate`, {
-        tone,
-        length: scriptLength,
-        additionalInstructions: `Please improve the script with these preferences: ${tone} tone, ${scriptLength} length for ${format} format.`
+      const response = await fetch(`${API_BASE_URL}/api/ai-script-generator/gameplay/generate-narration`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('smartclips_token')}`,
+        },
+        body: JSON.stringify({
+          scriptId: project.projectId,
+          voice: selectedVoice.name,
+          speed: voiceSpeed
+        }),
       });
 
-      if (response.data.success) {
-        setGeneratedScript(response.data.script);
-        
-        toast({
-          title: "Script Regenerated!",
-          description: "Your script has been regenerated with the new preferences.",
-        });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to generate audio');
       }
-    } catch (error: any) {
-      console.error('Error regenerating script:', error);
+
+      const result = await response.json();
+      
+      // Only accept successful TTS generation
+      if (result.success !== true) {
+        throw new Error(result.message || result.error || 'TTS generation failed');
+      }
+      
+      setProject(prev => ({
+        ...prev,
+        voiceConfig: {
+          name: selectedVoice.name,
+          languageCode: selectedVoice.languageCode,
+          ssmlGender: selectedVoice.ssmlGender,
+          audioEncoding: 'MP3',
+          speed: voiceSpeed,
+          pitch: voicePitch
+        },
+        audioUrl: result.audioPath || `/uploads/narrations/${result.audioFilename}`,
+        audioDuration: result.duration || 30,
+        isMockAudio: false // Only real TTS audio allowed
+      }));
+
       toast({
-        title: "Regeneration Failed",
-        description: "Failed to regenerate script. Please try again.",
+        title: "Audio Generated!",
+        description: "Your narration audio has been generated successfully using Google Cloud TTS.",
+      });
+      
+      setCurrentPhase('video');
+      
+    } catch (error) {
+      console.error('Audio generation error:', error);
+      setError(error instanceof Error ? error.message : 'Failed to generate audio');
+      toast({
+        title: "Audio Generation Failed",
+        description: "Failed to generate audio. Please try again.",
         variant: "destructive",
       });
     } finally {
-      setIsGenerating(false);
+      setGeneratingAudio(false);
     }
+  };
+
+  // Phase 3: Prepare Final Video
+  const handlePrepareVideo = async () => {
+    if (!selectedVideo) {
+      toast({
+        title: "Video Required",
+        description: "Please select a video from the library",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setPreparingVideo(true);
+    setError(null);
+    setCurrentPhase('processing');
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/ai-script-generator/gameplay/combine-video`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('smartclips_token')}`,
+        },
+        body: JSON.stringify({
+          scriptId: project.projectId,
+          videoId: selectedVideo.id,
+          addSubtitles: false
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('❌ Video preparation failed:', errorData);
+        throw new Error(errorData.error || errorData.message || 'Failed to prepare video');
+      }
+
+      const result = await response.json();
+      
+      // Handle the video URL from the response
+      let finalUrl = '#processing';
+      if (result.videoUrl) {
+        finalUrl = result.videoUrl; // Use the S3 URL directly from the response
+      } else if (result.outputFilename) {
+        finalUrl = `/uploads/${result.outputFilename}`;
+      }
+      
+      setProject(prev => ({
+        ...prev,
+        selectedVideo: {
+          id: selectedVideo.id,
+          name: selectedVideo.title,
+          url: selectedVideo.url || selectedVideo.s3Url || '',
+          duration: selectedVideo.duration || 0
+        },
+        finalVideoUrl: finalUrl,
+        isMockVideo: false, // Always treat as real video now
+        status: 'completed'
+      }));
+
+      toast({
+        title: "Video Complete!",
+        description: "Your video has been generated successfully.",
+      });
+      setCurrentPhase('complete');
+      
+    } catch (error) {
+      console.error('Video preparation error:', error);
+      setError(error instanceof Error ? error.message : 'Failed to prepare video');
+      toast({
+        title: "Video Generation Failed",
+        description: "Failed to prepare video. Please try again.",
+        variant: "destructive",
+      });
+      setCurrentPhase('video'); // Go back to video selection
+    } finally {
+      setPreparingVideo(false);
+    }
+  };
+
+  const formatFileSize = (bytes?: number): string => {
+    if (!bytes) return 'Unknown size';
+    const mb = bytes / (1024 * 1024);
+    return `${mb.toFixed(1)} MB`;
+  };
+
+  const formatDurationSeconds = (seconds: number): string => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
   const copyToClipboard = (text: string, section: string = "script") => {
@@ -260,756 +464,618 @@ export default function AIScriptGenerator() {
     });
   };
 
-  const formatDuration = (seconds: number): string => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return minutes > 0 ? `${minutes}m ${remainingSeconds}s` : `${remainingSeconds}s`;
-  };
-
-  // New workflow functions
-  const loadVideoLibrary = async () => {
-    try {
-      setIsLoadingLibrary(true);
-      const response = await apiClient.get('/ai-script-generator/library');
-      if (response.data.success) {
-        setVideoLibrary(response.data.videos);
-      }
-    } catch (error) {
-      console.error('Error loading video library:', error);
-      toast({
-        title: "Failed to load videos",
-        description: "Could not load your video library. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoadingLibrary(false);
+  const getPhaseProgress = () => {
+    switch (currentPhase) {
+      case 'script': return 0;
+      case 'voice': return 33;
+      case 'video': return 66;
+      case 'processing': return 90;
+      case 'complete': return 100;
+      default: return 0;
     }
   };
 
-  const updateWorkflowProgress = () => {
-    setWorkflowSteps(prev => prev.map(step => {
-      switch (step.id) {
-        case 'video':
-          return { ...step, completed: !!selectedVideo, active: !selectedVideo };
-        case 'script':
-          return { ...step, completed: !!generatedScript, active: !!selectedVideo && !generatedScript };
-        case 'narration':
-          return { ...step, completed: !!narrationJob?.audioPath, active: !!generatedScript && !narrationJob?.audioPath };
-        case 'combine':
-          return { ...step, completed: false, active: !!narrationJob?.audioPath };
-        default:
-          return step;
-      }
-    }));
-  };
+  const renderPhaseIndicator = () => {
+    const phases = [
+      { key: 'script', label: 'Script', icon: FileText },
+      { key: 'voice', label: 'Voice', icon: Mic },
+      { key: 'video', label: 'Video', icon: Video }
+    ];
 
-  const generateGameplayScript = async () => {
-    if (!prompt.trim() || !selectedVideo) {
-      toast({
-        title: "Missing Information",
-        description: "Please select a video and enter a story prompt.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsGenerating(true);
-    setGeneratedScript(null);
-
-    try {
-      const response = await apiClient.post('/ai-script-generator/gameplay/generate-script', {
-        prompt: prompt.trim(),
-        videoId: selectedVideo.id,
-        targetAudience,
-        tone,
-        scriptLength,
-        format,
-      });
-
-      if (response.data.success) {
-        setGeneratedScript(response.data.script);
-        setCurrentProjectId(response.data.projectId);
-        
-        toast({
-          title: "Gameplay Script Generated!",
-          description: `Your 10-15 second story is ready for ${selectedVideo.title}.`,
-        });
-
-        setActiveTab('narration');
-      }
-    } catch (error: any) {
-      console.error('Error generating gameplay script:', error);
-      toast({
-        title: "Generation Failed",
-        description: error.response?.data?.details || "Failed to generate script. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  const generateNarration = async () => {
-    if (!currentProjectId || !generatedScript) {
-      toast({
-        title: "No Script Available",
-        description: "Please generate a script first.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsGeneratingNarration(true);
-    
-    try {
-      const response = await apiClient.post('/ai-script-generator/gameplay/generate-narration', {
-        scriptId: currentProjectId,
-        voice: selectedVoice,
-        speed: narrationSpeed,
-      });
-
-      if (response.data.success) {
-        setNarrationJob({
-          id: currentProjectId,
-          status: 'completed',
-          audioPath: response.data.audioPath,
-        });
-        
-        toast({
-          title: "Narration Generated!",
-          description: "Your AI narration is ready. You can now combine it with your video.",
-        });
-
-        setActiveTab('subtitles');
-      }
-    } catch (error: any) {
-      console.error('Error generating narration:', error);
-      toast({
-        title: "Narration Failed",
-        description: error.response?.data?.details || "Failed to generate narration. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsGeneratingNarration(false);
-    }
-  };
-
-  const combineVideoWithNarration = async () => {
-    if (!currentProjectId || !selectedVideo || !narrationJob?.audioPath) {
-      toast({
-        title: "Missing Components",
-        description: "Video, script, and narration are all required.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsProcessingFinal(true);
-    
-    try {
-      const response = await apiClient.post('/ai-script-generator/gameplay/combine-video', {
-        scriptId: currentProjectId,
-        videoId: selectedVideo.id,
-        addSubtitles: addSubtitles,
-      });
-
-      if (response.data.success) {
-        toast({
-          title: "Processing Started!",
-          description: `Your gameplay story is being created. Estimated time: ${response.data.estimatedTime}`,
-        });
-
-        // Update final step
-        setWorkflowSteps(prev => prev.map(step => 
-          step.id === 'combine' ? { ...step, completed: true, active: false } : step
-        ));
-
-        // Poll for completion status here if needed
-      }
-    } catch (error: any) {
-      console.error('Error combining video:', error);
-      toast({
-        title: "Processing Failed",
-        description: error.response?.data?.details || "Failed to process video. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsProcessingFinal(false);
-    }
-  };
-
-  return (
-    <div className="flex-1 flex flex-col min-h-screen bg-background text-foreground">
-      {/* Header */}
-      <header className="flex items-center gap-4 border-b p-4">
-        <SidebarTrigger />
-        <div className="flex-1">
-          <div className="flex items-center space-x-2">
-            <Wand2 className="h-6 w-6 text-purple-600" />
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-              AI Script Generator
-            </h1>
-          </div>
-          <p className="text-sm text-muted-foreground mt-1">
-            Create engaging narration scripts instantly using advanced AI
-          </p>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="flex-1 overflow-auto p-6">
-        <div className="max-w-7xl mx-auto space-y-6">
+    return (
+      <div className="flex items-center justify-center space-x-4 mb-8">
+        {phases.map((phase, index) => {
+          const Icon = phase.icon;
+          const isActive = currentPhase === phase.key;
+          const isCompleted = ['voice', 'video', 'processing', 'complete'].includes(currentPhase) && phase.key === 'script' ||
+                              ['video', 'processing', 'complete'].includes(currentPhase) && phase.key === 'voice' ||
+                              ['processing', 'complete'].includes(currentPhase) && phase.key === 'video';
           
-          {/* Workflow Progress */}
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                {workflowSteps.map((step, index) => (
-                  <div key={step.id} className="flex items-center">
-                    <div className="flex flex-col items-center">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${
-                        step.completed 
-                          ? 'bg-green-500 border-green-500 text-white' 
-                          : step.active 
-                            ? 'bg-blue-500 border-blue-500 text-white' 
-                            : 'bg-gray-800 border-gray-600 text-gray-400'
-                      }`}>
-                        {step.completed ? (
-                          <CheckCircle className="w-5 h-5" />
-                        ) : (
-                          <span className="text-sm font-bold">{index + 1}</span>
-                        )}
-                      </div>
-                      <div className="mt-2 text-center">
-                        <p className="text-sm font-medium">{step.title}</p>
-                        <p className="text-xs text-muted-foreground">{step.description}</p>
-                      </div>
-                    </div>
-                    {index < workflowSteps.length - 1 && (
-                      <div className="w-16 h-0.5 bg-gray-600 mx-4" />
+          return (
+            <div key={phase.key} className="flex items-center">
+              <div className={`
+                w-10 h-10 rounded-full flex items-center justify-center transition-colors
+                ${isCompleted ? 'bg-green-600 text-white dark:bg-green-500' : 
+                  isActive ? 'bg-primary text-primary-foreground' : 
+                  'bg-muted text-muted-foreground'}
+              `}>
+                {isCompleted ? <CheckCircle className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
+              </div>
+              <span className={`ml-2 text-sm font-medium ${
+                isActive ? 'text-primary' : isCompleted ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'
+              }`}>
+                {phase.label}
+              </span>
+              {index < phases.length - 1 && (
+                <ArrowRight className="w-4 h-4 text-muted-foreground mx-4" />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const renderScriptPhase = () => (
+    <Card className="w-full max-w-4xl mx-auto">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <FileText className="w-6 h-6" />
+          Phase 1: Generate Script
+        </CardTitle>
+        <p className="text-muted-foreground">
+          Create an engaging script for your video using AI
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div>
+          <label className="text-sm font-medium mb-2 block">Project Name</label>
+          <Input
+            placeholder="Enter project name (optional)"
+            value={projectName}
+            onChange={(e) => setProjectName(e.target.value)}
+          />
+        </div>
+
+        <div>
+          <label className="text-sm font-medium mb-2 block">Script Prompt</label>
+          <Textarea
+            placeholder="Describe what your video should be about..."
+            value={scriptPrompt}
+            onChange={(e) => setScriptPrompt(e.target.value)}
+            rows={4}
+            className="resize-none"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <label className="text-sm font-medium mb-2 block">Target Audience</label>
+            <Select
+              value={scriptOptions.targetAudience}
+              onValueChange={(value) => setScriptOptions(prev => ({ ...prev, targetAudience: value as any }))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="casual">Casual</SelectItem>
+                <SelectItem value="formal">Formal</SelectItem>
+                <SelectItem value="educational">Educational</SelectItem>
+                <SelectItem value="entertainment">Entertainment</SelectItem>
+                <SelectItem value="marketing">Marketing</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium mb-2 block">Script Length</label>
+            <Select
+              value={scriptOptions.scriptLength}
+              onValueChange={(value) => setScriptOptions(prev => ({ ...prev, scriptLength: value as any }))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="short">Short (30-60s)</SelectItem>
+                <SelectItem value="medium">Medium (1-3min)</SelectItem>
+                <SelectItem value="long">Long (3-5min)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium mb-2 block">Tone</label>
+            <Select
+              value={scriptOptions.tone}
+              onValueChange={(value) => setScriptOptions(prev => ({ ...prev, tone: value as any }))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="conversational">Conversational</SelectItem>
+                <SelectItem value="professional">Professional</SelectItem>
+                <SelectItem value="dramatic">Dramatic</SelectItem>
+                <SelectItem value="humorous">Humorous</SelectItem>
+                <SelectItem value="mysterious">Mysterious</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium mb-2 block">Format</label>
+            <Select
+              value={scriptOptions.format}
+              onValueChange={(value) => setScriptOptions(prev => ({ ...prev, format: value as any }))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="youtube">YouTube</SelectItem>
+                <SelectItem value="tiktok">TikTok</SelectItem>
+                <SelectItem value="instagram">Instagram</SelectItem>
+                <SelectItem value="marketing">Marketing</SelectItem>
+                <SelectItem value="educational">Educational</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {project.script && (
+          <div className="mt-6 p-4 border rounded-lg bg-muted/50">
+            <div className="flex items-center gap-2 mb-3">
+              <CheckCircle className="w-5 h-5 text-green-500" />
+              <h3 className="font-medium">Generated Script</h3>
+              <Badge variant="secondary">
+                {project.scriptWordCount} words • ~{project.scriptDuration}s
+              </Badge>
+            </div>
+            <div className="bg-card p-4 rounded border max-h-48 overflow-y-auto">
+              <p className="whitespace-pre-wrap text-sm text-card-foreground">{project.script}</p>
+            </div>
+          </div>
+        )}
+
+        <div className="flex gap-3">
+          <Button 
+            onClick={handleGenerateScript}
+            disabled={loading || !scriptPrompt.trim()}
+            className="flex-1"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Generating Script...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4 mr-2" />
+                Generate Script
+              </>
+            )}
+          </Button>
+          
+          {project.script && (
+            <Button 
+              onClick={() => setCurrentPhase('voice')}
+              variant="outline"
+            >
+              Next: Choose Voice
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const renderVoicePhase = () => (
+    <Card className="w-full max-w-4xl mx-auto">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Mic className="w-6 h-6" />
+          Phase 2: Choose Voice & Generate Audio
+        </CardTitle>
+        <p className="text-muted-foreground">
+          Select a Google Cloud Text-to-Speech voice for narration
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {project.script && (
+          <div className="p-4 border rounded-lg bg-muted/50">
+            <h3 className="font-medium mb-2">Script Preview</h3>
+            <p className="text-sm text-muted-foreground mb-2">
+              {project.scriptWordCount} words • ~{project.scriptDuration}s duration
+            </p>
+            <div className="bg-card p-3 rounded border max-h-32 overflow-y-auto">
+              <p className="text-sm text-card-foreground">{project.script?.substring(0, 200)}...</p>
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div>
+            <label className="text-sm font-medium mb-2 block">Voice Selection</label>
+            <Select
+              value={selectedVoice?.name || ''}
+              onValueChange={(value) => {
+                console.log('Voice selected:', value);
+                const voice = availableVoices.find(v => v.name === value);
+                console.log('Found voice:', voice);
+                setSelectedVoice(voice || null);
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={`Choose a voice (${availableVoices.length} available)`} />
+              </SelectTrigger>
+              <SelectContent>
+                {availableVoices.length > 0 ? (
+                  availableVoices.map((voice) => (
+                    <SelectItem key={voice.name} value={voice.name}>
+                      {voice.displayName} ({voice.ssmlGender})
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="loading" disabled>
+                    Loading voices...
+                  </SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">
+                Speech Speed ({voiceSpeed}x)
+              </label>
+              <input
+                type="range"
+                min="0.25"
+                max="4.0"
+                step="0.25"
+                value={voiceSpeed}
+                onChange={(e) => setVoiceSpeed(parseFloat(e.target.value))}
+                className="w-full"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">
+                Pitch ({voicePitch > 0 ? '+' : ''}{voicePitch})
+              </label>
+              <input
+                type="range"
+                min="-20"
+                max="20"
+                step="1"
+                value={voicePitch}
+                onChange={(e) => setVoicePitch(parseInt(e.target.value))}
+                className="w-full"
+              />
+            </div>
+          </div>
+        </div>
+
+        {project.audioUrl && (
+          <div className="mt-6 p-4 border rounded-lg bg-muted/50">
+            <div className="flex items-center gap-2 mb-3">
+              <CheckCircle className="w-5 h-5 text-green-500" />
+              <h3 className="font-medium">Generated Audio</h3>
+              <Badge variant="secondary">
+                {project.audioDuration}s duration
+              </Badge>
+            </div>
+            <audio controls className="w-full">
+              <source src={project.audioUrl} type="audio/mpeg" />
+            </audio>
+          </div>
+        )}
+
+        <div className="flex gap-3">
+          <Button 
+            onClick={() => setCurrentPhase('script')}
+            variant="outline"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Script
+          </Button>
+          
+          <Button 
+            onClick={handleGenerateAudio}
+            disabled={generatingAudio || !selectedVoice}
+            className="flex-1"
+          >
+            {generatingAudio ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Generating Audio...
+              </>
+            ) : (
+              <>
+                <Mic className="w-4 h-4 mr-2" />
+                Generate Audio
+              </>
+            )}
+          </Button>
+          
+          {project.audioUrl && (
+            <Button 
+              onClick={() => setCurrentPhase('video')}
+              variant="outline"
+            >
+              Next: Choose Video
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const renderVideoPhase = () => (
+    <Card className="w-full max-w-4xl mx-auto">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Video className="w-6 h-6" />
+          Phase 3: Choose Background Video
+        </CardTitle>
+        <p className="text-muted-foreground">
+          Select a video from the library to use as background
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {project.audioUrl && (
+          <div className="p-4 border rounded-lg bg-muted/50">
+            <h3 className="font-medium mb-2">Audio Preview</h3>
+            <div className="flex items-center gap-4">
+              <audio controls className="flex-1">
+                <source src={project.audioUrl} type="audio/mpeg" />
+              </audio>
+              <Badge variant="secondary">
+                {project.audioDuration}s duration
+              </Badge>
+            </div>
+          </div>
+        )}
+
+        {loadingVideos ? (
+          <div className="text-center py-8">
+            <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
+            <p className="text-muted-foreground">Loading video library...</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {videoLibrary.map((video) => (
+              <Card 
+                key={video.id}
+                className={`cursor-pointer transition-colors ${
+                  selectedVideo?.id === video.id ? 'border-primary bg-primary/10 dark:bg-primary/20' : 'hover:bg-muted/50'
+                }`}
+                onClick={() => setSelectedVideo(video)}
+              >
+                <CardContent className="p-4">
+                  <div className="aspect-video bg-muted rounded mb-3 flex items-center justify-center">
+                    {video.thumbnailUrl ? (
+                      <img 
+                        src={video.thumbnailUrl} 
+                        alt={video.title}
+                        className="w-full h-full object-cover rounded"
+                      />
+                    ) : (
+                      <Video className="w-8 h-8 text-muted-foreground" />
                     )}
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-            {/* Library Sidebar */}
-            <div className="lg:col-span-1">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Video className="h-5 w-5 text-blue-600" />
-                    <span>Video Library</span>
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground">Select a video for AI narration</p>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {isLoadingLibrary ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="h-6 w-6 animate-spin" />
-                    </div>
-                  ) : videoLibrary.length > 0 ? (
-                    <div className="space-y-3">
-                      {videoLibrary.map((video) => (
-                        <div
-                          key={video.id}
-                          onClick={() => setSelectedVideo(video)}
-                          className={`p-3 border rounded-lg cursor-pointer transition-all hover:border-blue-500 ${
-                            selectedVideo?.id === video.id 
-                              ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
-                              : 'border-gray-200 dark:border-gray-700'
-                          }`}
-                        >
-                          {video.thumbnailUrl && (
-                            <img 
-                              src={video.thumbnailUrl} 
-                              alt={video.title}
-                              className="w-full h-20 object-cover rounded mb-2"
-                            />
-                          )}
-                          <h4 className="font-medium text-sm truncate">{video.title}</h4>
-                          <div className="flex items-center justify-between mt-1">
-                            <span className="text-xs text-muted-foreground">
-                              {video.duration ? formatDuration(Math.floor(video.duration)) : 'Unknown'}
-                            </span>
-                            {video.category && (
-                              <Badge variant="secondary" className="text-xs">
-                                {video.category}
-                              </Badge>
-                            )}
-                          </div>
-                          {video.tags && video.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-2">
-                              {video.tags.slice(0, 2).map((tag, index) => (
-                                <span key={index} className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
-                                  {tag}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
+                  <h3 className="font-medium text-sm mb-1">{video.title}</h3>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    {formatDurationSeconds(video.duration || 0)}
+                  </p>
+                  {video.tags && Array.isArray(video.tags) && video.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {video.tags.slice(0, 2).map((tag, index) => (
+                        <Badge key={index} variant="secondary" className="text-xs">
+                          {tag}
+                        </Badge>
                       ))}
                     </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <Video className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                      <p className="text-muted-foreground text-sm mb-4">No videos in library</p>
-                      <Button size="sm" variant="outline">
-                        <Upload className="h-4 w-4 mr-2" />
-                        Upload Video
-                      </Button>
-                    </div>
                   )}
                 </CardContent>
               </Card>
-            </div>
-
-            {/* Main Content Panel */}
-            <div className="lg:col-span-4 space-y-6">
-
-              {/* Templates */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Sparkles className="h-5 w-5 text-purple-600" />
-                    <span>Quick Start Templates</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {templates.map((template) => (
-                      <Button
-                        key={template.id}
-                        variant={selectedTemplate === template.id ? "default" : "outline"}
-                        className="h-auto p-4 text-left justify-start flex-col items-start space-y-2"
-                        onClick={() => handleTemplateSelect(template.id)}
-                      >
-                        <span className="font-medium">{template.name}</span>
-                        <span className="text-sm text-muted-foreground">{template.description}</span>
-                      </Button>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Main Input */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Type className="h-5 w-5 text-blue-600" />
-                    <span>Your Script Topic</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <Textarea
-                    placeholder="Enter your short video idea or story prompt...
-
-Perfect for TikTok, Instagram Reels & YouTube Shorts:
-• 'This insane gaming moment changed everything...'
-• 'POV: You discover a secret in your favorite game'
-• 'The most satisfying combo ever performed'
-• 'When you finally beat that impossible level'"
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    className="min-h-[120px] resize-none"
-                  />
-                  
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Audience</label>
-                      <Select value={targetAudience} onValueChange={setTargetAudience}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="casual">Casual</SelectItem>
-                          <SelectItem value="formal">Formal</SelectItem>
-                          <SelectItem value="educational">Educational</SelectItem>
-                          <SelectItem value="entertainment">Entertainment</SelectItem>
-                          <SelectItem value="marketing">Marketing</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Length</label>
-                      <Select value={scriptLength} onValueChange={setScriptLength}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="very-short">Ultra Short (0-15s)</SelectItem>
-                          <SelectItem value="short">Short (15-30s)</SelectItem>
-                          <SelectItem value="max">Max Length (30-45s)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Tone</label>
-                      <Select value={tone} onValueChange={setTone}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="conversational">Conversational</SelectItem>
-                          <SelectItem value="dramatic">Dramatic</SelectItem>
-                          <SelectItem value="professional">Professional</SelectItem>
-                          <SelectItem value="humorous">Humorous</SelectItem>
-                          <SelectItem value="mysterious">Mysterious</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Platform</label>
-                      <Select value={format} onValueChange={setFormat}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="tiktok">TikTok</SelectItem>
-                          <SelectItem value="instagram">Instagram Reels</SelectItem>
-                          <SelectItem value="youtube">YouTube Shorts</SelectItem>
-                          <SelectItem value="snapchat">Snapchat</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="flex space-x-3">
-                    <Button
-                      onClick={selectedVideo ? generateGameplayScript : generateScript}
-                      disabled={isGenerating || !prompt.trim()}
-                      className="flex-1"
-                      size="lg"
-                    >
-                      {isGenerating ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <Wand2 className="h-4 w-4 mr-2" />
-                      )}
-                      {isGenerating 
-                        ? "Generating..." 
-                        : selectedVideo 
-                          ? "Generate Gameplay Script" 
-                          : "Generate Script"
-                      }
-                    </Button>
-
-                    {generatedScript && (
-                      <Button
-                        onClick={regenerateScript}
-                        disabled={isGenerating}
-                        variant="outline"
-                        size="lg"
-                      >
-                        <RefreshCw className={`h-4 w-4 mr-2 ${isGenerating ? 'animate-spin' : ''}`} />
-                        Regenerate
-                      </Button>
-                    )}
-                  </div>
-
-                  {selectedVideo && (
-                    <div className="flex items-center p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                      <Video className="h-5 w-5 text-blue-600 mr-2" />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">Selected: {selectedVideo.title}</p>
-                        <p className="text-xs text-muted-foreground">
-                          Will generate 10-15 second narration for this gameplay
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Workflow Tabs - Show when video is selected */}
-              {selectedVideo && generatedScript && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>AI Script Generator Workflow</CardTitle>
-                    <p className="text-sm text-muted-foreground">
-                      Complete the workflow to create your AI-narrated gameplay story
-                    </p>
-                  </CardHeader>
-                  <CardContent>
-                    <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)} className="w-full">
-                      <TabsList className="grid w-full grid-cols-3">
-                        <TabsTrigger value="script">Script Ready ✓</TabsTrigger>
-                        <TabsTrigger value="narration">Add Narration</TabsTrigger>
-                        <TabsTrigger value="subtitles">Final Video</TabsTrigger>
-                      </TabsList>
-                      
-                      <TabsContent value="script" className="space-y-4">
-                        <div className="text-center py-4">
-                          <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
-                          <h3 className="text-lg font-semibold mb-2">Script Generated Successfully!</h3>
-                          <p className="text-muted-foreground mb-4">
-                            Your {generatedScript.wordCount}-word script is ready for AI narration.
-                          </p>
-                          <Button 
-                            onClick={() => setActiveTab('narration')}
-                            className="gap-2"
-                          >
-                            <Headphones className="h-4 w-4" />
-                            Generate AI Narration
-                          </Button>
-                        </div>
-                      </TabsContent>
-
-                      <TabsContent value="narration" className="space-y-4">
-                        <div className="space-y-4">
-                          <h3 className="text-lg font-semibold">Generate AI Narration</h3>
-                          <p className="text-muted-foreground">
-                            Convert your script to realistic AI speech using Google's neural voices.
-                          </p>
-                          
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className="text-sm font-medium mb-2 block">Voice Style</label>
-                              <Select value={selectedVoice} onValueChange={setSelectedVoice}>
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="en-US-Neural2-J">Dramatic Male (Neural2-J)</SelectItem>
-                                  <SelectItem value="en-US-Neural2-A">Professional Female (Neural2-A)</SelectItem>
-                                  <SelectItem value="en-US-Neural2-C">Casual Female (Neural2-C)</SelectItem>
-                                  <SelectItem value="en-US-Neural2-D">Young Male (Neural2-D)</SelectItem>
-                                  <SelectItem value="en-US-Neural2-F">Mature Male (Neural2-F)</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            <div>
-                              <label className="text-sm font-medium mb-2 block">
-                                Speed: {narrationSpeed}x
-                              </label>
-                              <Select value={narrationSpeed.toString()} onValueChange={(v) => setNarrationSpeed(parseFloat(v))}>
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="0.8">Slow (0.8x)</SelectItem>
-                                  <SelectItem value="1.0">Normal (1.0x)</SelectItem>
-                                  <SelectItem value="1.1">Fast (1.1x)</SelectItem>
-                                  <SelectItem value="1.2">Very Fast (1.2x)</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-
-                          {!narrationJob?.audioPath ? (
-                            <Button 
-                              onClick={generateNarration}
-                              disabled={isGeneratingNarration}
-                              className="w-full gap-2"
-                              size="lg"
-                            >
-                              {isGeneratingNarration ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <Headphones className="h-4 w-4" />
-                              )}
-                              {isGeneratingNarration ? "Generating Narration..." : "Generate AI Narration"}
-                            </Button>
-                          ) : (
-                            <div className="text-center py-4 border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                              <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-2" />
-                              <p className="text-green-700 dark:text-green-300 font-medium">
-                                Narration generated successfully!
-                              </p>
-                              <Button 
-                                onClick={() => setActiveTab('subtitles')}
-                                className="mt-2 gap-2"
-                                size="sm"
-                              >
-                                <Play className="h-4 w-4" />
-                                Continue to Final Video
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                      </TabsContent>
-
-                      <TabsContent value="subtitles" className="space-y-4">
-                        <div className="space-y-4">
-                          <h3 className="text-lg font-semibold">Create Final Video</h3>
-                          <p className="text-muted-foreground">
-                            Combine your gameplay footage with AI narration and optional subtitles.
-                          </p>
-                          
-                          <div className="space-y-4">
-                            <div className="flex items-center space-x-2">
-                              <input 
-                                type="checkbox" 
-                                id="subtitles" 
-                                checked={addSubtitles}
-                                onChange={(e) => setAddSubtitles(e.target.checked)}
-                                className="rounded"
-                              />
-                              <label htmlFor="subtitles" className="text-sm font-medium">
-                                Add subtitles to the video
-                              </label>
-                            </div>
-
-                            <div className="border rounded-lg p-4">
-                              <h4 className="font-medium mb-2">Final Video Preview:</h4>
-                              <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                                <div className="flex items-center space-x-1">
-                                  <Video className="h-4 w-4" />
-                                  <span>{selectedVideo.title}</span>
-                                </div>
-                                <span>+</span>
-                                <div className="flex items-center space-x-1">
-                                  <Headphones className="h-4 w-4" />
-                                  <span>AI Narration ({selectedVoice.split('-').pop()})</span>
-                                </div>
-                                {addSubtitles && (
-                                  <>
-                                    <span>+</span>
-                                    <div className="flex items-center space-x-1">
-                                      <Subtitles className="h-4 w-4" />
-                                      <span>Subtitles</span>
-                                    </div>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-
-                            <Button 
-                              onClick={combineVideoWithNarration}
-                              disabled={isProcessingFinal || !narrationJob?.audioPath}
-                              className="w-full gap-2"
-                              size="lg"
-                            >
-                              {isProcessingFinal ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <Play className="h-4 w-4" />
-                              )}
-                              {isProcessingFinal ? "Creating Final Video..." : "Create Final Video"}
-                            </Button>
-                          </div>
-                        </div>
-                      </TabsContent>
-                    </Tabs>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Generated Script */}
-              {generatedScript && (
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="flex items-center space-x-2">
-                        <Star className="h-5 w-5 text-yellow-500" />
-                        <span>Generated Script</span>
-                      </CardTitle>
-                      <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                        <div className="flex items-center space-x-1">
-                          <Type className="h-4 w-4" />
-                          <span>{generatedScript.wordCount} words</span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <Clock className="h-4 w-4" />
-                          <span>{formatDuration(generatedScript.estimatedDuration)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    {/* Hook */}
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-semibold text-purple-700">🎣 Hook</h4>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => copyToClipboard(generatedScript.hook, "Hook")}
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <p className="bg-gradient-to-br from-purple-900/20 to-violet-900/20 border border-purple-700/30 p-4 rounded-lg">
-                        {generatedScript.hook}
-                      </p>
-                    </div>
-
-                    <Separator />
-
-                    {/* Key Points */}
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-semibold text-blue-700">📋 Key Points</h4>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => copyToClipboard(generatedScript.keyPoints.join('\n'), "Key Points")}
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <div className="space-y-2">
-                        {generatedScript.keyPoints.map((point, index) => (
-                          <div key={index} className="flex items-start space-x-2">
-                            <Badge variant="secondary" className="mt-1">{index + 1}</Badge>
-                            <p className="flex-1">{point}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <Separator />
-
-                    {/* Conclusion */}
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-semibold text-green-700">🎯 Conclusion</h4>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => copyToClipboard(generatedScript.conclusion, "Conclusion")}
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <p className="bg-gradient-to-br from-green-900/20 to-emerald-900/20 border border-green-700/30 p-4 rounded-lg">
-                        {generatedScript.conclusion}
-                      </p>
-                    </div>
-
-                    <Separator />
-
-                    {/* Full Script */}
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-semibold">📝 Complete Script</h4>
-                        <Button
-                          onClick={() => copyToClipboard(generatedScript.fullScript, "Full Script")}
-                          className="gap-2"
-                        >
-                          <Copy className="h-4 w-4" />
-                          Copy Full Script
-                        </Button>
-                      </div>
-                      <div className="bg-gradient-to-br from-gray-900/20 to-slate-900/20 border border-gray-700/30 p-6 rounded-lg font-mono text-sm leading-relaxed whitespace-pre-wrap">
-                        {generatedScript.fullScript}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-
-
+            ))}
           </div>
+        )}
+
+        <div className="flex gap-3">
+          <Button 
+            onClick={() => setCurrentPhase('voice')}
+            variant="outline"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Voice
+          </Button>
+          
+          <Button 
+            onClick={handlePrepareVideo}
+            disabled={!selectedVideo || preparingVideo}
+            className="flex-1"
+          >
+            {preparingVideo ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Preparing Video...
+              </>
+            ) : (
+              <>
+                <Video className="w-4 h-4 mr-2" />
+                Prepare Final Video
+              </>
+            )}
+          </Button>
         </div>
-      </main>
+      </CardContent>
+    </Card>
+  );
+
+  const renderProcessingPhase = () => (
+    <Card className="w-full max-w-4xl mx-auto">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Loader2 className="w-6 h-6 animate-spin" />
+          Processing Your Video
+        </CardTitle>
+        <p className="text-muted-foreground">
+          Combining audio and video to create your final output...
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="text-center py-8">
+          <div className="w-16 h-16 bg-primary/10 dark:bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+          <h3 className="text-lg font-medium mb-2">Creating Your Video</h3>
+          <p className="text-muted-foreground mb-4">
+            This may take a few minutes depending on the video length
+          </p>
+          <Progress value={85} className="w-full max-w-md mx-auto" />
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const renderCompletePhase = () => (
+    <Card className="w-full max-w-4xl mx-auto">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <CheckCircle className="w-6 h-6 text-green-500" />
+          Video Ready!
+        </CardTitle>
+        <p className="text-muted-foreground">
+          Your video has been successfully generated and is ready for download
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {project.finalVideoUrl && (
+          <div className="space-y-4">
+            {project.isMockVideo ? (
+              <div className="w-full aspect-video bg-muted rounded-lg flex items-center justify-center border-2 border-dashed border-muted-foreground/25">
+                <div className="text-center space-y-3">
+                  <Video className="w-16 h-16 mx-auto text-muted-foreground/50" />
+                  <div className="space-y-1">
+                    <h4 className="font-semibold text-lg">Mock Video Generated</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Video generation completed successfully in development mode
+                    </p>
+                    <Badge variant="secondary" className="mt-2">
+                      Development Mode
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <video 
+                controls 
+                className="w-full rounded-lg"
+                src={project.finalVideoUrl}
+              >
+                Your browser does not support video playbook.
+              </video>
+            )}
+            
+            <div className="flex gap-3">
+              {!project.isMockVideo && (
+                <Button asChild className="flex-1">
+                  <a 
+                    href={project.finalVideoUrl}
+                    download={`${project.projectName || 'generated-video'}.mp4`}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Download Video
+                  </a>
+                </Button>
+              )}
+              {project.isMockVideo && (
+                <Button disabled className="flex-1">
+                  <Download className="w-4 h-4 mr-2" />
+                  Download (Mock Mode)
+                </Button>
+              )}
+              
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setCurrentPhase('script');
+                  setProject({ status: 'idle' });
+                  setScriptPrompt('');
+                  setProjectName('');
+                }}
+              >
+                Create New Video
+              </Button>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="space-y-8"
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <SidebarTrigger />
+            <div className="flex items-center space-x-2">
+              <Wand2 className="h-8 w-8 text-primary" />
+              <h1 className="text-3xl font-bold text-foreground">
+                AI Video Generation
+              </h1>
+            </div>
+            <div></div>
+          </div>
+          
+          <div className="text-center">
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Create complete videos with AI-generated scripts, narration, and background footage. Perfect for TikTok, YouTube, and social media.
+            </p>
+          </div>
+
+          {/* Progress Indicator */}
+          {renderPhaseIndicator()}
+
+          {/* Progress Bar */}
+          <div className="w-full max-w-4xl mx-auto">
+            <Progress value={getPhaseProgress()} className="h-2 bg-muted/50" />
+          </div>
+
+          {/* Error Display */}
+          {error && (
+            <div className="w-full max-w-4xl mx-auto">
+              <div className="bg-destructive/10 dark:bg-destructive/20 border border-destructive/20 dark:border-destructive/30 rounded-lg p-4">
+                <p className="text-destructive dark:text-destructive-foreground text-sm">{error}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Phase Content */}
+          <div className="w-full">
+            {currentPhase === 'script' && renderScriptPhase()}
+            {currentPhase === 'voice' && renderVoicePhase()}
+            {currentPhase === 'video' && renderVideoPhase()}
+            {currentPhase === 'processing' && renderProcessingPhase()}
+            {currentPhase === 'complete' && renderCompletePhase()}
+          </div>
+
+        </motion.div>
+      </div>
     </div>
   );
 }

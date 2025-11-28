@@ -11,17 +11,19 @@ import { Loader2, Copy, RefreshCw, Star, Clock, Type, Wand2, Sparkles } from "lu
 import { useToast } from "@/hooks/use-toast";
 import { apiClient } from "@/lib/api-client";
 
-interface ScriptTemplate {
+interface VideoLibraryItem {
   id: string;
-  name: string;
-  description: string;
-  prompt: string;
-  defaultOptions: {
-    tone?: string;
-    format?: string;
-    targetAudience?: string;
-    scriptLength?: string;
-  };
+  title: string;
+  description?: string;
+  filename: string;
+  duration: number;
+  thumbnailUrl?: string;
+  s3Url?: string;
+  createdAt: string;
+  fileSize?: number;
+  mimeType?: string;
+  category?: string;
+  tags?: string[];
 }
 
 interface GeneratedScript {
@@ -33,19 +35,6 @@ interface GeneratedScript {
   wordCount: number;
 }
 
-interface ScriptProject {
-  id: string;
-  title: string;
-  originalPrompt: string;
-  targetAudience?: string;
-  scriptLength?: string;
-  tone?: string;
-  format?: string;
-  status: string;
-  createdAt: string;
-  generatedScripts: any[];
-}
-
 export default function AIScriptGenerator() {
   const [prompt, setPrompt] = useState("");
   const [targetAudience, setTargetAudience] = useState("casual");
@@ -55,56 +44,54 @@ export default function AIScriptGenerator() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedScript, setGeneratedScript] = useState<GeneratedScript | null>(null);
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
-  const [templates, setTemplates] = useState<ScriptTemplate[]>([]);
-  const [recentProjects, setRecentProjects] = useState<ScriptProject[]>([]);
-  const [selectedTemplate, setSelectedTemplate] = useState<string>("");
+  const [libraryVideos, setLibraryVideos] = useState<VideoLibraryItem[]>([]);
+  const [selectedVideo, setSelectedVideo] = useState<VideoLibraryItem | null>(null);
+  const [isLoadingLibrary, setIsLoadingLibrary] = useState(false);
 
   const { toast } = useToast();
 
   useEffect(() => {
-    loadTemplates();
-    loadRecentProjects();
+    loadLibrary();
   }, []);
 
-  const loadTemplates = async () => {
+  const loadLibrary = async () => {
+    setIsLoadingLibrary(true);
     try {
-      const response = await apiClient.get('/ai-script-generator/templates');
+      const response = await apiClient.get('/api/ai-script-generator/library');
       if (response.data.success) {
-        setTemplates(response.data.templates);
+        setLibraryVideos(response.data.videos);
+        console.log('Loaded library videos:', response.data.videos);
       }
     } catch (error) {
-      console.error('Error loading templates:', error);
-    }
-  };
-
-  const loadRecentProjects = async () => {
-    try {
-      const response = await apiClient.get('/ai-script-generator/projects');
-      if (response.data.success) {
-        setRecentProjects(response.data.scripts.slice(0, 5)); // Show only recent 5
-      }
-    } catch (error) {
-      console.error('Error loading recent projects:', error);
-    }
-  };
-
-  const handleTemplateSelect = (templateId: string) => {
-    const template = templates.find(t => t.id === templateId);
-    if (template) {
-      setSelectedTemplate(templateId);
-      setPrompt(template.prompt.replace('[TOPIC]', ''));
-      
-      // Apply template defaults
-      if (template.defaultOptions.tone) setTone(template.defaultOptions.tone);
-      if (template.defaultOptions.format) setFormat(template.defaultOptions.format);
-      if (template.defaultOptions.targetAudience) setTargetAudience(template.defaultOptions.targetAudience);
-      if (template.defaultOptions.scriptLength) setScriptLength(template.defaultOptions.scriptLength);
-
+      console.error('Error loading library:', error);
       toast({
-        title: "Template Applied",
-        description: `${template.name} template has been applied. Fill in your topic and generate!`,
+        title: "Library Load Error",
+        description: "Failed to load video library. Please refresh the page.",
+        variant: "destructive",
       });
+    } finally {
+      setIsLoadingLibrary(false);
     }
+  };
+
+  const handleVideoSelect = (video: VideoLibraryItem) => {
+    setSelectedVideo(video);
+    toast({
+      title: "Video Selected",
+      description: `${video.title} selected for your script generation.`,
+    });
+  };
+
+  const formatFileSize = (bytes?: number): string => {
+    if (!bytes) return 'Unknown size';
+    const mb = bytes / (1024 * 1024);
+    return `${mb.toFixed(1)} MB`;
+  };
+
+  const formatDurationSeconds = (seconds: number): string => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
   const generateScript = async () => {
@@ -121,7 +108,7 @@ export default function AIScriptGenerator() {
     setGeneratedScript(null);
 
     try {
-      const response = await apiClient.post('/ai-script-generator/generate', {
+      const response = await apiClient.post('/api/ai-script-generator/generate', {
         prompt: prompt.trim(),
         targetAudience,
         scriptLength,
@@ -137,9 +124,6 @@ export default function AIScriptGenerator() {
           title: "Script Generated!",
           description: `Your ${scriptLength} ${format} script is ready with ${response.data.script.wordCount} words.`,
         });
-
-        // Refresh recent projects
-        loadRecentProjects();
       }
     } catch (error: any) {
       console.error('Error generating script:', error);
@@ -170,7 +154,7 @@ export default function AIScriptGenerator() {
     setIsGenerating(true);
 
     try {
-      const response = await apiClient.post(`/ai-script-generator/${currentProjectId}/regenerate`, {
+      const response = await apiClient.post(`/api/ai-script-generator/${currentProjectId}/regenerate`, {
         tone,
         length: scriptLength,
         additionalInstructions: `Please improve the script with these preferences: ${tone} tone, ${scriptLength} length for ${format} format.`
@@ -229,28 +213,73 @@ export default function AIScriptGenerator() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Input Panel */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Templates */}
+            {/* Video Library */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <Sparkles className="h-5 w-5 text-purple-600" />
-                  <span>Quick Start Templates</span>
+                  <span>Video Library</span>
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {templates.map((template) => (
-                    <Button
-                      key={template.id}
-                      variant={selectedTemplate === template.id ? "default" : "outline"}
-                      className="h-auto p-4 text-left justify-start flex-col items-start space-y-2"
-                      onClick={() => handleTemplateSelect(template.id)}
+                {isLoadingLibrary ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
+                    <span className="ml-2">Loading library...</span>
+                  </div>
+                ) : libraryVideos.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {libraryVideos.map((video) => (
+                      <div
+                        key={video.id}
+                        className={`border rounded-lg p-4 cursor-pointer transition-all hover:shadow-md ${
+                          selectedVideo?.id === video.id 
+                            ? 'border-purple-500 bg-purple-50' 
+                            : 'border-gray-200 hover:border-purple-300'
+                        }`}
+                        onClick={() => handleVideoSelect(video)}
+                      >
+                        {video.thumbnailUrl && (
+                          <img
+                            src={video.thumbnailUrl}
+                            alt={video.title}
+                            className="w-full h-32 object-cover rounded-md mb-3"
+                          />
+                        )}
+                        <h3 className="font-semibold text-sm mb-2">{video.title}</h3>
+                        {video.description && (
+                          <p className="text-xs text-gray-600 mb-2 line-clamp-2">{video.description}</p>
+                        )}
+                        <div className="flex items-center justify-between text-xs text-gray-500">
+                          <span>{formatDurationSeconds(video.duration)}</span>
+                          <span>{formatFileSize(video.fileSize)}</span>
+                        </div>
+                        {video.tags && video.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {video.tags.slice(0, 3).map((tag, index) => (
+                              <Badge key={index} variant="secondary" className="text-xs px-2 py-0">
+                                {tag}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">No videos available in the library.</p>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="mt-2"
+                      onClick={loadLibrary}
                     >
-                      <span className="font-medium">{template.name}</span>
-                      <span className="text-sm text-gray-500">{template.description}</span>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Refresh Library
                     </Button>
-                  ))}
-                </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -477,35 +506,59 @@ Examples:
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Recent Projects */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Scripts</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {recentProjects.length > 0 ? (
-                  <div className="space-y-3">
-                    {recentProjects.map((project) => (
-                      <div key={project.id} className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                        <h4 className="font-medium text-sm truncate">{project.title}</h4>
-                        <div className="flex items-center justify-between mt-1">
-                          <Badge variant="secondary" className="text-xs">
-                            {project.format || 'General'}
-                          </Badge>
-                          <span className="text-xs text-gray-500">
-                            {new Date(project.createdAt).toLocaleDateString()}
-                          </span>
+            {/* Selected Video Info */}
+            {selectedVideo && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Selected Video</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {selectedVideo.thumbnailUrl && (
+                      <img
+                        src={selectedVideo.thumbnailUrl}
+                        alt={selectedVideo.title}
+                        className="w-full h-32 object-cover rounded-md"
+                      />
+                    )}
+                    <div>
+                      <h3 className="font-semibold text-sm mb-2">{selectedVideo.title}</h3>
+                      {selectedVideo.description && (
+                        <p className="text-xs text-gray-600 mb-3">{selectedVideo.description}</p>
+                      )}
+                      <div className="space-y-2 text-xs text-gray-500">
+                        <div className="flex justify-between">
+                          <span>Duration:</span>
+                          <span>{formatDurationSeconds(selectedVideo.duration)}</span>
                         </div>
+                        <div className="flex justify-between">
+                          <span>Size:</span>
+                          <span>{formatFileSize(selectedVideo.fileSize)}</span>
+                        </div>
+                        {selectedVideo.category && (
+                          <div className="flex justify-between">
+                            <span>Category:</span>
+                            <Badge variant="outline" className="text-xs">{selectedVideo.category}</Badge>
+                          </div>
+                        )}
                       </div>
-                    ))}
+                      {selectedVideo.tags && selectedVideo.tags.length > 0 && (
+                        <div className="mt-3">
+                          <p className="text-xs text-gray-500 mb-2">Tags:</p>
+                          <div className="flex flex-wrap gap-1">
+                            {selectedVideo.tags.map((tag, index) => (
+                              <Badge key={index} variant="secondary" className="text-xs">
+                                {tag}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                ) : (
-                  <p className="text-gray-500 text-sm text-center py-4">
-                    No recent scripts yet. Generate your first script!
-                  </p>
-                )}
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Tips */}
             <Card>
@@ -513,6 +566,10 @@ Examples:
                 <CardTitle>💡 Pro Tips</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
+                <div>
+                  <p className="font-medium">Select a Video First</p>
+                  <p className="text-gray-600">Choose a gameplay video from the library to create engaging content.</p>
+                </div>
                 <div>
                   <p className="font-medium">Be Specific</p>
                   <p className="text-gray-600">The more details you provide, the better your script will be.</p>
@@ -522,12 +579,8 @@ Examples:
                   <p className="text-gray-600">Experiment with dramatic, humorous, or mysterious tones for different effects.</p>
                 </div>
                 <div>
-                  <p className="font-medium">Use Templates</p>
-                  <p className="text-gray-600">Start with a template and customize it for your specific needs.</p>
-                </div>
-                <div>
-                  <p className="font-medium">Copy Sections</p>
-                  <p className="text-gray-600">Copy individual sections (hook, conclusion) to use in different projects.</p>
+                  <p className="font-medium">Short Video Focus</p>
+                  <p className="text-gray-600">Keep scripts 0-45 seconds for TikTok, Instagram, and YouTube Shorts.</p>
                 </div>
               </CardContent>
             </Card>
