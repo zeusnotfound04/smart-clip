@@ -13,6 +13,7 @@ import fakeConversationsRoutes from './routes/fake-conversations.routes';
 import statusRoutes from './routes/status.routes';
 import thumbnailRoutes from './routes/thumbnail.routes';
 import videoProcessingRoutes from './routes/video-processing.routes';
+import videoGenerationRoutes from './routes/video-generation.routes';
 import healthRoutes from './routes/health.routes';
 import docsRoutes from './routes/docs.routes';
 import { 
@@ -55,6 +56,7 @@ app.use('/api/fake-conversations', fakeConversationsRoutes);
 app.use('/api/status', statusRoutes);
 app.use('/api/thumbnails', thumbnailRoutes);
 app.use('/api/video-processing', videoProcessingRoutes);
+app.use('/api/video-generation', videoGenerationRoutes);
 
 app.use('/api/health', healthRoutes);
 app.use('/api/docs', docsRoutes);
