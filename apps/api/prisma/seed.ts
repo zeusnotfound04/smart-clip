@@ -140,8 +140,51 @@ async function seedContentTypes() {
   console.log('Content type seeding completed!');
 }
 
+async function seedGlobalLibrary() {
+  console.log('🌱 Seeding global video library...');
+
+  // Seed the Subway Surfers video for the global library
+  const sampleVideos = [
+    {
+      title: "Subway Surfers Epic Run",
+      description: "Amazing 3+ minute endless runner gameplay with incredible moves",
+      videoUrl: "https://smart-clip-temp.s3.ap-south-1.amazonaws.com/library/subway-sufer-3min.mp4",
+      thumbnailUrl: "https://i.ytimg.com/vi/QPW3XwBoQlw/hqdefault.jpg",
+      duration: 193.0, // 3:13 in seconds
+      fileSize: 55188685, // 52.6MB in bytes
+      mimeType: "video/mp4",
+      category: "gaming",
+      tags: ["subway-surfers", "endless-runner", "mobile-game", "epic", "gameplay"],
+      uploadSource: "seeded",
+      status: "active"
+    }
+  ];
+
+  for (const video of sampleVideos) {
+    try {
+      const existingVideo = await prisma.library.findFirst({
+        where: { title: video.title }
+      });
+
+      if (!existingVideo) {
+        await prisma.library.create({
+          data: video
+        });
+        console.log(`✅ Seeded video: ${video.title}`);
+      } else {
+        console.log(`⏭️  Skipped existing video: ${video.title}`);
+      }
+    } catch (error) {
+      console.error(`✗ Failed to seed video ${video.title}:`, error);
+    }
+  }
+
+  console.log('🌱 Global video library seeding completed!');
+}
+
 async function main() {
   await seedContentTypes();
+  await seedGlobalLibrary();
 }
 
 main()

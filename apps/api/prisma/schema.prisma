@@ -53,7 +53,7 @@ model User {
   segmentFeedback      SegmentFeedback[]
   scriptProjects       ScriptProject[]
   conversationProjects ConversationProject[]
-  library       Library[]
+  videoGenerationProjects VideoGenerationProject[]
 
   @@map("users")
 }
@@ -464,7 +464,6 @@ model ConversationApiUsage {
 
 model Library {
   id                String    @id @default(cuid())
-  userId            String    @map("user_id")
   title             String
   description       String?
   videoUrl          String    @map("video_url")
@@ -474,19 +473,66 @@ model Library {
   mimeType          String?   @map("mime_type")
   category          String?   @default("gameplay")
   tags              String[]  @default([])
-  isPublic          Boolean   @default(false) @map("is_public")
-  uploadSource      String?   @default("upload") @map("upload_source")
+  uploadSource      String?   @default("seeded") @map("upload_source")
   metadata          Json?
   status            String    @default("active")
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
-  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  videoGenerationProjects VideoGenerationProject[]
 
-  @@index([userId])
   @@index([category])
   @@index([status])
-  @@index([isPublic])
   @@index([createdAt])
   @@map("library")
+}
+
+model VideoGenerationProject {
+  id                  String    @id @default(cuid())
+  userId              String    @map("user_id")
+  title               String
+  originalPrompt      String    @map("original_prompt")
+  targetAudience      String?   @map("target_audience")
+  scriptLength        String?   @map("script_length")
+  tone                String?
+  format              String?
+  
+  // Phase 1: Script Generation
+  scriptStatus        String    @default("pending") @map("script_status")
+  generatedScript     Json?     @map("generated_script")
+  scriptProjectId     String?   @map("script_project_id")
+  
+  // Phase 2: Voice Selection  
+  voiceStatus         String    @default("pending") @map("voice_status")
+  selectedVoice       String?   @map("selected_voice")
+  voiceSpeed          Float?    @default(1.0) @map("voice_speed")
+  voicePitch          Float?    @default(0) @map("voice_pitch")
+  audioUrl            String?   @map("audio_url")
+  audioDuration       Float?    @map("audio_duration")
+  
+  // Phase 3: Video Selection & Generation
+  videoStatus         String    @default("pending") @map("video_status")
+  selectedVideoId     String?   @map("selected_video_id")
+  finalVideoUrl       String?   @map("final_video_url")
+  videoDuration       Float?    @map("video_duration")
+  
+  // Project metadata
+  currentPhase        Int       @default(1) @map("current_phase")
+  overallStatus       String    @default("script_generation")
+  estimatedCost       Decimal?  @map("estimated_cost") @db.Decimal(10,4)
+  actualCost          Decimal?  @map("actual_cost") @db.Decimal(10,4)
+  errorMessage        String?   @map("error_message")
+  processingLogs      Json?     @map("processing_logs")
+  
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  selectedVideo       Library?  @relation(fields: [selectedVideoId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([overallStatus])
+  @@index([currentPhase])
+  @@index([createdAt])
+  @@map("video_generation_projects")
 }
