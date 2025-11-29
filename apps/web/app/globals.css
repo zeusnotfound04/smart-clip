@@ -58,8 +58,8 @@
   --secondary-foreground: oklch(0.985 0 0);
   --muted: #2a2a2a;
   --muted-foreground: oklch(0.708 0 0);
-  --accent: #2a2a2a;
-  --accent-foreground: oklch(0.985 0 0);
+  --accent: oklch(0.6 0.18 250);
+  --accent-foreground: oklch(0.98 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --border: #333333;
   --input: #2a2a2a;
@@ -92,8 +92,8 @@
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
   --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+    --accent: oklch(0.6 0.18 250);
+  --accent-foreground: oklch(0.98 0 0);
   --destructive: oklch(0.704 0.191 22.216);
   --border: #333333;
   --input: #2a2a2a;
@@ -137,6 +137,27 @@
     @apply bg-foreground;
   }
 }
+html {
+  scroll-behavior: smooth;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: oklch(0.1 0 0);
+}
+
+::-webkit-scrollbar-thumb {
+  background: oklch(0.3 0 0);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.4 0 0);
+}
+
 
 @layer components {
   /* Glass morphism effect */
