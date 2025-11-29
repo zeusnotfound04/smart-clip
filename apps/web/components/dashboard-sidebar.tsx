@@ -58,42 +58,42 @@ const navigationItems = [
     icon: Wand2,
     badge: "AI",
   },
-  {
-    title: "Fake Conversations",
-    url: "/dashboard/fake-conversations",
-    icon: MessageCircle,
-    badge: "AI",
-  },
+  // {
+  //   title: "Fake Conversations",
+  //   url: "/dashboard/fake-conversations",
+  //   icon: MessageCircle,
+  //   badge: "AI",
+  // },
   {
     title: "Smart Clipper",
     url: "/dashboard/features/smart-clipper",
     icon: Scissors,
     badge: null,
   },
-  {
-    title: "Video Enhancement",
-    url: "/dashboard/features/video-enhancement",
-    icon: Video,
-    badge: null,
-  },
-  {
-    title: "Projects",
-    url: "/dashboard/projects",
-    icon: Briefcase,
-    badge: null,
-  },
-  {
-    title: "Videos",
-    url: "/dashboard/videos",
-    icon: Play,
-    badge: null,
-  },
-  {
-    title: "Workspaces",
-    url: "/dashboard/workspaces",
-    icon: Layers,
-    badge: null,
-  },
+  // {
+  //   title: "Video Enhancement",
+  //   url: "/dashboard/features/video-enhancement",
+  //   icon: Video,
+  //   badge: null,
+  // },
+  // {
+  //   title: "Projects",
+  //   url: "/dashboard/projects",
+  //   icon: Briefcase,
+  //   badge: null,
+  // },
+  // {
+  //   title: "Videos",
+  //   url: "/dashboard/videos",
+  //   icon: Play,
+  //   badge: null,
+  // },
+  // {
+  //   title: "Workspaces",
+  //   url: "/dashboard/workspaces",
+  //   icon: Layers,
+  //   badge: null,
+  // },
 ];
 
 const bottomNavigation = [

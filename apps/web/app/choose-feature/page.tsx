@@ -29,15 +29,6 @@ const coreFeatures = [
     gradient: 'from-blue-500 to-cyan-500'
   },
   {
-    id: 'video-generation',
-    title: 'Video Generation',
-    description: 'Create complete videos with AI narration and script generation',
-    icon: FileVideo,
-    href: '/video-generation-v2',
-    gradient: 'from-violet-500 to-purple-500',
-    isNew: true
-  },
-  {
     id: 'split-streamer',
     title: 'Split Streamer', 
     description: 'Split long videos into multiple clips automatically',
@@ -50,7 +41,7 @@ const coreFeatures = [
     title: 'Smart Clipper',
     description: 'Extract highlights and key moments using AI',
     icon: Scissors,
-    href: '/dashboard/smart-clipper',
+    href: '/dashboard/features/smart-clipper',
     gradient: 'from-green-500 to-teal-500'
   },
   {
@@ -61,14 +52,7 @@ const coreFeatures = [
     href: '/dashboard/ai-script-generator',
     gradient: 'from-orange-500 to-red-500'
   },
-  {
-    id: 'fake-conversations',
-    title: 'Fake Conversations',
-    description: 'Generate realistic chat conversations',
-    icon: MessageCircle,
-    href: '/dashboard/fake-conversations',
-    gradient: 'from-indigo-500 to-purple-500'
-  }
+
 ];
 
 function ChooseFeaturePageContent() {
@@ -174,7 +158,7 @@ function ChooseFeaturePageContent() {
                       />
                       
                       <CardHeader className="pb-4 relative z-10">
-                        {feature.isNew && (
+                        {/* {feature.isNew && (
                           <motion.div
                             className="absolute -top-2 -right-2 z-20 bg-gradient-to-r from-yellow-400 to-orange-500 text-black text-xs font-bold px-2 py-1 rounded-full shadow-lg"
                             animate={{ scale: [1, 1.1, 1], rotate: [0, 5, -5, 0] }}
@@ -182,7 +166,7 @@ function ChooseFeaturePageContent() {
                           >
                             ✨ NEW
                           </motion.div>
-                        )}
+                        )} */}
                         <motion.div 
                           className={`w-24 h-24 rounded-2xl bg-gradient-to-r ${feature.gradient} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500 relative shadow-lg mx-auto`}
                           whileHover={{ rotate: [0, -5, 5, 0] }}
