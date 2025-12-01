@@ -442,23 +442,37 @@ class APIClient {
       headers.Authorization = authHeader.Authorization;
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/split-streamer/combine`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        webcamVideoId,
-        gameplayVideoId,
-        layoutConfig,
-      }),
-    });
+    // Use AbortController for timeout handling
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 600000); // 10 minute timeout
 
-    const result = await response.json();
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/split-streamer/combine`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          webcamVideoId,
+          gameplayVideoId,
+          layoutConfig,
+        }),
+        signal: controller.signal,
+      });
 
-    if (!response.ok) {
-      throw new Error(result.error || 'Failed to combine videos');
+      clearTimeout(timeoutId);
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to combine videos');
+      }
+
+      return result;
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error('Video combination timed out. Please try again or use shorter videos.');
+      }
+      throw error;
     }
-
-    return result;
   }
 
   async updateVideoLayout(projectId: string, layoutConfig: any): Promise<{
@@ -534,6 +548,66 @@ class APIClient {
     }
 
     return result;
+  }
+
+  // Poll job status for long-running operations
+  async pollJobStatus(
+    projectId: string, 
+    onProgress?: (progress: { status: string; progress?: number; message?: string }) => void,
+    maxAttempts: number = 180, // 15 minutes with 5s intervals
+    interval: number = 5000 // 5 seconds
+  ): Promise<{
+    id: string;
+    name: string;
+    status: string;
+    outputUrl?: string;
+    config: any;
+  }> {
+    let attempts = 0;
+    
+    return new Promise((resolve, reject) => {
+      const poll = async () => {
+        try {
+          attempts++;
+          const project = await this.getSplitStreamerProject(projectId);
+          
+          // Call progress callback if provided
+          if (onProgress) {
+            onProgress({
+              status: project.status,
+              message: `Processing video combination... (${attempts}/${maxAttempts})`
+            });
+          }
+          
+          // Check if job is complete
+          if (project.status === 'completed') {
+            resolve(project);
+            return;
+          }
+          
+          // Check if job failed
+          if (project.status === 'failed' || project.status === 'error') {
+            reject(new Error('Video combination failed'));
+            return;
+          }
+          
+          // Check if we've exceeded max attempts
+          if (attempts >= maxAttempts) {
+            reject(new Error('Video combination timed out'));
+            return;
+          }
+          
+          // Continue polling
+          setTimeout(poll, interval);
+          
+        } catch (error) {
+          reject(error);
+        }
+      };
+      
+      // Start polling
+      poll();
+    });
   }
 
   // Generic HTTP methods

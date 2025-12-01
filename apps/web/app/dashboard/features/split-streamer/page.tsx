@@ -103,27 +103,31 @@ export default function SplitStreamerPage() {
       setProcessingStage('processing');
       setProcessingProgress(0);
 
-      // Simulate processing progress
-      const progressInterval = setInterval(() => {
-        setProcessingProgress((prev) => {
-          if (prev >= 90) {
-            clearInterval(progressInterval);
-            return prev;
-          }
-          return prev + Math.random() * 10;
-        });
-      }, 1000);
-
-      // Start video combination
-      const result = await apiClient.combineVideos(webcamUpload.id, gameplayUpload.id, layoutConfig);
-      clearInterval(progressInterval);
-      setProcessingProgress(100);
+      // Start video combination (returns immediately with project ID)
+      const initialResult = await apiClient.combineVideos(webcamUpload.id, gameplayUpload.id, layoutConfig);
+      
+      // Poll for completion
+      const finalResult = await apiClient.pollJobStatus(
+        initialResult.projectId,
+        (progress) => {
+          // Update progress based on status
+          const progressMap: { [key: string]: number } = {
+            'processing': 30,
+            'uploading': 60,
+            'finalizing': 80,
+            'completed': 100
+          };
+          
+          const currentProgress = progressMap[progress.status] || 10;
+          setProcessingProgress(currentProgress);
+        }
+      );
 
       setProjectData({
-        id: result.projectId,
+        id: finalResult.id,
         name: `Split Stream - ${new Date().toLocaleDateString()}`,
-        outputUrl: result.outputUrl,
-        status: 'completed'
+        outputUrl: finalResult.outputUrl,
+        status: finalResult.status
       });
       
       setProcessingStage('completed');

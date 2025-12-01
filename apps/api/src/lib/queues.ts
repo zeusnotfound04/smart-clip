@@ -45,34 +45,38 @@ export { redisConfig };
 export const videoProcessingQueue = new Bull('video processing', {
   redis: redisConfig,
   settings: {
-    stalledInterval: 30 * 1000, // 30 seconds
-    maxStalledCount: 1,
+    stalledInterval: 60 * 1000, // 60 seconds for large file processing
+    maxStalledCount: 2, // Allow more stalls for heavy processing
   },
   defaultJobOptions: {
-    removeOnComplete: 10,
+    removeOnComplete: 5, // Keep fewer completed jobs to save memory
     removeOnFail: 10,
-    attempts: 3,
+    attempts: 2, // Reduce attempts for faster failure detection
     backoff: {
       type: 'exponential',
-      delay: 2000
-    }
+      delay: 10000 // 10 second delay for large file retries
+    },
+    // Extended timeout for large video processing (30 minutes)
+    timeout: 1800000
   }
 });
 
 export const subtitleQueue = new Bull('subtitle generation', {
   redis: redisConfig,
   settings: {
-    stalledInterval: 30 * 1000,
+    stalledInterval: 45 * 1000, // 45 seconds for audio processing
     maxStalledCount: 1,
   },
   defaultJobOptions: {
-    removeOnComplete: 10,
+    removeOnComplete: 5,
     removeOnFail: 10,
     attempts: 2,
     backoff: {
       type: 'exponential',
-      delay: 1000
-    }
+      delay: 5000
+    },
+    // Extended timeout for large video subtitle generation (20 minutes)
+    timeout: 1200000
   }
 });
 
@@ -96,17 +100,19 @@ export const aiQueue = new Bull('ai processing', {
 export const smartClipperQueue = new Bull('smart clipper', {
   redis: redisConfig,
   settings: {
-    stalledInterval: 30 * 1000,
-    maxStalledCount: 1,
+    stalledInterval: 60 * 1000, // 60 seconds for AI processing
+    maxStalledCount: 2,
   },
   defaultJobOptions: {
-    removeOnComplete: 5,
+    removeOnComplete: 3, // Keep fewer for memory efficiency
     removeOnFail: 5,
     attempts: 2,
     backoff: {
       type: 'exponential',
-      delay: 5000
-    }
+      delay: 10000
+    },
+    // Extended timeout for large video AI analysis (45 minutes)
+    timeout: 2700000
   }
 });
 

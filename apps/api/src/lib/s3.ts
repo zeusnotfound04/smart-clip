@@ -20,15 +20,45 @@ const s3Client = new S3Client({
 const bucketName = "smart-clip-temp";
 
 export const uploadFile = async (key: string, buffer: Buffer, contentType: string): Promise<string> => {
-  const command = new PutObjectCommand({
-    Bucket: bucketName,
-    Key: key,
-    Body: buffer,
-    ContentType: contentType,
-  });
+  // Use multipart upload for files larger than 100MB
+  if (buffer.length > 100 * 1024 * 1024) {
+    console.log(`📤 Large file detected (${Math.round(buffer.length / 1024 / 1024)}MB), using multipart upload`);
+    
+    const { Upload } = await import('@aws-sdk/lib-storage');
+    
+    const upload = new Upload({
+      client: s3Client,
+      params: {
+        Bucket: bucketName,
+        Key: key,
+        Body: buffer,
+        ContentType: contentType,
+      },
+      // Configure multipart upload settings
+      partSize: 10 * 1024 * 1024, // 10MB parts
+      queueSize: 4, // Process 4 parts concurrently
+    });
 
-  await s3Client.send(command);
-  return `https://${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+    // Monitor upload progress
+    upload.on('httpUploadProgress', (progress) => {
+      const percent = Math.round((progress.loaded! / progress.total!) * 100);
+      console.log(`📊 Upload progress: ${percent}% (${Math.round(progress.loaded! / 1024 / 1024)}MB/${Math.round(progress.total! / 1024 / 1024)}MB)`);
+    });
+
+    const result = await upload.done();
+    return `https://${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+  } else {
+    // Standard upload for smaller files
+    const command = new PutObjectCommand({
+      Bucket: bucketName,
+      Key: key,
+      Body: buffer,
+      ContentType: contentType,
+    });
+
+    await s3Client.send(command);
+    return `https://${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+  }
 };
 
   export const uploadtoS3 = async (file: Buffer, filename: string, contentType: string, ) => {
@@ -137,24 +167,53 @@ export const deleteFile = async (key: string): Promise<void> => {
 };
 
 export const uploadClip = async (filePath: string, userId: string, segmentId: string, projectId: string): Promise<string> => {
-  // Read the clip file
-  const fileBuffer = fs.readFileSync(filePath);
-  const fileName = path.basename(filePath);
+  // Get file stats first
+  const stats = fs.statSync(filePath);
+  const fileSizeMB = Math.round(stats.size / 1024 / 1024);
+  console.log(`📁 Uploading clip: ${path.basename(filePath)} (${fileSizeMB}MB)`);
   
-  // Generate S3 key for the clip
+  const fileName = path.basename(filePath);
   const key = `clips/${userId}/${projectId}/${segmentId}-${fileName}`;
   
-  // Upload to S3
-  const command = new PutObjectCommand({
-    Bucket: bucketName,
-    Key: key,
-    Body: fileBuffer,
-    ContentType: 'video/mp4',
-  });
+  // Use streaming upload for large files to avoid memory issues
+  if (stats.size > 50 * 1024 * 1024) { // 50MB threshold
+    console.log(`📤 Large clip detected, using streaming multipart upload`);
+    
+    const { Upload } = await import('@aws-sdk/lib-storage');
+    const fileStream = fs.createReadStream(filePath);
+    
+    const upload = new Upload({
+      client: s3Client,
+      params: {
+        Bucket: bucketName,
+        Key: key,
+        Body: fileStream,
+        ContentType: 'video/mp4',
+      },
+      partSize: 5 * 1024 * 1024, // 5MB parts for clips
+      queueSize: 3,
+    });
 
-  await s3Client.send(command);
+    upload.on('httpUploadProgress', (progress) => {
+      const percent = Math.round((progress.loaded! / progress.total!) * 100);
+      console.log(`📊 Clip upload: ${percent}% (${segmentId})`);
+    });
+
+    await upload.done();
+  } else {
+    // Standard upload for smaller clips
+    const fileBuffer = fs.readFileSync(filePath);
+    const command = new PutObjectCommand({
+      Bucket: bucketName,
+      Key: key,
+      Body: fileBuffer,
+      ContentType: 'video/mp4',
+    });
+
+    await s3Client.send(command);
+  }
   
-  // Return S3 URL
+  console.log(`✅ Clip uploaded successfully: ${key}`);
   return `https://${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
 };
 

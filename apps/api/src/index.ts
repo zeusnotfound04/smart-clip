@@ -60,8 +60,30 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+// Increase body parser limits for large video uploads (500MB)
+app.use(express.json({ 
+  limit: '500mb',
+  extended: true,
+  parameterLimit: 50000
+}));
+app.use(express.urlencoded({ 
+  extended: true, 
+  limit: '500mb',
+  parameterLimit: 50000
+}));
+
+// Add timeout middleware for long-running operations
+app.use((req, res, next) => {
+  // Set longer timeout for video processing endpoints
+  if (req.path.includes('/split-streamer') || 
+      req.path.includes('/subtitles') || 
+      req.path.includes('/smart-clipper') ||
+      req.path.includes('/video-processing')) {
+    req.setTimeout(1800000); // 30 minutes
+    res.setTimeout(1800000); // 30 minutes
+  }
+  next();
+});
 
 app.use('/api/auth', authRoutes);
 app.use('/api/videos', videoRoutes);

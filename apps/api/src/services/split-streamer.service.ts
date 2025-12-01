@@ -314,19 +314,33 @@ export const combineVideos = async (
     const longerVideoIndex = webcamDuration >= gameplayDuration ? 0 : 1;
     console.log(`Using audio from ${longerVideoIndex === 0 ? 'webcam' : 'gameplay'} video`);
     
-    // Execute FFmpeg command
+    // Execute FFmpeg command - optimized for large files (500MB)
     const ffmpegArgs = [
       '-i', webcamPath,
       '-i', gameplayPath,
       '-filter_complex', filterComplex,
       '-map', '[final]',
       '-map', `${longerVideoIndex}:a?`,
+      // Video encoding optimized for large files
       '-c:v', 'libx264',
+      '-preset', 'fast', // Faster encoding for large files
+      '-crf', '23', // Good quality/size balance
+      '-pix_fmt', 'yuv420p', // Ensure compatibility
+      '-movflags', '+faststart', // Web optimization
+      '-threads', '0', // Use all CPU cores
+      '-max_muxing_queue_size', '1024', // Handle large files
+      // Audio encoding
       '-c:a', 'aac',
-      '-preset', 'medium',
-      '-crf', '23',
+      '-b:a', '128k', // Consistent audio bitrate
+      '-ar', '44100', // Standard sample rate
+      // Timing and synchronization
       '-avoid_negative_ts', 'make_zero',
       '-fflags', '+genpts',
+      '-vsync', 'cfr', // Constant frame rate for stability
+      // Memory management for large files
+      '-max_alloc', '2147483647', // ~2GB max allocation
+      '-probesize', '100M', // Increase probe size for large files
+      '-analyzeduration', '100M', // Longer analysis for better sync
       '-y',
       outputPath
     ];

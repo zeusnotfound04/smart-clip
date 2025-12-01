@@ -65,53 +65,43 @@ export const combine = async (req: AuthRequest, res: Response) => {
     
     console.log(`[${requestId}] Project created (${Date.now() - projectStart}ms), ID: ${project.id}`);
 
-    // Process videos directly
-    try {
-      console.log(`[${requestId}] Starting video combination...`);
-      const combineStart = Date.now();
-      
-      const outputBuffer = await combineVideos(webcamVideo.filePath, gameplayVideo.filePath, layoutConfig);
-      
-      console.log(`[${requestId}] Video combination completed (${Date.now() - combineStart}ms)`);
-      
-      // Upload combined video to S3
-      console.log(`[${requestId}] Uploading to S3...`);
-      const uploadStart = Date.now();
-      
-      const { uploadFile, generateKey } = await import('../lib/s3');
-      const outputKey = generateKey(req.userId, `${project.id}_combined.mp4`, 'video');
-      
-      const outputUrl = await uploadFile(outputKey, outputBuffer, 'video/mp4');
-      console.log(`[${requestId}] S3 upload completed (${Date.now() - uploadStart}ms)`);
-      
-      console.log(`💾 [${requestId}] Updating project status to completed...`);
-      await prisma.project.update({
-        where: { id: project.id },
-        data: { 
-          status: 'completed',
-          outputPath: outputUrl
-        }
-      });
-      
-      const totalTime = Date.now() - projectStart;
-      console.log(`[${requestId}] Process completed (${totalTime}ms)`);
+    // Add job to queue for async processing
+    console.log(`[${requestId}] Adding job to video processing queue...`);
+    
+    const job = await videoProcessingQueue.add('combine-videos', {
+      projectId: project.id,
+      webcamVideoPath: webcamVideo.filePath,
+      gameplayVideoPath: gameplayVideo.filePath,
+      layoutConfig: layoutConfig || {
+        orientation: 'vertical',
+        topRatio: 50,
+        bottomRatio: 50,
+        gap: 4,
+        backgroundColor: '#000000',
+        cornerRadius: 8,
+        swapVideos: false,
+        webcamZoom: 1,
+        gameplayZoom: 1
+      },
+      userId: req.userId,
+      requestId
+    }, {
+      attempts: 3,
+      backoff: {
+        type: 'exponential',
+        delay: 5000
+      }
+    });
 
-      res.json({
-        message: 'Video combination completed',
-        projectId: project.id,
-        status: 'completed',
-        outputUrl
-      });
-    } catch (processingError) {
-      console.error(`[${requestId}] Processing error:`, processingError);
-      
-      await prisma.project.update({
-        where: { id: project.id },
-        data: { status: 'failed' }
-      });
-      
-      throw processingError;
-    }
+    console.log(`[${requestId}] Job added to queue with ID: ${job.id}`);
+
+    // Return immediately with job info
+    res.json({
+      message: 'Video combination started',
+      projectId: project.id,
+      jobId: job.id,
+      status: 'processing'
+    });
   } catch (error) {
     console.error(`[${requestId}] Fatal error:`, error);
     res.status(500).json({ error: 'Failed to combine videos' });

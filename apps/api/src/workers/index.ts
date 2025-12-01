@@ -12,26 +12,41 @@ import { segmentScoring } from '../services/segment-scoring.service';
 import { prisma } from '../lib/prisma';
 
 videoProcessingQueue.process('combine-videos', 1, async (job) => {
-  const { webcamS3Key, gameplayS3Key, projectId } = job.data;
+  const { projectId, webcamVideoPath, gameplayVideoPath, layoutConfig, userId, requestId } = job.data;
   
   try {
+    console.log(`[${requestId}] Worker: Starting video combination for project ${projectId}`);
+    
     await prisma.project.update({
       where: { id: projectId },
       data: { status: 'processing' }
     });
 
-    const result = await combineVideos(webcamS3Key, gameplayS3Key);
+    console.log(`[${requestId}] Worker: Calling combineVideos service...`);
+    const outputBuffer = await combineVideos(webcamVideoPath, gameplayVideoPath, layoutConfig);
+    
+    console.log(`[${requestId}] Worker: Video combination completed, uploading to S3...`);
+    
+    // Upload combined video to S3
+    const { uploadFile, generateKey } = await import('../lib/s3');
+    const outputKey = generateKey(userId, `${projectId}_combined.mp4`, 'video');
+    
+    const outputUrl = await uploadFile(outputKey, outputBuffer, 'video/mp4');
+    console.log(`[${requestId}] Worker: S3 upload completed: ${outputUrl}`);
     
     await prisma.project.update({
       where: { id: projectId },
       data: { 
         status: 'completed',
-        outputPath: `processed/${projectId}/combined.mp4`
+        outputPath: outputUrl
       }
     });
 
-    return result;
+    console.log(`[${requestId}] Worker: Project ${projectId} completed successfully`);
+    return { projectId, outputUrl };
   } catch (error) {
+    console.error(`[${requestId}] Worker: Video combination failed:`, error);
+    
     await prisma.project.update({
       where: { id: projectId },
       data: { status: 'failed' }
