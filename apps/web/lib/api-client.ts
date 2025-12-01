@@ -511,16 +511,32 @@ class APIClient {
       headers.Authorization = authHeader.Authorization;
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/split-streamer/download/${projectId}`, {
-      headers,
-    });
+    // Use AbortController for better timeout handling
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout for downloads
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || 'Failed to download combined video');
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/split-streamer/download/${projectId}`, {
+        headers,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => '');
+        const errorData = errorText ? JSON.parse(errorText) : {};
+        throw new Error(errorData.error || `Download failed with status ${response.status}`);
+      }
+
+      return response.blob();
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error('Download timed out. The file might be too large or the connection is slow.');
+      }
+      throw error;
     }
-
-    return response.blob();
   }
 
   async getSplitStreamerProject(projectId: string): Promise<{

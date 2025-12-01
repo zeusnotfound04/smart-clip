@@ -191,9 +191,53 @@ export const downloadCombined = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Combined video not found' });
     }
 
-    // In a real implementation, you would stream the file from S3
-    // For now, return the URL
-    res.redirect(project.outputPath);
+    try {
+      // Extract S3 key from the output path URL
+      const s3Url = new URL(project.outputPath);
+      const s3Key = s3Url.pathname.substring(1); // Remove leading slash
+      
+      console.log(`Downloading video from S3 key: ${s3Key}`);
+      
+      // For large files (>100MB), use streaming instead of loading into memory
+      const { GetObjectCommand } = await import('@aws-sdk/client-s3');
+      const { S3Client } = await import('@aws-sdk/client-s3');
+      
+      const s3Client = new S3Client({
+        region: process.env.AWS_REGION || 'ap-south-1',
+        credentials: {
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+        },
+      });
+      
+      const command = new GetObjectCommand({
+        Bucket: process.env.AWS_S3_BUCKET || 'smart-clip-temp',
+        Key: s3Key,
+      });
+      
+      const response = await s3Client.send(command);
+      
+      if (!response.Body) {
+        throw new Error('File not found in S3');
+      }
+      
+      // Set headers for video download
+      res.setHeader('Content-Type', response.ContentType || 'video/mp4');
+      res.setHeader('Content-Disposition', `attachment; filename=\"combined_video_${projectId}.mp4\"`);
+      if (response.ContentLength) {
+        res.setHeader('Content-Length', response.ContentLength.toString());
+      }
+      res.setHeader('Cache-Control', 'no-cache');
+      
+      // Stream the file directly from S3 to client (memory efficient)
+      const stream = response.Body as NodeJS.ReadableStream;
+      stream.pipe(res);
+      
+    } catch (s3Error) {
+      console.error('S3 download error:', s3Error);
+      // Fallback: redirect to S3 URL if direct download fails
+      res.redirect(project.outputPath);
+    }
   } catch (error) {
     console.error('Error downloading combined video:', error);
     res.status(500).json({ error: 'Failed to download video' });

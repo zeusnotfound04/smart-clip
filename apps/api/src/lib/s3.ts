@@ -219,6 +219,8 @@ export const uploadClip = async (filePath: string, userId: string, segmentId: st
 
 export const generateKey = (userId: string, originalName: string, type: 'video' | 'audio' | 'subtitle' = 'video'): string => {
   const timestamp = Date.now();
-  const extension = originalName.split('.').pop();
-  return `${type}s/${userId}/${timestamp}-${originalName.replace(/[^a-zA-Z0-9.-]/g, '_')}.${extension}`;
+  // Remove extension from originalName to avoid double extensions
+  const nameWithoutExt = originalName.replace(/\.[^/.]+$/, '');
+  const extension = originalName.split('.').pop() || 'mp4';
+  return `${type}s/${userId}/${timestamp}-${nameWithoutExt.replace(/[^a-zA-Z0-9.-]/g, '_')}.${extension}`;
 };
