@@ -504,6 +504,8 @@ class APIClient {
   }
 
   async downloadCombinedVideo(projectId: string): Promise<Blob> {
+    console.log('📡 API Client: Starting download for project', projectId);
+    
     const authHeader = this.getAuthHeader();
     const headers: Record<string, string> = {};
     
@@ -513,25 +515,44 @@ class APIClient {
 
     // Use AbortController for better timeout handling
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout for downloads
+    const timeoutId = setTimeout(() => {
+      console.warn('⏰ Download timeout reached, aborting...');
+      controller.abort();
+    }, 300000); // 5 minute timeout for downloads
 
     try {
+      console.log('🔗 Fetching:', `${API_BASE_URL}/api/split-streamer/download/${projectId}`);
+      
       const response = await fetch(`${API_BASE_URL}/api/split-streamer/download/${projectId}`, {
         headers,
         signal: controller.signal,
       });
 
       clearTimeout(timeoutId);
+      
+      console.log('📥 Response received:', {
+        status: response.status,
+        statusText: response.statusText,
+        contentType: response.headers.get('content-type'),
+        contentLength: response.headers.get('content-length')
+      });
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => '');
+        console.error('❌ Response not OK:', { status: response.status, errorText });
         const errorData = errorText ? JSON.parse(errorText) : {};
         throw new Error(errorData.error || `Download failed with status ${response.status}`);
       }
 
-      return response.blob();
+      console.log('🔄 Converting response to blob...');
+      const blob = await response.blob();
+      console.log('✅ Blob created:', { size: blob.size, type: blob.type });
+      
+      return blob;
     } catch (error: any) {
       clearTimeout(timeoutId);
+      console.error('❌ Download error:', error);
+      
       if (error.name === 'AbortError') {
         throw new Error('Download timed out. The file might be too large or the connection is slow.');
       }

@@ -155,22 +155,43 @@ export default function SplitStreamerPage() {
   };
 
   const handleDownload = async () => {
-    if (!projectData?.id) return;
+    if (!projectData?.id) {
+      console.error('No project ID available for download');
+      return;
+    }
+    
+    console.log('🔽 Starting download for project:', projectData.id);
     
     try {
+      console.log('📡 Calling downloadCombinedVideo API...');
       const blob = await apiClient.downloadCombinedVideo(projectData.id);
+      
+      console.log('✅ Blob received, size:', blob.size, 'bytes');
+      
+      if (blob.size === 0) {
+        throw new Error('Downloaded file is empty');
+      }
       
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.download = `${projectData.name}_combined.mp4`;
       document.body.appendChild(link);
+      
+      console.log('🔗 Triggering download with filename:', `${projectData.name}_combined.mp4`);
       link.click();
+      
+      // Cleanup
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
+      
+      console.log('✅ Download completed successfully');
     } catch (error: any) {
-      console.error('Failed to download video:', error);
-      setError('Failed to download video. Please try again later.');
+      console.error('❌ Download failed:', error);
+      setError(`Failed to download video: ${error.message || 'Unknown error'}`);
+      
+      // Re-throw the error so the CompletionActionBar can handle it properly
+      throw error;
     }
   };
 

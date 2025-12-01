@@ -34,10 +34,18 @@ export function CompletionActionBar({
   if (!projectData) return null;
 
   const handleDownload = async () => {
+    console.log('🔽 CompletionActionBar: Download started');
     setIsDownloading(true);
+    
     try {
       await onDownload();
+      console.log('✅ CompletionActionBar: Download completed');
+    } catch (error: any) {
+      console.error('❌ CompletionActionBar: Download failed:', error);
+      // Optionally show a toast or alert here
+      alert(`Download failed: ${error.message || 'Unknown error'}`);
     } finally {
+      console.log('🔄 CompletionActionBar: Resetting loading state');
       setIsDownloading(false);
     }
   };

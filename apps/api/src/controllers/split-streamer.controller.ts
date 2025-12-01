@@ -231,7 +231,27 @@ export const downloadCombined = async (req: AuthRequest, res: Response) => {
       
       // Stream the file directly from S3 to client (memory efficient)
       const stream = response.Body as NodeJS.ReadableStream;
+      
+      // Add error handling for the stream
+      stream.on('error', (error) => {
+        console.error('S3 stream error:', error);
+        if (!res.headersSent) {
+          res.status(500).json({ error: 'Stream error during download' });
+        }
+      });
+      
+      // Handle client disconnect
+      res.on('close', () => {
+        console.log('Client disconnected during download');
+        stream.destroy();
+      });
+      
+      // Pipe the stream and handle completion
       stream.pipe(res);
+      
+      stream.on('end', () => {
+        console.log(`✅ Download completed for project ${projectId}`);
+      });
       
     } catch (s3Error) {
       console.error('S3 download error:', s3Error);
