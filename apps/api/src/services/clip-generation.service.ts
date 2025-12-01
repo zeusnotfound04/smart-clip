@@ -2,6 +2,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import path from 'path';
 import fs from 'fs/promises';
+import os from 'os';
 import { prisma } from '../lib/prisma';
 import { downloadFile } from '../lib/s3';
 
@@ -46,7 +47,23 @@ export class ClipGenerationService {
   constructor() {
     this.uploadsDir = path.join(process.cwd(), 'uploads');
     this.outputDir = path.join(process.cwd(), 'uploads', 'clips');
-    this.tempDir = path.join(process.cwd(), 'temp');
+    // Use cross-platform temp directory instead of project-relative temp
+    this.tempDir = process.env.TEMP_DIR || path.join(os.tmpdir(), 'smart-clipper');
+  }
+
+  private normalizePathForFFmpeg(filePath: string): string {
+    // Normalize path for FFmpeg command line usage
+    // FFmpeg works with forward slashes on all platforms, but we need to handle Windows paths carefully
+    const resolved = path.resolve(filePath);
+    
+    // On Windows, if we have a drive letter, ensure the path is properly formatted for FFmpeg
+    if (process.platform === 'win32' && resolved.match(/^[A-Za-z]:\\/)) {
+      // Convert backslashes to forward slashes for FFmpeg on Windows
+      return resolved.replace(/\\/g, '/');
+    }
+    
+    // On Unix-like systems, return as-is (already uses forward slashes)
+    return resolved;
   }
 
   async generateSingleClip(
@@ -212,7 +229,9 @@ export class ClipGenerationService {
       }
 
       // Build FFmpeg command
-      let command = `ffmpeg -y -i "${localVideoPath}" -ss ${startTime} -t ${duration}`;
+      const normalizedInputPath = this.normalizePathForFFmpeg(localVideoPath);
+      const normalizedOutputPath = this.normalizePathForFFmpeg(outputPath);
+      let command = `ffmpeg -y -i "${normalizedInputPath}" -ss ${startTime} -t ${duration}`;
 
     // Video encoding settings
     command += this.buildVideoFilters(settings);
@@ -226,7 +245,7 @@ export class ClipGenerationService {
     }
 
     // Output file
-    command += ` "${outputPath}"`;
+    command += ` "${normalizedOutputPath}"`;
 
     console.log(`Executing FFmpeg command: ${command}`);
 
@@ -337,13 +356,15 @@ export class ClipGenerationService {
     // Create file list for FFmpeg concat
     const fileListPath = path.join(this.outputDir, `filelist_${projectId}_${timestamp}.txt`);
     const fileList = completedClips
-      .map(clip => `file '${clip.outputPath}'`)
+      .map(clip => `file '${this.normalizePathForFFmpeg(clip.outputPath)}'`)
       .join('\n');
     
     await fs.writeFile(fileListPath, fileList);
 
     // Build compilation command
-    let command = `ffmpeg -y -f concat -safe 0 -i "${fileListPath}"`;
+    const normalizedFileListPath = this.normalizePathForFFmpeg(fileListPath);
+    const normalizedCompilationPath = this.normalizePathForFFmpeg(compilationPath);
+    let command = `ffmpeg -y -f concat -safe 0 -i "${normalizedFileListPath}"`;
     
     // Add compilation title if specified
     if (options.compilationTitle) {
@@ -351,7 +372,7 @@ export class ClipGenerationService {
       command += ` -vf "${titleFilter}"`;
     }
     
-    command += ` -c copy "${compilationPath}"`;
+    command += ` -c copy "${normalizedCompilationPath}"`;
 
     try {
       await execAsync(command);

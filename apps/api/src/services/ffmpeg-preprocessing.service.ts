@@ -2,6 +2,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import { promises as fs } from 'fs';
 import path from 'path';
+import os from 'os';
 import { prisma } from '../lib/prisma';
 import { downloadFile } from '../lib/s3';
 
@@ -56,7 +57,30 @@ export class FFmpegPreprocessingService {
   private tempDir: string;
 
   constructor() {
-    this.tempDir = process.env.TEMP_DIR || path.join(process.env.TEMP || process.env.TMPDIR || 'C:\\tmp', 'smart-clipper');
+    // Get cross-platform temp directory
+    const defaultTempDir = this.getDefaultTempDir();
+    this.tempDir = process.env.TEMP_DIR || path.join(process.env.TEMP || process.env.TMPDIR || defaultTempDir, 'smart-clipper');
+  }
+
+  private getDefaultTempDir(): string {
+    // Use Node.js os.tmpdir() for cross-platform compatibility
+    // This returns /tmp on Linux/macOS and C:\Users\{user}\AppData\Local\Temp on Windows
+    return os.tmpdir();
+  }
+
+  private normalizePathForFFmpeg(filePath: string): string {
+    // Normalize path for FFmpeg command line usage
+    // FFmpeg works with forward slashes on all platforms, but we need to handle Windows paths carefully
+    const resolved = path.resolve(filePath);
+    
+    // On Windows, if we have a drive letter, ensure the path is properly formatted for FFmpeg
+    if (process.platform === 'win32' && resolved.match(/^[A-Za-z]:\\/)) {
+      // Convert backslashes to forward slashes for FFmpeg on Windows
+      return resolved.replace(/\\/g, '/');
+    }
+    
+    // On Unix-like systems, return as-is (already uses forward slashes)
+    return resolved;
   }
 
   async preprocessVideo(
@@ -131,7 +155,8 @@ export class FFmpegPreprocessingService {
   private async extractVideoMetadata(videoPath: string, projectId: string): Promise<VideoMetadata> {
     console.log(`[${projectId}] Extracting video metadata`);
 
-    const command = `ffprobe -v quiet -print_format json -show_format -show_streams "${videoPath}"`;
+    const normalizedVideoPath = this.normalizePathForFFmpeg(videoPath);
+    const command = `ffprobe -v quiet -print_format json -show_format -show_streams "${normalizedVideoPath}"`;
     
     try {
       const { stdout } = await execAsync(command);
@@ -179,16 +204,18 @@ export class FFmpegPreprocessingService {
 
     try {
       // Extract audio and analyze energy
-      const audioCommand = `ffmpeg -i "${videoPath}" -vn -acodec pcm_s16le -ar 44100 -ac 1 "${tempAudioFile}" -y`;
+      const normalizedVideoPath = this.normalizePathForFFmpeg(videoPath);
+      const normalizedTempAudioFile = this.normalizePathForFFmpeg(tempAudioFile);
+      const audioCommand = `ffmpeg -i "${normalizedVideoPath}" -vn -acodec pcm_s16le -ar 44100 -ac 1 "${normalizedTempAudioFile}" -y`;
       await execAsync(audioCommand);
 
       // Analyze RMS energy levels using astats filter without problematic file output
       // Output metadata to stderr which we can capture directly
-      const energyCommand = `ffmpeg -i "${tempAudioFile}" -af "astats=metadata=1:reset=1" -f null -`;
+      const energyCommand = `ffmpeg -i "${normalizedTempAudioFile}" -af "astats=metadata=1:reset=1" -f null -`;
       const { stderr } = await execAsync(energyCommand);
 
       // Detect silence segments - Windows compatible
-      const silenceCommand = `ffmpeg -i "${tempAudioFile}" -af "silencedetect=noise=${silenceThreshold}dB:duration=0.5" -f null -`;
+      const silenceCommand = `ffmpeg -i "${normalizedTempAudioFile}" -af "silencedetect=noise=${silenceThreshold}dB:duration=0.5" -f null -`;
       
       let silenceOutput = '';
       try {
@@ -238,7 +265,8 @@ export class FFmpegPreprocessingService {
     
     try {
       // Use FFmpeg's scene detection filter
-      const command = `ffmpeg -i "${videoPath}" -vf "select='gt(scene,0.3)',showinfo" -vsync vfr -f null - 2>&1 | grep "pts_time"`;
+      const normalizedVideoPath = this.normalizePathForFFmpeg(videoPath);
+      const command = `ffmpeg -i "${normalizedVideoPath}" -vf "select='gt(scene,0.3)',showinfo" -vsync vfr -f null - 2>&1 | grep "pts_time"`;
       
       let sceneOutput = '';
       try {
@@ -275,11 +303,14 @@ export class FFmpegPreprocessingService {
 
     try {
       // Extract audio at lower sample rate for waveform visualization
-      const audioCommand = `ffmpeg -i "${videoPath}" -vn -acodec pcm_s16le -ar 8000 -ac 1 "${tempWaveFile}" -y`;
+      const normalizedVideoPath = this.normalizePathForFFmpeg(videoPath);
+      const normalizedTempWaveFile = this.normalizePathForFFmpeg(tempWaveFile);
+      const normalizedTempDataFile = this.normalizePathForFFmpeg(tempDataFile);
+      const audioCommand = `ffmpeg -i "${normalizedVideoPath}" -vn -acodec pcm_s16le -ar 8000 -ac 1 "${normalizedTempWaveFile}" -y`;
       await execAsync(audioCommand);
 
       // Generate raw audio data for waveform
-      const dataCommand = `ffmpeg -i "${tempWaveFile}" -f f64le "${tempDataFile}" -y`;
+      const dataCommand = `ffmpeg -i "${normalizedTempWaveFile}" -f f64le "${normalizedTempDataFile}" -y`;
       await execAsync(dataCommand);
 
       // Read and process the raw data
@@ -317,7 +348,9 @@ export class FFmpegPreprocessingService {
     const outputPath = path.join(this.tempDir, `${projectId}-chunk-${startTime}-${duration}.mp4`);
 
     try {
-      const command = `ffmpeg -ss ${startTime} -i "${videoPath}" -t ${duration} -c copy "${outputPath}" -y`;
+      const normalizedVideoPath = this.normalizePathForFFmpeg(videoPath);
+      const normalizedOutputPath = this.normalizePathForFFmpeg(outputPath);
+      const command = `ffmpeg -ss ${startTime} -i "${normalizedVideoPath}" -t ${duration} -c copy "${normalizedOutputPath}" -y`;
       await execAsync(command);
       
       const chunkData = await fs.readFile(outputPath);
@@ -362,7 +395,9 @@ export class FFmpegPreprocessingService {
 
       const duration = endTime - startTime;
       // Use precise seeking with -ss before input for efficiency and accuracy
-      const command = `ffmpeg -ss ${startTime} -i "${videoPath}" -t ${duration} -c copy "${outputPath}" -y`;
+      const normalizedVideoPath = this.normalizePathForFFmpeg(videoPath);
+      const normalizedOutputPath = this.normalizePathForFFmpeg(outputPath);
+      const command = `ffmpeg -ss ${startTime} -i "${normalizedVideoPath}" -t ${duration} -c copy "${normalizedOutputPath}" -y`;
       
       console.log(`[${userId}] Running FFmpeg command:`, command);
       const { stderr } = await execAsync(command);
