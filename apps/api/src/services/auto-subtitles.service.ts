@@ -57,7 +57,7 @@ export interface VideoWithSubtitlesResult {
 const speechClient = new SpeechClient({
   projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
   credentials: {
-    client_email: `api-ai-intel@${process.env.GOOGLE_CLOUD_PROJECT_ID}.iam.gserviceaccount.com`,
+    client_email: process.env.GOOGLE_CLOUD_CLIENT_EMAIL,
     private_key: process.env.GOOGLE_CLOUD_PRIVATE_KEY?.replace(/\\n/g, '\n'),
   }
 });
@@ -159,9 +159,10 @@ const transcribeAudio = async (audioPath: string, options?: SubtitleOptions): Pr
           alternativeLanguageCodes: config.alternativeLanguageCodes
         }
       };
-
+      console.log(`Pushing the request : `, request);
       const [response] = await speechClient.recognize(request);
       const results = response.results || [];
+      console.log(`Transcription results for ${config.languageCode}:`, results);
       
       if (results.length > 0) {
         const confidence = results[0].alternatives?.[0]?.confidence || 0;
