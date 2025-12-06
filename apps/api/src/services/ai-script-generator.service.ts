@@ -781,10 +781,16 @@ Please regenerate the script with these modifications while maintaining the same
       const s3Key = `narrations/${audioFilename}`;
       const audioUrl = await this.uploadToS3(audioPath, s3Key, 'audio/mpeg');
       
+      // Cleanup temp audio file after successful S3 upload
+      await fs.unlink(audioPath).catch((err) => 
+        console.warn(`⚠️ [TTS] Failed to cleanup temp audio file ${audioPath}:`, err)
+      );
+      
       console.log(`🎙️ [TTS] Audio generated successfully: ${duration}s, uploaded to ${audioUrl}`);
+      console.log(`🗑️ [TTS] Temp audio file cleaned up: ${audioPath}`);
       
       return {
-        audioPath,
+        audioPath, // Return path for backward compatibility, but file is already deleted
         audioUrl,
         duration
       };
@@ -802,18 +808,16 @@ Please regenerate the script with these modifications while maintaining the same
     audioDuration: number,
     projectId: string
   ): Promise<{ finalVideoUrl: string }> {
+    const tempDir = path.join(process.cwd(), 'temp');
+    const outputFilename = `final_video_${projectId}_${Date.now()}.mp4`;
+    const outputPath = path.join(tempDir, outputFilename);
+    const videoFilename = `temp_video_${uuidv4()}.mp4`;
+    const videoPath = path.join(tempDir, videoFilename);
+    
     try {
       console.log(`✂️ [VIDEO] Processing video with audio overlay...`);
       console.log(`✂️ [VIDEO] Library video: ${libraryVideoUrl}`);
       console.log(`✂️ [VIDEO] Target duration: ${audioDuration}s`);
-      
-      const tempDir = path.join(process.cwd(), 'temp');
-      const outputFilename = `final_video_${projectId}_${Date.now()}.mp4`;
-      const outputPath = path.join(tempDir, outputFilename);
-      
-      // Download library video to temp location
-      const videoFilename = `temp_video_${uuidv4()}.mp4`;
-      const videoPath = path.join(tempDir, videoFilename);
       
       console.log(`📥 [VIDEO] Downloading library video...`);
       await this.downloadFile(libraryVideoUrl, videoPath);
@@ -854,8 +858,8 @@ Please regenerate the script with these modifications while maintaining the same
       const s3Key = `final-videos/${outputFilename}`;
       const finalVideoUrl = await this.uploadToS3(outputPath, s3Key, 'video/mp4');
       
-      // Cleanup temp files
-      this.cleanupTempFiles([videoPath, audioPath, outputPath]);
+      // Cleanup temp files after successful S3 upload
+      await this.cleanupTempFiles([videoPath, audioPath, outputPath]);
       
       console.log(`✅ [VIDEO] Final video processed and uploaded: ${finalVideoUrl}`);
       
@@ -863,6 +867,10 @@ Please regenerate the script with these modifications while maintaining the same
       
     } catch (error) {
       console.error('❌ [VIDEO] Failed to process video with audio:', error);
+      // Ensure temp files are cleaned up even on error
+      await this.cleanupTempFiles([videoPath, audioPath, outputPath]).catch((cleanupErr) =>
+        console.warn('⚠️ [VIDEO] Failed to cleanup temp files after error:', cleanupErr)
+      );
       throw error;
     }
   }
@@ -1401,16 +1409,13 @@ Please regenerate the script with these modifications while maintaining the same
       console.log(`📥 [SERVICE] Downloading audio from: ${audioUrl}`);
       await this.downloadFile(audioUrl, audioPath);
       
-      // Process video with audio overlay
+      // Process video with audio overlay (this will also cleanup the audio file)
       const result = await this.processVideoWithAudio(
         libraryVideo.videoUrl,
         audioPath,
         audioDuration,
         projectId
       );
-      
-      // Cleanup temp audio file
-      await fs.unlink(audioPath).catch(console.error);
       
       console.log(`✅ [SERVICE] Final video prepared successfully`);
       
