@@ -19,6 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiClient } from "@/lib/api-client";
 import { motion } from "framer-motion";
 import { useAuth } from '@/lib/auth-context';
+import { DownloadButton } from '@/components/download-button';
 
 // API Base URL - Remove trailing slashes to prevent double slashes in URLs
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001').replace(/\/+$/, '');
@@ -985,16 +986,14 @@ export default function AIScriptGenerator() {
             )}
             
             <div className="flex gap-3">
-              {!project.isMockVideo && (
-                <Button asChild className="flex-1">
-                  <a 
-                    href={project.finalVideoUrl}
-                    download={`${project.projectName || 'generated-video'}.mp4`}
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Download Video
-                  </a>
-                </Button>
+              {!project.isMockVideo && project.finalVideoUrl && (
+                <DownloadButton
+                  s3Url={project.finalVideoUrl}
+                  fileName={`${project.projectName || 'generated-video'}.mp4`}
+                  className="flex-1"
+                >
+                  Download Video
+                </DownloadButton>
               )}
               {project.isMockVideo && (
                 <Button disabled className="flex-1">
