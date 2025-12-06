@@ -1,7 +1,6 @@
 'use client';
 
-import { useState } from 'react';
-import { CheckCircle, Play, Download, ChevronDown, Loader2, Share2 } from 'lucide-react';
+import { CheckCircle, Play, ChevronDown, Share2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
@@ -10,6 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { DownloadButton } from '@/components/download-button';
 
 interface ProjectData {
   id: string;
@@ -21,34 +21,13 @@ interface ProjectData {
 interface CompletionActionBarProps {
   projectData: ProjectData | null;
   onPreview: () => void;
-  onDownload: () => void;
 }
 
 export function CompletionActionBar({
   projectData,
   onPreview,
-  onDownload
 }: CompletionActionBarProps) {
-  const [isDownloading, setIsDownloading] = useState(false);
-  
   if (!projectData) return null;
-
-  const handleDownload = async () => {
-    console.log('🔽 CompletionActionBar: Download started');
-    setIsDownloading(true);
-    
-    try {
-      await onDownload();
-      console.log('✅ CompletionActionBar: Download completed');
-    } catch (error: any) {
-      console.error('❌ CompletionActionBar: Download failed:', error);
-      // Optionally show a toast or alert here
-      alert(`Download failed: ${error.message || 'Unknown error'}`);
-    } finally {
-      console.log('🔄 CompletionActionBar: Resetting loading state');
-      setIsDownloading(false);
-    }
-  };
 
   const handleShare = async () => {
     if (navigator.share && projectData.outputUrl) {
@@ -85,20 +64,24 @@ export function CompletionActionBar({
               
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button size="sm" className="bg-green-600 hover:bg-green-700" disabled={isDownloading}>
-                    {isDownloading ? (
-                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                    ) : (
-                      <Download className="w-3 h-3 mr-1" />
-                    )}
-                    {isDownloading ? 'Downloading...' : 'Download'}
-                    {!isDownloading && <ChevronDown className="w-3 h-3 ml-1" />}
+                  <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                    Download
+                    <ChevronDown className="w-3 h-3 ml-1" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={handleDownload} disabled={isDownloading}>
-                    <Download className="w-3 h-3 mr-2" />
-                    Download MP4 Video
+                  <DropdownMenuItem asChild>
+                    <div className="w-full">
+                      <DownloadButton
+                        s3Url={projectData.outputUrl || ''}
+                        fileName={`${projectData.name}_combined.mp4`}
+                        variant="ghost"
+                        size="sm"
+                        className="w-full justify-start p-0 h-auto"
+                      >
+                        Download MP4 Video
+                      </DownloadButton>
+                    </div>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleShare} disabled={!projectData.outputUrl}>
                     <Share2 className="w-3 h-3 mr-2" />
