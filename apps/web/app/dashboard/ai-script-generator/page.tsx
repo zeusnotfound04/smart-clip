@@ -20,8 +20,8 @@ import { apiClient } from "@/lib/api-client";
 import { motion } from "framer-motion";
 import { useAuth } from '@/lib/auth-context';
 
-// API Base URL
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+// API Base URL - Remove trailing slashes to prevent double slashes in URLs
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001').replace(/\/+$/, '');
 
 // Types
 type VideoGenerationPhase = 'script' | 'voice' | 'video' | 'processing' | 'complete';
