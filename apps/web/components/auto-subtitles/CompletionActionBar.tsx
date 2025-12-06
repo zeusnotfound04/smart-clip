@@ -1,7 +1,6 @@
 'use client';
 
-import { useState } from 'react';
-import { CheckCircle, Play, Download, ChevronDown, Loader2 } from 'lucide-react';
+import { CheckCircle, Play, ChevronDown } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
@@ -10,6 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { DownloadButton } from '@/components/download-button';
 
 interface VideoData {
   id: string;
@@ -19,31 +19,22 @@ interface VideoData {
   videoUrl?: string;
   subtitles?: string;
   detectedLanguages?: string[];
+  subtitleFiles?: {
+    srt?: string;
+    vtt?: string;
+  };
 }
 
 interface CompletionActionBarProps {
   videoData: VideoData | null;
   onPreview: () => void;
-  onDownload: (type?: 'video' | 'srt' | 'vtt') => void;
 }
 
 export function CompletionActionBar({
   videoData,
   onPreview,
-  onDownload
 }: CompletionActionBarProps) {
-  const [isDownloading, setIsDownloading] = useState(false);
-  
   if (!videoData) return null;
-
-  const handleDownload = async (type?: 'video' | 'srt' | 'vtt') => {
-    setIsDownloading(true);
-    try {
-      await onDownload(type);
-    } finally {
-      setIsDownloading(false);
-    }
-  };
 
   return (
     <div className="fixed bottom-4 right-4 z-40">
@@ -59,29 +50,57 @@ export function CompletionActionBar({
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button size="sm" className="bg-green-600 hover:bg-green-700" disabled={isDownloading}>
-                    {isDownloading ? (
-                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                    ) : (
-                      <Download className="w-3 h-3 mr-1" />
-                    )}
-                    {isDownloading ? 'Downloading...' : 'Download'}
-                    {!isDownloading && <ChevronDown className="w-3 h-3 ml-1" />}
+                  <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                    Download
+                    <ChevronDown className="w-3 h-3 ml-1" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => handleDownload('video')} disabled={isDownloading}>
-                    <Download className="w-3 h-3 mr-2" />
-                    Download Video with Subtitles
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleDownload('srt')} disabled={isDownloading}>
-                    <Download className="w-3 h-3 mr-2" />
-                    Download SRT File
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleDownload('vtt')} disabled={isDownloading}>
-                    <Download className="w-3 h-3 mr-2" />
-                    Download VTT File
-                  </DropdownMenuItem>
+                  {videoData.videoUrl && (
+                    <DropdownMenuItem asChild>
+                      <div className="w-full">
+                        <DownloadButton
+                          s3Url={videoData.videoUrl}
+                          fileName={`${videoData.name}_subtitled.mp4`}
+                          variant="ghost"
+                          size="sm"
+                          className="w-full justify-start p-0 h-auto"
+                        >
+                          Download Video with Subtitles
+                        </DownloadButton>
+                      </div>
+                    </DropdownMenuItem>
+                  )}
+                  {videoData.subtitleFiles?.srt && (
+                    <DropdownMenuItem asChild>
+                      <div className="w-full">
+                        <DownloadButton
+                          s3Url={videoData.subtitleFiles.srt}
+                          fileName={`${videoData.name}_subtitles.srt`}
+                          variant="ghost"
+                          size="sm"
+                          className="w-full justify-start p-0 h-auto"
+                        >
+                          Download SRT File
+                        </DownloadButton>
+                      </div>
+                    </DropdownMenuItem>
+                  )}
+                  {videoData.subtitleFiles?.vtt && (
+                    <DropdownMenuItem asChild>
+                      <div className="w-full">
+                        <DownloadButton
+                          s3Url={videoData.subtitleFiles.vtt}
+                          fileName={`${videoData.name}_subtitles.vtt`}
+                          variant="ghost"
+                          size="sm"
+                          className="w-full justify-start p-0 h-auto"
+                        >
+                          Download VTT File
+                        </DownloadButton>
+                      </div>
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>

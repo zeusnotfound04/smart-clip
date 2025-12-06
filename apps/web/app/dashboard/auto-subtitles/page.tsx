@@ -222,82 +222,6 @@ export default function AutoSubtitlesPage() {
     }
   };
 
-  const handleDownload = async (type: 'video' | 'srt' | 'vtt' = 'video') => {
-    if (!videoData?.id) return;
-    
-    try {
-      let filename: string;
-      
-      if (type === 'video') {
-        // Use direct URL download if videoUrl is available
-        if (videoData.videoUrl) {
-          filename = `${videoData.name}_subtitled.mp4`;
-          
-          try {
-            // Fetch the video from S3 URL
-            const response = await fetch(videoData.videoUrl);
-            if (!response.ok) {
-              throw new Error('Failed to fetch video from URL');
-            }
-            
-            const blob = await response.blob();
-            
-            // Create download link with blob
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = filename;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            window.URL.revokeObjectURL(url);
-          } catch (fetchError) {
-            console.error('Failed to fetch from direct URL, trying API fallback:', fetchError);
-            // Fallback to API call if direct URL fetch fails
-            const blob = await apiClient.downloadSubtitledVideo(videoData.id);
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = filename;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            window.URL.revokeObjectURL(url);
-          }
-        } else {
-          // Fallback to API call if no direct URL
-          const blob = await apiClient.downloadSubtitledVideo(videoData.id);
-          filename = `${videoData.name}_subtitled.mp4`;
-          
-          const url = window.URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = filename;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          window.URL.revokeObjectURL(url);
-        }
-      } else {
-        // Download subtitle file in specified format
-        const blob = await apiClient.downloadSubtitleFile(videoData.id, type);
-        filename = `${videoData.name}_subtitles.${type}`;
-        
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-      }
-    } catch (error: any) {
-      console.error(`Failed to download ${type}:`, error);
-      setError(`Failed to download ${type === 'video' ? 'video' : 'subtitle file'}. Please try again later.`);
-    }
-  };
-
   return (
     <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden">
       {/* Header with Logo Integration */}
@@ -378,7 +302,6 @@ export default function AutoSubtitlesPage() {
         <CompletionActionBar
           videoData={videoData}
           onPreview={handlePreview}
-          onDownload={handleDownload}
         />
       )}
     </div>
