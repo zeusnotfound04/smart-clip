@@ -284,93 +284,9 @@ export default function DashboardSmartClipperPage() {
   };
 
   const handleDownloadClip = async (segment: HighlightSegment) => {
-    try {
-      if (!currentProject?.video?.id || !user) {
-        console.error('No project video or authentication');
-        return;
-      }
-
-      // Create download filename
-      const filename = `clip_${Math.floor(segment.startTime)}s-${Math.floor(segment.endTime)}s.mp4`;
-      
-      // Use S3 URL if available for direct download
-      if (segment.s3Url && segment.clipReady) {
-        console.log('📥 Downloading clip from S3:', segment.s3Url);
-        
-        // Download directly from S3
-        const response = await fetch(segment.s3Url);
-        if (!response.ok) {
-          throw new Error('Failed to download from S3');
-        }
-        
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        
-        // Cleanup
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-        
-        console.log('✅ Clip downloaded successfully from S3:', filename);
-        return;
-      }
-
-      console.log('🎬 Starting clip download...', { 
-        videoId: currentProject.video.id, 
-        startTime: segment.startTime, 
-        endTime: segment.endTime 
-      });
-      
-      // Get auth token from localStorage (same as API client does)
-      const token = localStorage.getItem('smartclips_token');
-      if (!token) {
-        console.error('No auth token found');
-        return;
-      }
-      
-      // Fallback: Generate the clip and download it directly
-      const response = await fetch(`/api/videos/${currentProject.video.id}/generate-clip`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          startTime: segment.startTime,
-          endTime: segment.endTime
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Failed to generate clip' }));
-        throw new Error(errorData.error || 'Failed to generate clip');
-      }
-
-      // Get the blob from response
-      const blob = await response.blob();
-      
-      // Create download link
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      
-      // Cleanup
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-      
-      console.log('✅ Clip downloaded successfully:', filename);
-
-    } catch (error) {
-      console.error('❌ Failed to download clip:', error);
-      // You could add a toast notification here
-    }
+    // Note: This is now just a placeholder - downloads are handled by the DownloadButton component
+    // This function is kept for compatibility but is no longer used
+    console.log('Download handler called (deprecated) - downloads now handled by DownloadButton component');
   };
 
   const handleBatchProcess = async (segments: HighlightSegment[], settings: any) => {
@@ -450,7 +366,6 @@ export default function DashboardSmartClipperPage() {
             setSelectedSegments={setSelectedSegments}
             setCurrentView={setCurrentView}
             onPlayClip={handlePlayClip}
-            onDownloadClip={handleDownloadClip}
           />
         );
 
@@ -462,7 +377,6 @@ export default function DashboardSmartClipperPage() {
             currentProject={currentProject}
             setCurrentView={setCurrentView}
             onPlayClip={handlePlayClip}
-            onDownloadClip={handleDownloadClip}
           />
         );
 

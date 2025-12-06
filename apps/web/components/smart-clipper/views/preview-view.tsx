@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { VideoTimeline } from '@/components/smart-clipper/video-timeline';
 import { SmartClipperProject, HighlightSegment } from '@/types/smart-clipper';
+import { DownloadButton } from '@/components/download-button';
 
 interface PreviewViewProps {
   currentProject: SmartClipperProject;
@@ -16,7 +17,6 @@ interface PreviewViewProps {
   setSelectedSegments: (segments: HighlightSegment[]) => void;
   setCurrentView: (view: 'timeline' | 'dashboard') => void;
   onPlayClip: (segment: HighlightSegment) => Promise<void>;
-  onDownloadClip: (segment: HighlightSegment) => Promise<void>;
 }
 
 export function PreviewView({
@@ -26,8 +26,7 @@ export function PreviewView({
   selectedSegments,
   setSelectedSegments,
   setCurrentView,
-  onPlayClip,
-  onDownloadClip
+  onPlayClip
 }: PreviewViewProps) {
   if (!currentProject?.highlightSegments?.length) {
     return (
@@ -191,15 +190,25 @@ export function PreviewView({
                         <Play className="w-3 h-3 mr-1" />
                         Preview
                       </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => onDownloadClip(segment)}
-                        disabled={!segment.clipReady}
-                      >
-                        <Download className="w-3 h-3 mr-1" />
-                        Download
-                      </Button>
+                      {segment.s3Url && segment.clipReady ? (
+                        <DownloadButton
+                          s3Url={segment.s3Url}
+                          fileName={`clip_${Math.floor(segment.startTime)}s-${Math.floor(segment.endTime)}s.mp4`}
+                          size="sm"
+                          variant="outline"
+                        >
+                          Download
+                        </DownloadButton>
+                      ) : (
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          disabled
+                        >
+                          <Download className="w-3 h-3 mr-1" />
+                          Processing...
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </Card>
@@ -258,10 +267,21 @@ export function PreviewView({
                           <Play className="w-3 h-3 mr-1" />
                           Play
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => onDownloadClip(segment)} disabled={!segment.clipReady}>
-                          <Download className="w-3 h-3 mr-1" />
-                          Download
-                        </Button>
+                        {segment.s3Url && segment.clipReady ? (
+                          <DownloadButton
+                            s3Url={segment.s3Url}
+                            fileName={`clip_${Math.floor(segment.startTime)}s-${Math.floor(segment.endTime)}s.mp4`}
+                            size="sm"
+                            variant="outline"
+                          >
+                            Download
+                          </DownloadButton>
+                        ) : (
+                          <Button size="sm" variant="outline" disabled>
+                            <Download className="w-4 h-4 mr-1" />
+                            Processing...
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ))}

@@ -5,19 +5,18 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { SmartClipperProject, HighlightSegment } from '@/types/smart-clipper';
+import { DownloadButton } from '@/components/download-button';
 
 interface DashboardViewProps {
   currentProject: SmartClipperProject | null;
   setCurrentView: (view: 'upload') => void;
   onPlayClip: (segment: HighlightSegment) => Promise<void>;
-  onDownloadClip: (segment: HighlightSegment) => Promise<void>;
 }
 
 export function DashboardView({ 
   currentProject, 
   setCurrentView, 
-  onPlayClip, 
-  onDownloadClip 
+  onPlayClip
 }: DashboardViewProps) {
   return (
     <div className="space-y-6">
@@ -105,19 +104,32 @@ export function DashboardView({
                       size="sm"
                       onClick={() => onPlayClip(segment)}
                       className="flex-1"
+                      disabled={!segment.s3Url && !segment.clipReady}
                     >
                       <Play className="w-4 h-4 mr-1" />
                       Play
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onDownloadClip(segment)}
-                      className="flex-1"
-                    >
-                      <Download className="w-4 h-4 mr-1" />
-                      Download
-                    </Button>
+                    {segment.s3Url && segment.clipReady ? (
+                      <DownloadButton
+                        s3Url={segment.s3Url}
+                        fileName={`clip_${Math.floor(segment.startTime)}s-${Math.floor(segment.endTime)}s.mp4`}
+                        size="sm"
+                        variant="outline"
+                        className="flex-1"
+                      >
+                        Download
+                      </DownloadButton>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled
+                        className="flex-1"
+                      >
+                        <Download className="w-4 h-4 mr-1" />
+                        Processing...
+                      </Button>
+                    )}
                   </div>
                 </div>
               </Card>
