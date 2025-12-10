@@ -36,15 +36,34 @@ interface AudioResult {
 
 
 /**
+ * Remove stage directions and instructions in parentheses from text
+ */
+function removeStageDirections(text: string): string {
+  // Remove text within parentheses (like "(Upbeat music)" or "(Quick whoosh sound effect)")
+  let cleanedText = text.replace(/\([^)]*\)/g, '');
+  
+  // Remove extra whitespace and blank lines
+  cleanedText = cleanedText.replace(/\n\s*\n\s*\n/g, '\n\n'); // Remove triple+ newlines
+  cleanedText = cleanedText.trim();
+  
+  return cleanedText;
+}
+
+/**
  * Generate TTS audio using Google Translate TTS (Free & Unlimited)
  */
 export async function generateTTSAudio(options: TTSOptions): Promise<AudioResult> {
   const startTime = Date.now();
-  console.log(`🎵 [TTS] Starting Google Translate TTS for ${options.text.length} character text`);
+  
+  // Remove stage directions before generating audio
+  const cleanedText = removeStageDirections(options.text);
+  console.log(`🎵 [TTS] Original text length: ${options.text.length} characters`);
+  console.log(`🎵 [TTS] Cleaned text length: ${cleanedText.length} characters`);
+  console.log(`🎵 [TTS] Starting Google Translate TTS for cleaned text`);
 
   try {
-    // Generate audio using Google Translate TTS
-    const audioBuffer = await generateGoogleTranslateTTS(options.text, options);
+    // Generate audio using Google Translate TTS with cleaned text
+    const audioBuffer = await generateGoogleTranslateTTS(cleanedText, options);
     
     // Upload to S3
     const audioUrl = await uploadAudioToS3(audioBuffer, 'tts');

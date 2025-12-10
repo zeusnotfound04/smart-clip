@@ -181,9 +181,9 @@ class APIClient {
     }
   }
 
-  async confirmUpload(key: string, originalName: string, size?: number, mimeType?: string): Promise<ApiResponse<Video>> {
-    console.log('💾 [API_CLIENT] confirmUpload called:', { key, originalName, size, mimeType });
-    const requestData = { s3Key: key, originalName, size, mimeType };
+  async confirmUpload(key: string, originalName: string, size?: number, mimeType?: string, language?: string): Promise<ApiResponse<Video>> {
+    console.log('💾 [API_CLIENT] confirmUpload called:', { key, originalName, size, mimeType, language });
+    const requestData = { s3Key: key, originalName, size, mimeType, language };
     
     try {
       console.log('📤 Sending request to /api/videos/confirm-upload...');
@@ -237,8 +237,8 @@ class APIClient {
     return response.data;
   }
 
-  async uploadVideo(file: File, onProgress?: (progress: number) => void): Promise<Video> {
-    console.log('🟢 [API_CLIENT] uploadVideo started');
+  async uploadVideo(file: File, onProgress?: (progress: number) => void, language?: string): Promise<Video> {
+    console.log('🟢 [API_CLIENT] uploadVideo started', { language });
     console.log('📁 File details:', { name: file.name, size: file.size, type: file.type });
     
     try {
@@ -287,7 +287,7 @@ class APIClient {
       console.log('✅ S3 upload successful, confirming upload...');
       console.log('💾 Step 3: Confirming upload in database...');
       
-      const confirmResponse = await this.confirmUpload(key, file.name, file.size, file.type);
+      const confirmResponse = await this.confirmUpload(key, file.name, file.size, file.type, language);
       console.log('📋 Confirmation response:', { success: confirmResponse.success, hasData: !!confirmResponse.data });
       
       if (!confirmResponse.success || !confirmResponse.data) {
@@ -302,7 +302,7 @@ class APIClient {
     }
   }
 
-  async generateSubtitles(videoId: string, options?: any): Promise<{ 
+  async generateSubtitles(videoId: string, options?: any, language?: string): Promise<{ 
     message: string; 
     videoId: string; 
     videoWithSubtitles?: string;
@@ -328,7 +328,7 @@ class APIClient {
     const response = await fetch(`${API_BASE_URL}/api/subtitles/generate`, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ videoId, options }),
+      body: JSON.stringify({ videoId, language, options }),
     });
 
     const result = await response.json();
@@ -338,6 +338,11 @@ class APIClient {
     }
 
     return result;
+  }
+
+  async getSupportedLanguages(): Promise<{ languages: Array<{ code: string; name: string; priority: number }> }> {
+    const response = await fetch(`${API_BASE_URL}/api/subtitles/languages`);
+    return response.json();
   }
 
   async getSubtitles(videoId: string): Promise<{ subtitles: any[]; status: string }> {

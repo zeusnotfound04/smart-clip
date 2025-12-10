@@ -37,10 +37,8 @@ interface GeneratedScript {
 
 export default function AIScriptGenerator() {
   const [prompt, setPrompt] = useState("");
-  const [targetAudience, setTargetAudience] = useState("casual");
-  const [scriptLength, setScriptLength] = useState("medium");
+  const [scriptLength, setScriptLength] = useState("30s");
   const [tone, setTone] = useState("conversational");
-  const [format, setFormat] = useState("youtube");
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedScript, setGeneratedScript] = useState<GeneratedScript | null>(null);
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
@@ -110,10 +108,8 @@ export default function AIScriptGenerator() {
     try {
       const response = await apiClient.post('/api/ai-script-generator/generate', {
         prompt: prompt.trim(),
-        targetAudience,
         scriptLength,
         tone,
-        format,
       });
 
       if (response.data.success) {
@@ -157,7 +153,7 @@ export default function AIScriptGenerator() {
       const response = await apiClient.post(`/api/ai-script-generator/${currentProjectId}/regenerate`, {
         tone,
         length: scriptLength,
-        additionalInstructions: `Please improve the script with these preferences: ${tone} tone, ${scriptLength} length for ${format} format.`
+        additionalInstructions: `Please improve the script with these preferences: ${tone} tone, ${scriptLength} length.`
       });
 
       if (response.data.success) {
@@ -305,23 +301,7 @@ Examples:
                   className="min-h-[120px] resize-none"
                 />
                 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2 block">Audience</label>
-                    <Select value={targetAudience} onValueChange={setTargetAudience}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="casual">Casual</SelectItem>
-                        <SelectItem value="formal">Formal</SelectItem>
-                        <SelectItem value="educational">Educational</SelectItem>
-                        <SelectItem value="entertainment">Entertainment</SelectItem>
-                        <SelectItem value="marketing">Marketing</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium text-gray-700 mb-2 block">Length</label>
                     <Select value={scriptLength} onValueChange={setScriptLength}>
@@ -329,9 +309,11 @@ Examples:
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="short">Short (30-45s)</SelectItem>
-                        <SelectItem value="medium">Medium (60-90s)</SelectItem>
-                        <SelectItem value="long">Long (120s+)</SelectItem>
+                        <SelectItem value="10s">10 seconds</SelectItem>
+                        <SelectItem value="15s">15 seconds</SelectItem>
+                        <SelectItem value="30s">30 seconds</SelectItem>
+                        <SelectItem value="45s">45 seconds</SelectItem>
+                        <SelectItem value="60s">60 seconds</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -348,22 +330,6 @@ Examples:
                         <SelectItem value="professional">Professional</SelectItem>
                         <SelectItem value="humorous">Humorous</SelectItem>
                         <SelectItem value="mysterious">Mysterious</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2 block">Format</label>
-                    <Select value={format} onValueChange={setFormat}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="youtube">YouTube</SelectItem>
-                        <SelectItem value="tiktok">TikTok</SelectItem>
-                        <SelectItem value="instagram">Instagram</SelectItem>
-                        <SelectItem value="marketing">Marketing</SelectItem>
-                        <SelectItem value="educational">Educational</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

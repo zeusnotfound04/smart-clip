@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import { FcGoogle } from 'react-icons/fc';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,7 @@ export function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const registered = searchParams.get('registered');
@@ -60,6 +62,13 @@ export function SignInForm() {
     }
   }, [signIn, router]);
 
+  const handleGoogleSignIn = useCallback(() => {
+    setIsGoogleLoading(true);
+    setError(null);
+    // Redirect to backend OAuth endpoint
+    window.location.href = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/google`;
+  }, []);
+
   return (
     <motion.div
       variants={scaleIn}
@@ -78,6 +87,44 @@ export function SignInForm() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {error && (
+            <motion.div 
+              className="bg-red-900/30 border border-red-600/50 text-red-200 px-4 py-3 rounded-lg text-sm mb-4"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              {error}
+            </motion.div>
+          )}
+
+          <motion.div
+            variants={staggerItem}
+            initial="initial"
+            animate="animate"
+            className="mb-6"
+          >
+            <Button
+              type="button"
+              onClick={handleGoogleSignIn}
+              disabled={isGoogleLoading || isLoading}
+              className="w-full h-12 bg-white hover:bg-gray-100 text-gray-900 font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-3"
+            >
+              <FcGoogle className="h-5 w-5" />
+              {isGoogleLoading ? 'Signing in...' : 'Continue with Google'}
+            </Button>
+          </motion.div>
+
+          <div className="relative mb-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-600"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="bg-black/50 px-2 text-gray-400">
+                Or continue with email
+              </span>
+            </div>
+          </div>
+
           <Form {...form}>
             <motion.form 
               onSubmit={form.handleSubmit(onSubmit)} 
@@ -86,15 +133,6 @@ export function SignInForm() {
               initial="initial"
               animate="animate"
             >
-              {error && (
-                <motion.div 
-                  className="bg-red-900/30 border border-red-600/50 text-red-200 px-4 py-3 rounded-lg text-sm"
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                >
-                  {error}
-                </motion.div>
-              )}
 
               <motion.div variants={staggerItem}>
                 <FormField

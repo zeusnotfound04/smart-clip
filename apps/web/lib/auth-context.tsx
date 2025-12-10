@@ -19,8 +19,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkUser = useCallback(async () => {
     try {
-      // Check if there's a token before making API call
       const token = typeof window !== 'undefined' ? localStorage.getItem('smartclips_token') : null;
+      
       if (!token) {
         setUser(null);
         setLoading(false);
@@ -32,7 +32,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Auth check failed:', error);
       setUser(null);
-      // Clear invalid token
       if (typeof window !== 'undefined') {
         localStorage.removeItem('smartclips_token');
         localStorage.removeItem('smartclips_user');
@@ -40,7 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, []); // No dependencies to prevent recreations
+  }, []);
 
   useEffect(() => {
     checkUser();

@@ -9,10 +9,8 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { v4 as uuidv4 } from 'uuid';
 
 interface ScriptGenerationOptions {
-  targetAudience?: 'casual' | 'formal' | 'educational' | 'entertainment' | 'marketing';
-  scriptLength?: 'short' | 'medium' | 'long'; // 30s, 60s, 120s+
+  scriptLength?: '10s' | '15s' | '30s' | '45s' | '60s';
   tone?: 'dramatic' | 'conversational' | 'professional' | 'humorous' | 'mysterious';
-  format?: 'tiktok' | 'youtube' | 'instagram' | 'marketing' | 'educational';
 }
 
 interface StructuredScript {
@@ -198,10 +196,8 @@ export class AIScriptGeneratorService {
           userId,
           title: this.generateTitle(prompt),
           originalPrompt: prompt,
-          targetAudience: options.targetAudience,
           scriptLength: options.scriptLength,
           tone: options.tone,
-          format: options.format,
           status: 'generating'
         }
       });
@@ -329,23 +325,15 @@ export class AIScriptGeneratorService {
   }
 
   private buildEnhancedPrompt(prompt: string, options: ScriptGenerationOptions): string {
-    const targetAudience = options.targetAudience || 'casual';
-    const scriptLength = options.scriptLength || 'medium';
+    const scriptLength = options.scriptLength || '30s';
     const tone = options.tone || 'conversational';
-    const format = options.format || 'youtube';
 
     const lengthGuide = {
-      short: '30-45 seconds (75-110 words)',
-      medium: '60-90 seconds (150-225 words)', 
-      long: '120+ seconds (300+ words)'
-    };
-
-    const formatGuide = {
-      tiktok: 'TikTok-style with quick hooks, trending language, and fast-paced content',
-      youtube: 'YouTube format with strong intro, clear segments, and call-to-action',
-      instagram: 'Instagram Reels style with visual cues and engaging captions',
-      marketing: 'Marketing video with clear value proposition and persuasive language',
-      educational: 'Educational content with structured learning points and clear explanations'
+      '10s': '10 seconds (25-30 words)',
+      '15s': '15 seconds (35-40 words)',
+      '30s': '30 seconds (75-85 words)',
+      '45s': '45 seconds (110-120 words)',
+      '60s': '60 seconds (150-160 words)'
     };
 
     const toneGuide = {
@@ -356,13 +344,12 @@ export class AIScriptGeneratorService {
       mysterious: 'intriguing and suspenseful with question-based hooks'
     };
 
-    return `You are an expert script writer for ${format} content. Create an engaging narration script based on this topic: "${prompt}"
+    return `You are an expert script writer for short-form vertical video content. Create an engaging narration script based on this topic: "${prompt}"
 
 REQUIREMENTS:
-- Target Audience: ${targetAudience}
-- Script Length: ${lengthGuide[scriptLength]}
+- Script Length: ${lengthGuide[scriptLength]} - THIS IS CRITICAL, DO NOT EXCEED THIS WORD COUNT
 - Tone: ${toneGuide[tone]}
-- Format: ${formatGuide[format]}
+- Content Type: Short-form vertical video optimized for maximum engagement (TikTok, Instagram Reels, YouTube Shorts)
 
 STRUCTURE YOUR RESPONSE EXACTLY AS FOLLOWS:
 
@@ -376,20 +363,22 @@ STRUCTURE YOUR RESPONSE EXACTLY AS FOLLOWS:
 [Continue with additional points as needed]
 
 **CONCLUSION:**
-[Strong closing that reinforces the main message and includes a call-to-action appropriate for ${format}]
+[Strong closing that reinforces the main message and includes a compelling call-to-action]
 
 **FULL SCRIPT:**
 [Complete narration script written in natural speaking language, ready to be read aloud. Include natural pauses with "..." and emphasize important words with ALL CAPS when appropriate for dramatic effect.]
 
 GUIDELINES:
 - Use ${tone} tone throughout
-- Target ${targetAudience} audience level
+- STRICTLY adhere to the ${lengthGuide[scriptLength]} word count limit
+- Perfect for short-form vertical video content
 - Include specific details and examples when possible
-- Make it engaging and memorable
+- Make it engaging and memorable with quick pacing
 - Ensure smooth flow between sections
 - Add strategic pauses for emphasis
 - Include emotional triggers appropriate for the topic
 - End with a strong call-to-action
+- Keep sentences short and punchy for maximum impact
 
 Generate the script now:`;
   }
@@ -552,10 +541,8 @@ ${modifications.additionalInstructions ? `- Additional instructions: ${modificat
 Please regenerate the script with these modifications while maintaining the same structure.`;
 
     const options: ScriptGenerationOptions = {
-      targetAudience: project.targetAudience as any,
       scriptLength: modifications.length as any || project.scriptLength as any,
-      tone: modifications.tone as any || project.tone as any,
-      format: project.format as any
+      tone: modifications.tone as any || project.tone as any
     };
 
     const result = await this.generateScript(modifiedPrompt, options, project.userId);
@@ -1142,7 +1129,6 @@ Please regenerate the script with these modifications while maintaining the same
               userId: userId,
               title: scriptProject.title,
               originalPrompt: scriptProject.originalPrompt,
-              targetAudience: scriptProject.targetAudience,
               scriptLength: scriptProject.scriptLength,
               tone: scriptProject.tone,
               format: scriptProject.format,

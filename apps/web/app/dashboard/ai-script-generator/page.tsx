@@ -92,10 +92,8 @@ interface GeneratedScript {
 }
 
 interface ScriptGenerationOptions {
-  targetAudience?: 'casual' | 'formal' | 'educational' | 'entertainment' | 'marketing';
-  scriptLength?: 'short' | 'medium' | 'long';
+  scriptLength?: '10s' | '15s' | '30s' | '45s' | '60s';
   tone?: 'dramatic' | 'conversational' | 'professional' | 'humorous' | 'mysterious';
-  format?: 'tiktok' | 'youtube' | 'instagram' | 'marketing' | 'educational';
 }
 
 export default function AIScriptGenerator() {
@@ -112,10 +110,8 @@ export default function AIScriptGenerator() {
   const [scriptPrompt, setScriptPrompt] = useState<string>('');
   const [projectName, setProjectName] = useState<string>('');
   const [scriptOptions, setScriptOptions] = useState<ScriptGenerationOptions>({
-    targetAudience: 'casual',
-    scriptLength: 'medium',
-    tone: 'conversational',
-    format: 'youtube'
+    scriptLength: '30s',
+    tone: 'conversational'
   });
   
   // Phase 2: Voice Selection
@@ -249,10 +245,8 @@ export default function AIScriptGenerator() {
         },
         body: JSON.stringify({
           prompt: scriptPrompt,
-          targetAudience: scriptOptions.targetAudience,
           scriptLength: scriptOptions.scriptLength,
-          tone: scriptOptions.tone,
-          format: scriptOptions.format
+          tone: scriptOptions.tone
         }),
       });
 
@@ -549,26 +543,7 @@ export default function AIScriptGenerator() {
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div>
-            <label className="text-sm font-medium mb-2 block">Target Audience</label>
-            <Select
-              value={scriptOptions.targetAudience}
-              onValueChange={(value) => setScriptOptions(prev => ({ ...prev, targetAudience: value as any }))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="casual">Casual</SelectItem>
-                <SelectItem value="formal">Formal</SelectItem>
-                <SelectItem value="educational">Educational</SelectItem>
-                <SelectItem value="entertainment">Entertainment</SelectItem>
-                <SelectItem value="marketing">Marketing</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="text-sm font-medium mb-2 block">Script Length</label>
             <Select
@@ -579,9 +554,11 @@ export default function AIScriptGenerator() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="short">Short (30-60s)</SelectItem>
-                <SelectItem value="medium">Medium (1-3min)</SelectItem>
-                <SelectItem value="long">Long (3-5min)</SelectItem>
+                <SelectItem value="10s">10 seconds</SelectItem>
+                <SelectItem value="15s">15 seconds</SelectItem>
+                <SelectItem value="30s">30 seconds</SelectItem>
+                <SelectItem value="45s">45 seconds</SelectItem>
+                <SelectItem value="60s">60 seconds</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -601,25 +578,6 @@ export default function AIScriptGenerator() {
                 <SelectItem value="dramatic">Dramatic</SelectItem>
                 <SelectItem value="humorous">Humorous</SelectItem>
                 <SelectItem value="mysterious">Mysterious</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <label className="text-sm font-medium mb-2 block">Format</label>
-            <Select
-              value={scriptOptions.format}
-              onValueChange={(value) => setScriptOptions(prev => ({ ...prev, format: value as any }))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="youtube">YouTube</SelectItem>
-                <SelectItem value="tiktok">TikTok</SelectItem>
-                <SelectItem value="instagram">Instagram</SelectItem>
-                <SelectItem value="marketing">Marketing</SelectItem>
-                <SelectItem value="educational">Educational</SelectItem>
               </SelectContent>
             </Select>
           </div>

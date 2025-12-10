@@ -270,10 +270,8 @@ model ScriptProject {
   userId           String            @map("user_id")
   title            String
   originalPrompt   String            @map("original_prompt")
-  targetAudience   String?           @map("target_audience")
   scriptLength     String?           @map("script_length")
   tone             String?           
-  format           String?           
   status           String            @default("generating")
   estimatedCost    Decimal?          @map("estimated_cost") @db.Decimal(10,4)
   actualCost       Decimal?          @map("actual_cost") @db.Decimal(10,4)
@@ -492,10 +490,8 @@ model VideoGenerationProject {
   userId              String    @map("user_id")
   title               String
   originalPrompt      String    @map("original_prompt")
-  targetAudience      String?   @map("target_audience")
   scriptLength        String?   @map("script_length")
   tone                String?
-  format              String?
   
   // Phase 1: Script Generation
   scriptStatus        String    @default("pending") @map("script_status")

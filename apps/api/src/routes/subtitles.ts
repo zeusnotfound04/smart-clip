@@ -1,9 +1,11 @@
 import { Router } from 'express';
 import { generate, getSubtitles, updateSubtitle, exportSRT, downloadSRT, getDetailedSubtitles, updateConfiguration } from '../controllers/auto-subtitles.controller';
+import { getSupportedLanguages } from '../controllers/languages.controller';
 import { authMiddleware } from '../middleware/auth.middleware';
 
 const router: Router = Router();
 
+router.get('/languages', getSupportedLanguages);
 router.post('/generate', authMiddleware, generate);
 router.get('/:videoId', authMiddleware, getSubtitles);
 router.get('/debug/:videoId', authMiddleware, getDetailedSubtitles);

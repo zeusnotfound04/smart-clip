@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Subtitles } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
@@ -52,9 +52,11 @@ export default function AutoSubtitlesPage() {
   const [error, setError] = useState<string>('');
   const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
   const [demoText, setDemoText] = useState('Hello! This is a sample subtitle text.');
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('');
+  const [availableLanguages, setAvailableLanguages] = useState<Array<{ code: string; name: string; priority: number }>>([]);
   
   const [subtitleOptions, setSubtitleOptions] = useState<SubtitleOptions>({
-    detectAllLanguages: true,
+    detectAllLanguages: false,
     style: {
       textCase: 'normal',
       fontFamily: 'Inter',
@@ -68,6 +70,18 @@ export default function AutoSubtitlesPage() {
       showShadow: true
     }
   });
+
+  useEffect(() => {
+    const fetchLanguages = async () => {
+      try {
+        const data = await apiClient.getSupportedLanguages();
+        setAvailableLanguages(data.languages);
+      } catch (error) {
+        console.error('Failed to fetch languages:', error);
+      }
+    };
+    fetchLanguages();
+  }, []);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -95,7 +109,7 @@ export default function AutoSubtitlesPage() {
 
       const video = await apiClient.uploadVideo(selectedFile, (progress) => {
         setUploadProgress(progress);
-      });
+      }, selectedLanguage || undefined);
       setVideoData({
         id: video.id,
         name: video.originalName || selectedFile.name,
@@ -117,7 +131,7 @@ export default function AutoSubtitlesPage() {
         });
       }, 1000);
 
-      const subtitleResult = await apiClient.generateSubtitles(video.id, subtitleOptions);
+      const subtitleResult = await apiClient.generateSubtitles(video.id, subtitleOptions, selectedLanguage || undefined);
       clearInterval(progressInterval);
       setProcessingProgress(100);
 
@@ -247,6 +261,9 @@ export default function AutoSubtitlesPage() {
               onFileSelect={handleFileSelect}
               onReset={resetUpload}
               onConfigure={proceedToConfiguration}
+              availableLanguages={availableLanguages}
+              selectedLanguage={selectedLanguage}
+              onLanguageChange={setSelectedLanguage}
             />
           </motion.section>
 

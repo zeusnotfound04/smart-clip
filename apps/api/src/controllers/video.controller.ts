@@ -45,11 +45,15 @@ export const confirmUpload = async (req: AuthRequest, res: Response) => {
   console.log('👤 User ID:', req.userId);
   
   try {
-    const { s3Key, originalName, size, mimeType } = req.body;
+    const { s3Key, originalName, size, mimeType, language } = req.body;
     
     if (!s3Key || !originalName || !req.userId) {
       console.error('❌ Missing required fields:', { s3Key, originalName, userId: req.userId });
       return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    if (language) {
+      console.log('🌍 Language specified:', language);
     }
 
     console.log('💾 Creating video record in database...');

@@ -9,6 +9,15 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { Gamepad2, Mic, Smartphone, GraduationCap, LucideIcon } from 'lucide-react';
+
+// Icon mapping for content types
+const iconMap: Record<string, LucideIcon> = {
+  'Gamepad2': Gamepad2,
+  'Mic': Mic,
+  'Smartphone': Smartphone,
+  'GraduationCap': GraduationCap,
+};
 
 interface ContentTypeConfig {
   type: string;
@@ -72,41 +81,71 @@ const ContentTypeCard = React.memo<{
   return (
     <Card 
       className={cn(
-        "cursor-pointer transition-all duration-200 hover:shadow-md",
-        isSelected && "ring-2 ring-blue-500 bg-blue-50",
-        disabled && "opacity-50 cursor-not-allowed"
+        "cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-[1.02] border-2",
+        isSelected 
+          ? "ring-2 ring-primary shadow-lg bg-primary/5 border-primary" 
+          : "border-border hover:border-primary/50",
+        disabled && "opacity-50 cursor-not-allowed hover:scale-100"
       )}
       onClick={handleClick}
     >
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-semibold">
+          <CardTitle className={cn(
+            "text-lg font-semibold",
+            isSelected ? "text-primary" : "text-foreground"
+          )}>
             {contentType.name}
           </CardTitle>
-          {contentType.icon && (
-            <div className="text-2xl" role="img" aria-label={`${contentType.name} icon`}>
-              {contentType.icon}
-            </div>
-          )}
+          {contentType.icon && (() => {
+            const IconComponent = iconMap[contentType.icon];
+            return IconComponent ? (
+              <IconComponent 
+                className={cn(
+                  "w-7 h-7 transition-colors",
+                  isSelected ? "text-primary" : "text-muted-foreground"
+                )} 
+                aria-label={`${contentType.name} icon`} 
+              />
+            ) : null;
+          })()}
         </div>
-        <CardDescription className="text-sm text-gray-600">
+        <CardDescription className={cn(
+          "text-sm mt-1",
+          isSelected ? "text-foreground/80" : "text-muted-foreground"
+        )}>
           {contentType.description}
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-0">
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-500">Clip Length:</span>
-            <span className="font-medium">{contentType.preferredClipLength}s</span>
+            <span className={cn(
+              isSelected ? "text-foreground/70" : "text-muted-foreground"
+            )}>Clip Length:</span>
+            <span className={cn(
+              "font-semibold",
+              isSelected ? "text-primary" : "text-foreground"
+            )}>{contentType.preferredClipLength}s</span>
           </div>
           <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-500">Max Segments:</span>
-            <span className="font-medium">{contentType.maxSegments}</span>
+            <span className={cn(
+              isSelected ? "text-foreground/70" : "text-muted-foreground"
+            )}>Max Segments:</span>
+            <span className={cn(
+              "font-semibold",
+              isSelected ? "text-primary" : "text-foreground"
+            )}>{contentType.maxSegments}</span>
           </div>
           {keywordPreview && (
             <div className="text-sm">
-              <span className="text-gray-500">Keywords: </span>
-              <span className="text-gray-700">{keywordPreview}</span>
+              <span className={cn(
+                isSelected ? "text-foreground/70" : "text-muted-foreground"
+              )}>Keywords: </span>
+              <span className={cn(
+                "font-medium",
+                isSelected ? "text-foreground" : "text-foreground/80"
+              )}>{keywordPreview}</span>
             </div>
           )}
         </div>
@@ -369,19 +408,22 @@ export const ContentTypeSelector: React.FC<ContentTypeSelectorProps> = ({
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold">Select Content Type</h2>
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <h2 className="text-2xl font-bold text-foreground">Select Content Type</h2>
+          <p className="text-muted-foreground">Choose the type of content you want to analyze for smart clipping</p>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, index) => (
-            <Card key={index} className="animate-pulse">
+            <Card key={index} className="animate-pulse border-2">
               <CardHeader>
-                <div className="h-6 bg-gray-200 rounded mb-2"></div>
-                <div className="h-4 bg-gray-200 rounded"></div>
+                <div className="h-6 bg-muted rounded mb-2"></div>
+                <div className="h-4 bg-muted rounded"></div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  <div className="h-3 bg-gray-200 rounded"></div>
-                  <div className="h-3 bg-gray-200 rounded"></div>
+                  <div className="h-3 bg-muted rounded"></div>
+                  <div className="h-3 bg-muted rounded"></div>
                 </div>
               </CardContent>
             </Card>
@@ -393,13 +435,17 @@ export const ContentTypeSelector: React.FC<ContentTypeSelectorProps> = ({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        {/* <h2 className="text-xl font-semibold">Select Content Type</h2> */}
-        {selectedType && (
-          <Badge variant="outline" className="text-sm">
-            {contentTypes.find(t => t.type === selectedType)?.name}
-          </Badge>
-        )}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <p className="text-sm text-muted-foreground">Choose the type that best matches your video content</p>
+          </div>
+          {selectedType && (
+            <Badge variant="default" className="text-sm px-3 py-1">
+              ✓ {contentTypes.find(t => t.type === selectedType)?.name}
+            </Badge>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -415,9 +461,9 @@ export const ContentTypeSelector: React.FC<ContentTypeSelectorProps> = ({
       </div>
 
       {selectedConfig && (
-        <div className="border-t pt-6">
+        <div className="border-t border-border pt-6 mt-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold">
+            <h3 className="text-xl font-semibold text-foreground">
               {selectedConfig.name} Configuration
             </h3>
             <Button
@@ -425,6 +471,7 @@ export const ContentTypeSelector: React.FC<ContentTypeSelectorProps> = ({
               size="sm"
               onClick={toggleCustomization}
               disabled={disabled}
+              className="font-medium"
             >
               {showCustomization ? 'Hide Configuration' : 'Customize Settings'}
             </Button>
@@ -439,30 +486,26 @@ export const ContentTypeSelector: React.FC<ContentTypeSelectorProps> = ({
           )}
 
           {!showCustomization && (
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-sm text-gray-600 mb-2">
+            <div className="bg-muted/50 p-6 rounded-lg border border-border">
+              <p className="text-sm text-foreground/80 mb-4">
                 This content type is optimized for {selectedConfig.description.toLowerCase()}
               </p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div>
-                  <span className="font-medium">Clip Length:</span>
-                  <br />
-                  {selectedConfig.preferredClipLength}s
+                <div className="space-y-1">
+                  <span className="font-semibold text-foreground block">Clip Length:</span>
+                  <span className="text-lg font-bold text-primary">{selectedConfig.preferredClipLength}s</span>
                 </div>
-                <div>
-                  <span className="font-medium">Max Segments:</span>
-                  <br />
-                  {selectedConfig.maxSegments}
+                <div className="space-y-1">
+                  <span className="font-semibold text-foreground block">Max Segments:</span>
+                  <span className="text-lg font-bold text-primary">{selectedConfig.maxSegments}</span>
                 </div>
-                <div>
-                  <span className="font-medium">Keywords:</span>
-                  <br />
-                  {selectedConfig.excitementKeywords.length + selectedConfig.actionKeywords.length + selectedConfig.emotionalKeywords.length}
+                <div className="space-y-1">
+                  <span className="font-semibold text-foreground block">Keywords:</span>
+                  <span className="text-lg font-bold text-primary">{selectedConfig.excitementKeywords.length + selectedConfig.actionKeywords.length + selectedConfig.emotionalKeywords.length}</span>
                 </div>
-                <div>
-                  <span className="font-medium">Audio Focus:</span>
-                  <br />
-                  {Math.round(selectedConfig.audioEnergyWeight * 100)}%
+                <div className="space-y-1">
+                  <span className="font-semibold text-foreground block">Audio Focus:</span>
+                  <span className="text-lg font-bold text-primary">{Math.round(selectedConfig.audioEnergyWeight * 100)}%</span>
                 </div>
               </div>
             </div>

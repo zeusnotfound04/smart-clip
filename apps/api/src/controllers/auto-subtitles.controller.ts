@@ -9,8 +9,10 @@ interface AuthRequest extends Request {
 
 const generateSchema = z.object({
   videoId: z.string(),
+  language: z.string().optional(),
   options: z.object({
-    detectAllLanguages: z.boolean().default(true),
+    detectAllLanguages: z.boolean().optional(),
+    language: z.string().optional(),
     style: z.object({
       textCase: z.enum(['normal', 'uppercase', 'lowercase', 'capitalize']).default('normal'),
       fontFamily: z.string().default('Arial'),
@@ -50,7 +52,7 @@ const configSchema = z.object({
 
 export const generate = async (req: AuthRequest, res: Response) => {
   try {
-    const { videoId, options } = generateSchema.parse(req.body);
+    const { videoId, language, options } = generateSchema.parse(req.body);
     
     const video = await prisma.video.findFirst({
       where: { id: videoId, userId: req.userId }
@@ -60,12 +62,21 @@ export const generate = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Video not found' });
     }
 
+    if (language) {
+      console.log(`🌍 Using specified language: ${language}`);
+    }
+
     await prisma.video.update({
       where: { id: videoId },
       data: { status: 'processing' }
     });
 
-    const result = await generateVideoWithSubtitles(videoId, video.filePath, options);
+    const subtitleOptions = options ? {
+      ...options,
+      language: language || options?.language
+    } : language ? { language } : undefined;
+
+    const result = await generateVideoWithSubtitles(videoId, video.filePath, subtitleOptions);
 
     // Update video with subtitled video URL and mark as completed
     await prisma.video.update({

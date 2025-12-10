@@ -39,8 +39,9 @@ export interface SubtitleStyle {
 }
 
 export interface SubtitleOptions {
-  detectAllLanguages: boolean;
-  style: SubtitleStyle;
+  detectAllLanguages?: boolean;
+  language?: string;
+  style?: SubtitleStyle;
 }
 
 export interface VideoWithSubtitlesResult {
@@ -109,29 +110,197 @@ const extractAudioFromVideo = async (videoPath: string, videoId: string): Promis
   });
 };
 
-const transcribeAudio = async (audioPath: string, options?: SubtitleOptions): Promise<{ results: any[], detectedLanguages: string[] }> => {
+const splitAudioIntoChunks = (audioPath: string, chunkDurationSeconds: number = 50): Promise<string[]> => {
+  const chunkPaths: string[] = [];
+  const baseFileName = audioPath.replace('.wav', '');
+  let chunkIndex = 0;
+  
+  return new Promise<string[]>((resolve, reject) => {
+    const getAudioDuration = (): Promise<number> => {
+      return new Promise((res, rej) => {
+        ffmpeg.ffprobe(audioPath, (err, metadata) => {
+          if (err) rej(err);
+          else res(metadata.format.duration || 0);
+        });
+      });
+    };
+
+    getAudioDuration().then(duration => {
+      if (duration <= chunkDurationSeconds) {
+        resolve([audioPath]);
+        return;
+      }
+
+      console.log(`🔪 Splitting ${duration.toFixed(2)}s audio into ${Math.ceil(duration / chunkDurationSeconds)} chunks`);
+      
+      const processChunk = (startTime: number) => {
+        if (startTime >= duration) {
+          resolve(chunkPaths);
+          return;
+        }
+
+        const chunkPath = `${baseFileName}_chunk${chunkIndex}.wav`;
+        chunkPaths.push(chunkPath);
+        
+        ffmpeg(audioPath)
+          .setStartTime(startTime)
+          .setDuration(chunkDurationSeconds)
+          .toFormat('wav')
+          .audioChannels(1)
+          .audioFrequency(16000)
+          .on('end', () => {
+            console.log(`✂️ Chunk ${chunkIndex} created: ${chunkPath}`);
+            chunkIndex++;
+            processChunk(startTime + chunkDurationSeconds);
+          })
+          .on('error', (err) => {
+            reject(new Error(`Failed to create chunk: ${err.message}`));
+          })
+          .save(chunkPath);
+      };
+
+      processChunk(0);
+    }).catch(reject);
+  });
+};
+
+const transcribeAudioChunk = async (audioPath: string, config: any, timeOffset: number = 0): Promise<any[]> => {
   const audioBuffer = readFileSync(audioPath);
+  const request = {
+    audio: { content: audioBuffer.toString('base64') },
+    config
+  };
+  
+  const [response] = await speechClient.recognize(request);
+  const results = response.results || [];
+  
+  // Adjust timestamps based on chunk offset for ALL chunks
+  if (results.length > 0) {
+    results.forEach((result: any) => {
+      if (result.alternatives?.[0]?.words) {
+        result.alternatives[0].words.forEach((word: any) => {
+          if (word.startTime) {
+            const startSeconds = parseFloat(String(word.startTime.seconds || '0'));
+            const startNanos = parseFloat(String(word.startTime.nanos || '0'));
+            const totalStartSeconds = startSeconds + (startNanos / 1000000000) + timeOffset;
+            word.startTime = {
+              seconds: String(Math.floor(totalStartSeconds)),
+              nanos: String(Math.floor((totalStartSeconds % 1) * 1000000000))
+            };
+          }
+          if (word.endTime) {
+            const endSeconds = parseFloat(String(word.endTime.seconds || '0'));
+            const endNanos = parseFloat(String(word.endTime.nanos || '0'));
+            const totalEndSeconds = endSeconds + (endNanos / 1000000000) + timeOffset;
+            word.endTime = {
+              seconds: String(Math.floor(totalEndSeconds)),
+              nanos: String(Math.floor((totalEndSeconds % 1) * 1000000000))
+            };
+          }
+        });
+      }
+    });
+  }
+  
+  return results;
+};
+
+const transcribeAudio = async (audioPath: string, options?: SubtitleOptions, audioS3Key?: string): Promise<{ results: any[], detectedLanguages: string[] }> => {
+  const audioSizeInBytes = statSync(audioPath).size;
+  const audioDurationEstimate = audioSizeInBytes / (16000 * 2);
+  
+  console.log(`🎵 Audio file size: ${(audioSizeInBytes / 1024 / 1024).toFixed(2)}MB, estimated duration: ${audioDurationEstimate.toFixed(2)}s`);
   
   const languageConfigs = [
     {
-      languageCode: 'hi-IN',
-      alternativeLanguageCodes: ['ur-PK', 'en-IN', 'ur-IN'],
-      phrases: ['aaj', 'maker', 'scam', 'instagram', 'video', 'content']
-    },
-    {
-      languageCode: 'ur-PK',
-      alternativeLanguageCodes: ['hi-IN', 'en-PK', 'en-IN'],
-      phrases: ['aaj', 'maker', 'scam', 'instagram', 'video', 'content']
-    },
-    {
-      languageCode: 'en-IN',
-      alternativeLanguageCodes: ['hi-IN', 'ur-PK', 'en-US'],
-      phrases: ['aaj', 'maker', 'scam', 'instagram', 'video', 'content']
-    },
-    {
       languageCode: 'en-US',
       alternativeLanguageCodes: ['en-GB', 'en-AU', 'en-IN'],
-      phrases: ['video', 'maker', 'scam', 'instagram', 'content', 'speech']
+      phrases: ['video', 'content', 'today', 'make', 'how'],
+      priority: 1
+    },
+    {
+      languageCode: 'hi-IN',
+      alternativeLanguageCodes: ['en-IN'],
+      phrases: ['aaj', 'video', 'content', 'करना', 'कैसे'],
+      priority: 1
+    },
+    {
+      languageCode: 'es-ES',
+      alternativeLanguageCodes: ['es-US', 'es-MX'],
+      phrases: ['video', 'contenido', 'hoy', 'hacer'],
+      priority: 2
+    },
+    {
+      languageCode: 'fr-FR',
+      alternativeLanguageCodes: ['fr-CA'],
+      phrases: ['vidéo', 'contenu', 'aujourd\'hui', 'faire'],
+      priority: 2
+    },
+    {
+      languageCode: 'de-DE',
+      alternativeLanguageCodes: [],
+      phrases: ['video', 'inhalt', 'heute', 'machen'],
+      priority: 2
+    },
+    {
+      languageCode: 'pt-BR',
+      alternativeLanguageCodes: ['pt-PT'],
+      phrases: ['vídeo', 'conteúdo', 'hoje', 'fazer'],
+      priority: 2
+    },
+    {
+      languageCode: 'ja-JP',
+      alternativeLanguageCodes: [],
+      phrases: ['ビデオ', '動画', 'コンテンツ', '今日'],
+      priority: 3
+    },
+    {
+      languageCode: 'ko-KR',
+      alternativeLanguageCodes: [],
+      phrases: ['비디오', '영상', '콘텐츠', '오늘'],
+      priority: 3
+    },
+    {
+      languageCode: 'ar-SA',
+      alternativeLanguageCodes: ['ar-AE'],
+      phrases: ['فيديو', 'محتوى', 'اليوم', 'كيف'],
+      priority: 3
+    },
+    {
+      languageCode: 'ru-RU',
+      alternativeLanguageCodes: [],
+      phrases: ['видео', 'контент', 'сегодня', 'как'],
+      priority: 3
+    },
+    {
+      languageCode: 'it-IT',
+      alternativeLanguageCodes: [],
+      phrases: ['video', 'contenuto', 'oggi', 'come'],
+      priority: 3
+    },
+    {
+      languageCode: 'nl-NL',
+      alternativeLanguageCodes: ['nl-BE'],
+      phrases: ['video', 'inhoud', 'vandaag', 'hoe'],
+      priority: 3
+    },
+    {
+      languageCode: 'tr-TR',
+      alternativeLanguageCodes: [],
+      phrases: ['video', 'içerik', 'bugün', 'nasıl'],
+      priority: 3
+    },
+    {
+      languageCode: 'zh-Hans',
+      alternativeLanguageCodes: [],
+      phrases: ['视频', '内容', '今天', '怎么'],
+      priority: 3
+    },
+    {
+      languageCode: 'id-ID',
+      alternativeLanguageCodes: [],
+      phrases: ['video', 'konten', 'hari', 'bagaimana'],
+      priority: 3
     }
   ];
 
@@ -140,11 +309,29 @@ const transcribeAudio = async (audioPath: string, options?: SubtitleOptions): Pr
   let bestResult = null;
   let bestConfidence = 0;
 
-  for (const config of languageConfigs) {
-    try {
-      const request = {
-        audio: { content: audioBuffer.toString('base64') },
-        config: {
+  // Split audio into chunks if needed
+  const chunkPaths = await splitAudioIntoChunks(audioPath, 50);
+  const isChunked = chunkPaths.length > 1;
+  
+  if (isChunked) {
+    console.log(`📦 Processing ${chunkPaths.length} audio chunks`);
+  }
+
+  // Filter and sort configs based on options
+  const configsToTest = options?.language 
+    ? languageConfigs.filter(c => c.languageCode === options.language)
+    : languageConfigs.sort((a, b) => (a.priority || 999) - (b.priority || 999));
+
+  if (options?.language) {
+    console.log(`🎯 Using specified language: ${options.language}`);
+  } else {
+    console.log(`🔍 Auto-detecting language (will stop at first good match)...`);
+  }
+
+  try {
+    for (const config of configsToTest) {
+      try {
+        const requestConfig = {
           encoding: 'LINEAR16' as const,
           sampleRateHertz: 16000,
           languageCode: config.languageCode,
@@ -157,45 +344,89 @@ const transcribeAudio = async (audioPath: string, options?: SubtitleOptions): Pr
           }],
           profanityFilter: false,
           alternativeLanguageCodes: config.alternativeLanguageCodes
-        }
-      };
-      console.log(`Pushing the request : `, request);
-      const [response] = await speechClient.recognize(request);
-      const results = response.results || [];
-      console.log(`Transcription results for ${config.languageCode}:`, results);
-      
-      if (results.length > 0) {
-        const confidence = results[0].alternatives?.[0]?.confidence || 0;
+        };
+
+        console.log(`🎤 Testing ${config.languageCode}...`);
         
-        if (confidence > 0.3) {
-          detectedLanguages.push(config.languageCode);
+        const allChunkResults: any[] = [];
+        let timeOffset = 0;
+        
+        // Process each chunk sequentially
+        for (let i = 0; i < chunkPaths.length; i++) {
+          const chunkPath = chunkPaths[i];
           
-          if (options?.detectAllLanguages) {
-            results.forEach(result => {
-              if (result.alternatives?.[0]) {
-                (result.alternatives[0] as any).detectedLanguage = config.languageCode;
-              }
-            });
-            allResults.push(...results);
+          try {
+            const chunkResults = await transcribeAudioChunk(chunkPath, requestConfig, timeOffset);
+            allChunkResults.push(...chunkResults);
+            timeOffset += 50;
+          } catch (chunkError: any) {
+            console.warn(`⚠️ ${config.languageCode} chunk ${i + 1} failed: ${chunkError.message}`);
           }
         }
         
-        if (confidence > bestConfidence) {
-          bestConfidence = confidence;
-          bestResult = {
-            results,
-            languageUsed: config.languageCode,
-            confidence,
-            transcript: results[0].alternatives?.[0]?.transcript || ''
-          };
+        const results = allChunkResults;
+        
+        if (results.length > 0) {
+          const confidence = results[0].alternatives?.[0]?.confidence || 0;
+          const transcriptPreview = results[0].alternatives?.[0]?.transcript?.substring(0, 50) || '';
+          console.log(`✅ ${config.languageCode}: ${results.length} segments, ${(confidence * 100).toFixed(0)}% confidence - "${transcriptPreview}..."`);
+          
+          
+          if (confidence > 0.3) {
+            detectedLanguages.push(config.languageCode);
+            
+            if (options?.detectAllLanguages) {
+              results.forEach((result: any) => {
+                if (result.alternatives?.[0]) {
+                  (result.alternatives[0] as any).detectedLanguage = config.languageCode;
+                }
+              });
+              allResults.push(...results);
+            }
+          }
+          
+          if (confidence > bestConfidence) {
+            bestConfidence = confidence;
+            bestResult = {
+              results,
+              languageUsed: config.languageCode,
+              confidence,
+              transcript: results.map((r: any) => r.alternatives?.[0]?.transcript || '').join(' ')
+            };
+          }
+
+          // 🚀 EARLY STOP: If we found a great match and not detecting all languages, stop here
+          if (confidence > 0.7 && !options?.detectAllLanguages && !options?.language) {
+            console.log(`🎯 High confidence (${(confidence * 100).toFixed(0)}%) - stopping search`);
+            break;
+          }
+        } else {
+          console.log(`❌ ${config.languageCode}: No transcription`);
         }
+      } catch (error: any) {
+        console.warn(`❌ ${config.languageCode}: ${error.message}`);
       }
-    } catch (error: any) {
-      console.warn(`Transcription failed for ${config.languageCode}:`, error.message);
     }
+  } finally {
+    // Clean up all chunk files
+    for (const chunkPath of chunkPaths) {
+      if (chunkPath !== audioPath && existsSync(chunkPath)) {
+        try {
+          unlinkSync(chunkPath);
+        } catch {}
+      }
+    }
+    console.log(`🧹 Cleaned up ${chunkPaths.length - 1} temporary chunk files`);
   }
 
-  const finalResults = options?.detectAllLanguages && allResults.length > 0 ? allResults : (bestResult ? bestResult.results : []);
+  if (bestResult) {
+    console.log(`\n🏆 Selected: ${bestResult.languageUsed} (${(bestResult.confidence * 100).toFixed(0)}% confidence)`);
+  } else {
+    console.error('❌ Failed to generate subtitles: No transcription results from any language');
+    throw new Error('Failed to generate subtitles: Audio could not be transcribed in any supported language. Please ensure the audio is clear and contains speech.');
+  }
+
+  const finalResults = options?.detectAllLanguages && allResults.length > 0 ? allResults : bestResult.results;
   return { results: finalResults, detectedLanguages };
 };
 
@@ -265,42 +496,12 @@ const processTranscriptionToSegments = (results: any[], options?: SubtitleOption
             wordCount = 0;
           }
         });
-      } else if (alternative.transcript && alternative.transcript.trim()) {
-        const processedText = options?.style ? applyTextCase(alternative.transcript.trim(), options.style.textCase) : alternative.transcript.trim();
-        
-        segments.push({
-          text: processedText,
-          startTime: 0,
-          endTime: 5,
-          confidence: alternative.confidence || 0,
-          language: (alternative as any).detectedLanguage || 'unknown',
-          rawTranscript: alternative.transcript
-        });
       }
     }
   });
-
-  if (segments.length === 0 && process.env.NODE_ENV === 'development') {
-    segments.push(
-      {
-        text: 'This is a test subtitle',
-        startTime: 1,
-        endTime: 3,
-        confidence: 0.9
-      },
-      {
-        text: 'Testing ASS subtitle format',
-        startTime: 4,
-        endTime: 7,
-        confidence: 0.9
-      },
-      {
-        text: 'SmartClip subtitle generation',
-        startTime: 8,
-        endTime: 10,
-        confidence: 0.9
-      }
-    );
+  
+  if (segments.length === 0) {
+    throw new Error('Failed to process transcription: No valid subtitle segments were generated. The audio may not contain recognizable speech or word timestamps are missing.');
   }
   
   return segments;
@@ -344,7 +545,7 @@ export const generateVideoWithSubtitles = async (videoId: string, s3Key: string,
     const audioResult = await extractAudioFromVideo(videoPath, videoId);
     audioPath = audioResult.audioPath;
     
-    const { results: transcriptionResults, detectedLanguages } = await transcribeAudio(audioPath, options);
+    const { results: transcriptionResults, detectedLanguages } = await transcribeAudio(audioPath, options, audioResult.s3Key);
     const segments = processTranscriptionToSegments(transcriptionResults, options);
     const srtContent = generateSRT(segments, options);
     

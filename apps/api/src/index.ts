@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import session from 'express-session';
+import passport from './config/passport';
 import authRoutes from './routes/auth';
 import videoRoutes from './routes/videos';
 import projectRoutes from './routes/projects';
@@ -63,14 +65,28 @@ app.use(cors({
 // Increase body parser limits for large video uploads (500MB)
 app.use(express.json({ 
   limit: '500mb',
-  extended: true,
-  parameterLimit: 50000
+  strict: false
 }));
 app.use(express.urlencoded({ 
   extended: true, 
   limit: '500mb',
   parameterLimit: 50000
 }));
+
+// Session configuration for Passport
+app.use(session({
+  secret: process.env.JWT_SECRET || 'your-secret-key',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
+
+// Initialize Passport
+app.use(passport.initialize());
+app.use(passport.session());
 
 // Add timeout middleware for long-running operations
 app.use((req, res, next) => {

@@ -1,18 +1,15 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Clock, Download, Play } from 'lucide-react';
+import { Download, Play } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { VideoTimeline } from '@/components/smart-clipper/video-timeline';
+import { Card, CardContent } from '@/components/ui/card';
 import { SmartClipperProject, HighlightSegment } from '@/types/smart-clipper';
 import { DownloadButton } from '@/components/download-button';
 
 interface PreviewViewProps {
   currentProject: SmartClipperProject;
-  previewTab: 'segments' | 'video';
-  setPreviewTab: (tab: 'segments' | 'video') => void;
   selectedSegments: HighlightSegment[];
   setSelectedSegments: (segments: HighlightSegment[]) => void;
   setCurrentView: (view: 'timeline' | 'dashboard') => void;
@@ -21,8 +18,6 @@ interface PreviewViewProps {
 
 export function PreviewView({
   currentProject,
-  previewTab,
-  setPreviewTab,
   selectedSegments,
   setSelectedSegments,
   setCurrentView,
@@ -38,16 +33,6 @@ export function PreviewView({
       </div>
     );
   }
-
-  const handleSegmentSelect = (segment: HighlightSegment) => {
-    console.log('Segment selected:', segment);
-    setSelectedSegments([segment]);
-  };
-
-  const handleSegmentModify = (segmentId: string, startTime: number, endTime: number) => {
-    console.log('Segment modified:', segmentId, startTime, endTime);
-    // This would need to be passed up to the parent to update the project
-  };
 
   return (
     <motion.div
@@ -74,33 +59,8 @@ export function PreviewView({
         </div>
       </div>
 
-      {/* Tab Navigation */}
-      <Card>
-        <CardContent className="p-0">
-          <div className="flex border-b">
-            <Button
-              variant={previewTab === 'segments' ? 'default' : 'ghost'}
-              className={`rounded-none border-b-2 ${previewTab === 'segments' ? 'border-primary' : 'border-transparent'} flex-1`}
-              onClick={() => setPreviewTab('segments')}
-            >
-              <Play className="w-4 h-4 mr-2" />
-              Segments ({currentProject.highlightSegments.length})
-            </Button>
-            <Button
-              variant={previewTab === 'video' ? 'default' : 'ghost'}
-              className={`rounded-none border-b-2 ${previewTab === 'video' ? 'border-primary' : 'border-transparent'} flex-1`}
-              onClick={() => setPreviewTab('video')}
-            >
-              <Clock className="w-4 h-4 mr-2" />
-              Video Timeline
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Tab Content */}
-      {previewTab === 'segments' ? (
-        <div className="space-y-4">
+      {/* Segments Content */}
+      <div className="space-y-4">
           {/* Quick Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card className="bg-gradient-to-br from-green-900/90 to-emerald-900/90 border-green-700/50 shadow-lg">
@@ -216,81 +176,6 @@ export function PreviewView({
             ))}
           </div>
         </div>
-      ) : (
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="w-5 h-5" />
-                Video Timeline View
-              </CardTitle>
-              <CardDescription>
-                Visual representation of all segments on the video timeline. Green segments are ready for download.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-6">
-              {currentProject.highlightSegments && (
-                <VideoTimeline
-                  segments={currentProject.highlightSegments}
-                  videoDuration={currentProject.video.duration || 300}
-                  currentTime={0}
-                  onTimeChange={(time) => console.log('Time changed:', time)}
-                  onSegmentSelect={handleSegmentSelect}
-                  onSegmentModify={handleSegmentModify}
-                  selectedSegmentId={selectedSegments[0]?.id}
-                />
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Selected Segment Details */}
-          {selectedSegments.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Selected Segment Details</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {selectedSegments.map((segment) => (
-                    <div key={segment.id} className="flex items-start justify-between p-4 bg-gradient-to-br from-gray-900/40 to-slate-900/40 border border-gray-700/30 rounded-lg">
-                      <div>
-                        <h4 className="font-medium text-gray-100">
-                          {Math.floor(segment.startTime)}s - {Math.floor(segment.endTime)}s
-                        </h4>
-                        <p className="text-sm text-gray-300">
-                          Score: {Math.round(segment.finalScore)} • Duration: {Math.floor(segment.endTime - segment.startTime)}s
-                        </p>
-                        <p className="text-xs text-gray-400 mt-2">{segment.reasoning}</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" onClick={() => onPlayClip(segment)} disabled={!segment.clipReady}>
-                          <Play className="w-3 h-3 mr-1" />
-                          Play
-                        </Button>
-                        {segment.s3Url && segment.clipReady ? (
-                          <DownloadButton
-                            s3Url={segment.s3Url}
-                            fileName={`clip_${Math.floor(segment.startTime)}s-${Math.floor(segment.endTime)}s.mp4`}
-                            size="sm"
-                            variant="outline"
-                          >
-                            Download
-                          </DownloadButton>
-                        ) : (
-                          <Button size="sm" variant="outline" disabled>
-                            <Download className="w-4 h-4 mr-1" />
-                            Processing...
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      )}
       
       <div className="flex justify-between">
         <Button variant="outline" onClick={() => setCurrentView('timeline')}>

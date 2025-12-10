@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { hashPassword, comparePassword, generateToken, verifyToken } from '../lib/auth';
+import passport from '../config/passport';
 
 const router: Router = Router();
 
@@ -124,5 +125,34 @@ router.get('/me', async (req: Request, res: Response) => {
     res.status(401).json({ error: 'Invalid token' });
   }
 });
+
+// Google OAuth routes
+router.get('/google', passport.authenticate('google', {
+  scope: ['profile', 'email'],
+  accessType: 'offline',
+  prompt: 'consent'
+}));
+
+router.get('/google/callback',
+  passport.authenticate('google', { 
+    failureRedirect: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/signin?error=oauth_failed`,
+    session: false 
+  }),
+  (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      
+      if (!user) {
+        return res.redirect(`${process.env.FRONTEND_URL}/auth/signin?error=no_user`);
+      }
+
+      const token = generateToken({ userId: user.id, email: user.email });
+      res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${token}`);
+    } catch (error) {
+      console.error('OAuth callback error:', error);
+      res.redirect(`${process.env.FRONTEND_URL}/auth/signin?error=token_generation_failed`);
+    }
+  }
+);
 
 export default router;

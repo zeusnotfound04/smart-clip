@@ -13,6 +13,9 @@ interface VideoUploadPanelProps {
   onFileSelect: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onReset: () => void;
   onConfigure: () => void;
+  availableLanguages: Array<{ code: string; name: string; priority: number }>;
+  selectedLanguage: string;
+  onLanguageChange: (language: string) => void;
 }
 
 export function VideoUploadPanel({
@@ -20,7 +23,10 @@ export function VideoUploadPanel({
   uploadStage,
   onFileSelect,
   onReset,
-  onConfigure
+  onConfigure,
+  availableLanguages,
+  selectedLanguage,
+  onLanguageChange
 }: VideoUploadPanelProps) {
   return (
     <Card className="h-full border-2 border-dashed border-gray-600 hover:border-blue-400 transition-colors duration-300">
@@ -51,6 +57,26 @@ export function VideoUploadPanel({
               <p className="text-muted-foreground text-sm">
                 Support for MP4, MOV, AVI formats
               </p>
+
+              {/* Language Selection */}
+              <div className="space-y-2 text-left">
+                <label htmlFor="language-select" className="text-sm font-medium">
+                  Video Language
+                </label>
+                <select
+                  id="language-select"
+                  value={selectedLanguage}
+                  onChange={(e) => onLanguageChange(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg bg-gray-800/50 border border-gray-700 text-sm focus:border-blue-500 focus:outline-none"
+                >
+                  <option value="">Auto-detect (slower, tests multiple languages)</option>
+                  {availableLanguages.map((lang) => (
+                    <option key={lang.code} value={lang.code}>
+                      {lang.name} ({lang.code})
+                    </option>
+                  ))}
+                </select>
+              </div>
             
               <input
                 type="file"
