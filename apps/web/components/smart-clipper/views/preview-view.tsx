@@ -10,6 +10,8 @@ import { DownloadButton } from '@/components/download-button';
 
 interface PreviewViewProps {
   currentProject: SmartClipperProject;
+  previewTab?: 'video' | 'segments';
+  setPreviewTab?: (tab: 'video' | 'segments') => void;
   selectedSegments: HighlightSegment[];
   setSelectedSegments: (segments: HighlightSegment[]) => void;
   setCurrentView: (view: 'timeline' | 'dashboard') => void;
@@ -18,6 +20,8 @@ interface PreviewViewProps {
 
 export function PreviewView({
   currentProject,
+  previewTab,
+  setPreviewTab,
   selectedSegments,
   setSelectedSegments,
   setCurrentView,
@@ -141,7 +145,7 @@ export function PreviewView({
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <Button 
+                      {/* <Button 
                         size="sm" 
                         variant={segment.clipReady ? 'default' : 'outline'}
                         onClick={() => onPlayClip(segment)}
@@ -149,7 +153,7 @@ export function PreviewView({
                       >
                         <Play className="w-3 h-3 mr-1" />
                         Preview
-                      </Button>
+                      </Button> */}
                       {segment.s3Url && segment.clipReady ? (
                         <DownloadButton
                           s3Url={segment.s3Url}

@@ -737,24 +737,8 @@ export const SegmentPreviewInterface: React.FC<SegmentPreviewProps> = ({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left column - Video preview and details */}
+        {/* Left column - Segment details */}
         <div className="space-y-6">
-          {videoUrl && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Video Preview</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <VideoPreviewPlayer
-                  videoUrl={videoUrl}
-                  segment={segment}
-                  onTimeUpdate={() => {}} // Could add time tracking if needed
-                  autoplay={false}
-                />
-              </CardContent>
-            </Card>
-          )}
-
           <SegmentDetails
             segment={segment}
             onApprovalChange={handleApprovalChange}
