@@ -6,10 +6,6 @@ const prisma = new PrismaClient();
 
 interface AuthRequest extends Request {
   userId?: string;
-  user?: {
-    id: string;
-    email?: string;
-  };
 }
 
 export const subscriptionController = {
@@ -45,7 +41,7 @@ export const subscriptionController = {
     
     try {
       // Check if we have userId from middleware
-      const userId = (req as any).userId || req.user?.id;
+      const userId = (req as any).userId || req.userId;
       console.log('💳 [CHECKOUT] Resolved userId:', userId);
       
       if (!userId) {
@@ -128,7 +124,7 @@ export const subscriptionController = {
    */
   async createSubscription(req: AuthRequest, res: Response) {
     try {
-      if (!req.user?.id) {
+      if (!req.userId) {
         return res.status(401).json({
           success: false,
           message: 'Unauthorized',
@@ -159,7 +155,7 @@ export const subscriptionController = {
       }
 
       const result = await subscriptionService.createSubscription({
-        userId: req.user.id,
+        userId: req.userId,
         tier,
         billingPeriod,
         paymentMethodId,
@@ -185,14 +181,14 @@ export const subscriptionController = {
    */
   async getSubscription(req: AuthRequest, res: Response) {
     try {
-      if (!req.user?.id) {
+      if (!req.userId) {
         return res.status(401).json({
           success: false,
           message: 'Unauthorized',
         });
       }
 
-      const details = await subscriptionService.getSubscriptionDetails(req.user.id);
+      const details = await subscriptionService.getSubscriptionDetails(req.userId);
 
       res.json({
         success: true,
@@ -213,7 +209,7 @@ export const subscriptionController = {
    */
   async cancelSubscription(req: AuthRequest, res: Response) {
     try {
-      if (!req.user?.id) {
+      if (!req.userId) {
         return res.status(401).json({
           success: false,
           message: 'Unauthorized',
@@ -223,7 +219,7 @@ export const subscriptionController = {
       const { cancelAtPeriodEnd = true } = req.body;
 
       const subscription = await subscriptionService.cancelSubscription(
-        req.user.id,
+        req.userId,
         cancelAtPeriodEnd
       );
 
@@ -249,14 +245,14 @@ export const subscriptionController = {
    */
   async resumeSubscription(req: AuthRequest, res: Response) {
     try {
-      if (!req.user?.id) {
+      if (!req.userId) {
         return res.status(401).json({
           success: false,
           message: 'Unauthorized',
         });
       }
 
-      const subscription = await subscriptionService.resumeSubscription(req.user.id);
+      const subscription = await subscriptionService.resumeSubscription(req.userId);
 
       res.json({
         success: true,
@@ -278,7 +274,7 @@ export const subscriptionController = {
    */
   async updateSubscription(req: AuthRequest, res: Response) {
     try {
-      if (!req.user?.id) {
+      if (!req.userId) {
         return res.status(401).json({
           success: false,
           message: 'Unauthorized',
@@ -294,7 +290,7 @@ export const subscriptionController = {
         });
       }
 
-      const subscription = await subscriptionService.updateSubscription(req.user.id, tier);
+      const subscription = await subscriptionService.updateSubscription(req.userId, tier);
 
       res.json({
         success: true,
@@ -311,3 +307,5 @@ export const subscriptionController = {
     }
   },
 };
+
+
