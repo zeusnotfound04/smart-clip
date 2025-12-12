@@ -157,6 +157,132 @@ class APIClient {
     }
   }
 
+  // Credits methods
+  async getCreditsBalance(): Promise<ApiResponse<{ balance: number; stats: any }>> {
+    const response = await axiosInstance.get('/api/credits/balance');
+    return {
+      success: true,
+      data: response.data
+    };
+  }
+
+  async getCreditsHistory(limit?: number, offset?: number): Promise<ApiResponse<any[]>> {
+    const response = await axiosInstance.get('/api/credits/history', {
+      params: { limit, offset }
+    });
+    return {
+      success: true,
+      data: response.data.transactions
+    };
+  }
+
+  async calculateCredits(durationInMinutes: number): Promise<ApiResponse<{ creditsNeeded: number }>> {
+    const response = await axiosInstance.post('/api/credits/calculate', { durationInMinutes });
+    return {
+      success: true,
+      data: response.data
+    };
+  }
+
+  async getCreditsStats(): Promise<ApiResponse<any>> {
+    const response = await axiosInstance.get('/api/credits/stats');
+    return {
+      success: true,
+      data: response.data
+    };
+  }
+
+  // Subscription methods
+  async getSubscriptionPlans(): Promise<ApiResponse<any[]>> {
+    const response = await axiosInstance.get('/api/subscriptions/plans');
+    return {
+      success: true,
+      data: response.data.plans
+    };
+  }
+
+  async getSubscriptionDetails(): Promise<ApiResponse<any>> {
+    const response = await axiosInstance.get('/api/subscriptions/details');
+    return {
+      success: true,
+      data: response.data
+    };
+  }
+
+  async createSubscription(tier: string, billingPeriod: string, paymentMethodId: string): Promise<ApiResponse<any>> {
+    const response = await axiosInstance.post('/api/subscriptions/create', {
+      tier,
+      billingPeriod,
+      paymentMethodId
+    });
+    return {
+      success: true,
+      data: response.data
+    };
+  }
+
+  async cancelSubscription(cancelAtPeriodEnd: boolean = true): Promise<ApiResponse<any>> {
+    const response = await axiosInstance.post('/api/subscriptions/cancel', { cancelAtPeriodEnd });
+    return {
+      success: true,
+      data: response.data
+    };
+  }
+
+  async resumeSubscription(): Promise<ApiResponse<any>> {
+    const response = await axiosInstance.post('/api/subscriptions/resume');
+    return {
+      success: true,
+      data: response.data
+    };
+  }
+
+  async updateSubscription(newTier: string): Promise<ApiResponse<any>> {
+    const response = await axiosInstance.put('/api/subscriptions/update', { newTier });
+    return {
+      success: true,
+      data: response.data
+    };
+  }
+
+  async createCheckoutSession(tier: string, billingPeriod: string): Promise<ApiResponse<{ sessionId: string; url: string }>> {
+    console.log('💳 [API CLIENT] Creating checkout session');
+    console.log('💳 [API CLIENT] Tier:', tier);
+    console.log('💳 [API CLIENT] Billing Period:', billingPeriod);
+    
+    const token = typeof window !== 'undefined' ? localStorage.getItem('smartclips_token') : null;
+    console.log('💳 [API CLIENT] Token present:', !!token);
+    if (token) {
+      console.log('💳 [API CLIENT] Token preview:', token.substring(0, 20) + '...');
+    }
+    
+    console.log('💳 [API CLIENT] Sending request to:', `${API_BASE_URL}/api/subscriptions/create-checkout-session`);
+    
+    const response = await axiosInstance.post('/api/subscriptions/create-checkout-session', {
+      tier,
+      billingPeriod
+    });
+    
+    console.log('✅ [API CLIENT] Checkout session response:', response.data);
+    
+    return {
+      success: true,
+      data: response.data.data
+    };
+  }
+
+  // TEMPORARY: Simulate checkout success for local testing
+  async simulateCheckoutSuccess(tier: string, billingPeriod: string): Promise<ApiResponse<any>> {
+    const response = await axiosInstance.post('/api/test/simulate-checkout-success', {
+      tier,
+      billingPeriod
+    });
+    return {
+      success: true,
+      data: response.data.data
+    };
+  }
+
   // Video methods
   async getUploadUrl(fileName: string, fileType: string): Promise<ApiResponse<{ uploadUrl: string; key: string }>> {
     console.log('🔗 [API_CLIENT] getUploadUrl called:', { fileName, fileType });
