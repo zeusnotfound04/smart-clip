@@ -160,19 +160,19 @@ class APIClient {
   // Credits methods
   async getCreditsBalance(): Promise<ApiResponse<{ balance: number; stats: any }>> {
     const response = await axiosInstance.get('/api/credits/balance');
-    return {
-      success: true,
-      data: response.data
-    };
+    // API already returns { success: true, data: { balance, stats } }
+    return response.data;
   }
 
   async getCreditsHistory(limit?: number, offset?: number): Promise<ApiResponse<any[]>> {
     const response = await axiosInstance.get('/api/credits/history', {
       params: { limit, offset }
     });
+    // API returns { success: true, data: { transactions, limit, offset } }
+    const apiResponse = response.data;
     return {
-      success: true,
-      data: response.data.transactions
+      success: apiResponse.success,
+      data: apiResponse.data?.transactions || []
     };
   }
 
@@ -195,18 +195,18 @@ class APIClient {
   // Subscription methods
   async getSubscriptionPlans(): Promise<ApiResponse<any[]>> {
     const response = await axiosInstance.get('/api/subscriptions/plans');
+    // API returns { success: true, data: { plans } }
+    const apiResponse = response.data;
     return {
-      success: true,
-      data: response.data.plans
+      success: apiResponse.success,
+      data: apiResponse.data?.plans || []
     };
   }
 
   async getSubscriptionDetails(): Promise<ApiResponse<any>> {
     const response = await axiosInstance.get('/api/subscriptions/details');
-    return {
-      success: true,
-      data: response.data
-    };
+    // API returns { success: true, data: subscriptionDetails }
+    return response.data;
   }
 
   async createSubscription(tier: string, billingPeriod: string, paymentMethodId: string): Promise<ApiResponse<any>> {
