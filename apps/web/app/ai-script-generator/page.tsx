@@ -118,7 +118,7 @@ export default function AIScriptGenerator() {
         
         toast({
           title: "Script Generated!",
-          description: `Your ${scriptLength} ${format} script is ready with ${response.data.script.wordCount} words.`,
+          description: `Your ${scriptLength} script is ready with ${response.data.script.wordCount} words.`,
         });
       }
     } catch (error: any) {
