@@ -11,7 +11,7 @@ import { ffmpegPreprocessing } from '../services/ffmpeg-preprocessing.service';
 import { segmentScoring } from '../services/segment-scoring.service';
 import { prisma } from '../lib/prisma';
 
-videoProcessingQueue.process('combine-videos', 1, async (job) => {
+videoProcessingQueue.process('combine-videos', 2, async (job) => {
   const { projectId, webcamVideoPath, gameplayVideoPath, layoutConfig, userId, requestId } = job.data;
   
   try {
@@ -55,17 +55,23 @@ videoProcessingQueue.process('combine-videos', 1, async (job) => {
   }
 });
 
-subtitleQueue.process('generate-subtitles', 1, async (job) => {
-  const { videoId, s3Key } = job.data;
+subtitleQueue.process('generate-subtitles', 3, async (job) => {
+  const { videoId, s3Key, userId } = job.data;
   
   try {
+    if (!userId) {
+      throw new Error('User ID is required for subtitle generation');
+    }
+
     await prisma.video.update({
       where: { id: videoId },
       data: { status: 'processing' }
     });
 
     const audioResult = await extractAudioFromVideo(s3Key, videoId);
-    const subtitles = await generateSubtitles(s3Key);
+    const { generateVideoWithSubtitles } = await import('../services/auto-subtitles.service');
+    const result = await generateVideoWithSubtitles(videoId, s3Key, userId);
+    const subtitles = result.segments;
     
     for (const subtitle of subtitles) {
       await prisma.subtitle.create({
@@ -94,7 +100,7 @@ subtitleQueue.process('generate-subtitles', 1, async (job) => {
   }
 });
 
-aiQueue.process('detect-highlights', 1, async (job) => {
+aiQueue.process('detect-highlights', 2, async (job) => {
   const { videoS3Key, projectId } = job.data;
   
   try {
@@ -123,7 +129,7 @@ aiQueue.process('detect-highlights', 1, async (job) => {
   }
 });
 
-aiQueue.process('generate-script', 1, async (job) => {
+aiQueue.process('generate-script', 2, async (job) => {
   const { prompt, options, projectId } = job.data;
   
   try {
@@ -152,7 +158,7 @@ aiQueue.process('generate-script', 1, async (job) => {
   }
 });
 
-aiQueue.process('create-conversation', 1, async (job) => {
+aiQueue.process('create-conversation', 2, async (job) => {
   const { conversationProjectId, videoSettings } = job.data;
   
   try {
@@ -211,8 +217,8 @@ export const extractClipQueue = new Bull('extract-clip', {
   }
 });
 
-// Process clip extraction jobs
-extractClipQueue.process('extract-clip', async (job) => {
+// Process clip extraction jobs with increased concurrency
+extractClipQueue.process('extract-clip', 2, async (job) => {
   try {
     const { projectId, videoUrl, startTime, endTime, highlightType } = job.data;
     
@@ -298,8 +304,8 @@ smartClipperQueue.on('stalled', (job) => {
   console.warn(`⏸️ Smart Clipper job ${job.id} stalled`);
 });
 
-// Force process jobs function with higher concurrency
-smartClipperQueue.process('analyze-video-complete', 2, async (job) => {
+// Force process jobs function with optimized concurrency for maximum throughput
+smartClipperQueue.process('analyze-video-complete', 3, async (job) => {
   const { projectId, videoPath, videoDuration, contentType, config, requestId } = job.data;
   
   console.log(`🚀 Smart Clipper: Starting analysis for project ${projectId}`);
@@ -461,6 +467,17 @@ smartClipperQueue.process('analyze-video-complete', 2, async (job) => {
     const { uploadClip } = await import('../lib/s3');
     const { unlink } = await import('fs/promises');
     
+    // Get user ID once before processing clips
+    const project = await prisma.smartClipperProject.findUnique({
+      where: { id: projectId },
+      include: { user: true }
+    });
+    const userId = project?.user.id;
+    
+    if (!userId) {
+      throw new Error('User ID not found for project');
+    }
+
     const generatedClips = [];
     for (const segment of recommendedSegments) {
       try {
@@ -470,6 +487,7 @@ smartClipperQueue.process('analyze-video-complete', 2, async (job) => {
           videoPath,
           segment.startTime,
           segment.endTime,
+          userId,
           {
             format: 'mp4',
             quality: 'medium',
@@ -479,13 +497,6 @@ smartClipperQueue.process('analyze-video-complete', 2, async (job) => {
           }
         );
         console.log(`[${requestId}] 🔧 DEBUG: Local clip generated at: ${localClipPath}`);
-
-        console.log(`[${requestId}] 🔧 DEBUG: Getting user ID for S3 upload...`);
-        // Upload clip to S3
-        const userId = (await prisma.smartClipperProject.findUnique({
-          where: { id: projectId },
-          include: { user: true }
-        }))?.user.id;
         
         if (userId) {
           const s3Url = await uploadClip(localClipPath, userId, segment.id, projectId);
@@ -600,20 +611,25 @@ setTimeout(async () => {
   }
 }, 3000);
 
-// Smart Clipper clip generation processor
-smartClipperQueue.process('generate-clip', async (job) => {
-  const { segmentId, videoPath, startTime, endTime, exportSettings, projectId } = job.data;
+// Smart Clipper clip generation processor with high concurrency
+smartClipperQueue.process('generate-clip', 3, async (job) => {
+  const { segmentId, videoPath, startTime, endTime, exportSettings, projectId, userId } = job.data;
   
   try {
     console.log(`[${projectId}] Generating clip for segment ${segmentId}: ${startTime}s-${endTime}s`);
 
     const { clipGeneration } = await import('../services/clip-generation.service');
     
+    if (!userId) {
+      throw new Error('User ID is required for clip generation');
+    }
+    
     const outputPath = await clipGeneration.generateSingleClip(
       segmentId,
       videoPath,
       startTime,
       endTime,
+      userId,
       exportSettings
     );
 
@@ -627,8 +643,8 @@ smartClipperQueue.process('generate-clip', async (job) => {
   }
 });
 
-// Smart Clipper segment scoring processor
-smartClipperQueue.process('score-segments', async (job) => {
+// Smart Clipper segment scoring processor with increased concurrency
+smartClipperQueue.process('score-segments', 2, async (job) => {
   const { projectId, requestId } = job.data;
   
   try {
@@ -675,8 +691,8 @@ smartClipperQueue.process('score-segments', async (job) => {
   }
 });
 
-// Smart Clipper user feedback processor for score rebalancing
-smartClipperQueue.process('rebalance-scores', async (job) => {
+// Smart Clipper user feedback processor for score rebalancing with concurrency
+smartClipperQueue.process('rebalance-scores', 2, async (job) => {
   const { projectId, userFeedback, requestId } = job.data;
   
   try {
