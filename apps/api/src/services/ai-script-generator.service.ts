@@ -9,8 +9,10 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { v4 as uuidv4 } from 'uuid';
 
 interface ScriptGenerationOptions {
+  targetAudience?: string;
   scriptLength?: '10s' | '15s' | '30s' | '45s' | '60s';
   tone?: 'dramatic' | 'conversational' | 'professional' | 'humorous' | 'mysterious';
+  format?: string;
 }
 
 interface StructuredScript {
