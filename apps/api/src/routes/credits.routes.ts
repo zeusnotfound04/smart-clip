@@ -1,7 +1,11 @@
 import express, { Router } from 'express';
 import { creditsController } from '../controllers/credits.controller.js';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router: Router = express.Router();
+
+// All credits routes require authentication
+router.use(authenticateToken);
 
 // Get credit balance and stats
 router.get('/balance', creditsController.getBalance);
