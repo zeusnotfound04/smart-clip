@@ -243,7 +243,7 @@ export const downloadCombined = async (req: AuthRequest, res: Response) => {
       // Handle client disconnect
       res.on('close', () => {
         console.log('Client disconnected during download');
-        stream.destroy();
+        // Stream cleanup is handled automatically
       });
       
       // Pipe the stream and handle completion

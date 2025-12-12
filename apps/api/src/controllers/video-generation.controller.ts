@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 
 interface AuthRequest extends Request {
-  user?: { id: string };
+  userId?: string;
 }
 import { AIScriptGeneratorService } from '../services/ai-script-generator.service.js';
 
@@ -50,7 +50,7 @@ export class VideoGenerationController {
       }
 
       const { prompt, selectedVideoId, options, voiceConfig } = validation.data;
-      const userId = req.user?.id;
+      const userId = req.userId;
 
       if (!userId) {
         res.status(401).json({
@@ -132,7 +132,7 @@ export class VideoGenerationController {
   getVideoStatus = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
       const { projectId } = req.params;
-      const userId = req.user?.id;
+      const userId = req.userId;
 
       if (!userId) {
         res.status(401).json({
@@ -245,7 +245,7 @@ export class VideoGenerationController {
       }
 
       const { prompt, projectName, options } = validation.data;
-      const userId = req.user?.id;
+      const userId = req.userId;
 
       if (!userId) {
         res.status(401).json({
@@ -338,7 +338,7 @@ export class VideoGenerationController {
       }
 
       const { projectId, script, voiceConfig } = validation.data;
-      const userId = req.user?.id;
+      const userId = req.userId;
 
       if (!userId) {
         res.status(401).json({
@@ -399,7 +399,7 @@ export class VideoGenerationController {
       }
 
       const { projectId, audioUrl, audioDuration, selectedVideo } = validation.data;
-      const userId = req.user?.id;
+      const userId = req.userId;
 
       if (!userId) {
         res.status(401).json({

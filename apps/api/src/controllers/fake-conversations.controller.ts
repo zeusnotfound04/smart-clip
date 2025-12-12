@@ -2,18 +2,14 @@ import { Request, Response } from 'express';
 import * as fakeConversationsService from '../services/fake-conversations.service';
 
 interface AuthRequest extends Request {
-  user?: {
-    id: string;
-    email: string;
-    name: string;
-  };
+  userId?: string;
 }
 
 class FakeConversationsController {
 
   generateConversation = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-      const userId = req.user?.id;
+      const userId = req.userId;
       if (!userId) {
         res.status(401).json({ error: 'Authentication required' });
         return;
@@ -89,7 +85,7 @@ class FakeConversationsController {
 
   regenerateConversation = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-      const userId = req.user?.id;
+      const userId = req.userId;
       if (!userId) {
         res.status(401).json({ error: 'Authentication required' });
         return;
@@ -136,7 +132,7 @@ class FakeConversationsController {
 
   getUserConversations = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-      const userId = req.user?.id;
+      const userId = req.userId;
       if (!userId) {
         res.status(401).json({ error: 'Authentication required' });
         return;
@@ -163,7 +159,7 @@ class FakeConversationsController {
 
   getConversationProject = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-      const userId = req.user?.id;
+      const userId = req.userId;
       if (!userId) {
         res.status(401).json({ error: 'Authentication required' });
         return;
@@ -199,7 +195,7 @@ class FakeConversationsController {
 
   deleteConversationProject = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-      const userId = req.user?.id;
+      const userId = req.userId;
       if (!userId) {
         res.status(401).json({ error: 'Authentication required' });
         return;
@@ -235,7 +231,7 @@ class FakeConversationsController {
 
   updateConversationSettings = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-      const userId = req.user?.id;
+      const userId = req.userId;
       if (!userId) {
         res.status(401).json({ error: 'Authentication required' });
         return;
@@ -289,7 +285,7 @@ class FakeConversationsController {
 
   generateVideo = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-      const userId = req.user?.id;
+      const userId = req.userId;
       if (!userId) {
         res.status(401).json({ error: 'Authentication required' });
         return;
@@ -394,7 +390,7 @@ class FakeConversationsController {
 
   submitFeedback = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-      const userId = req.user?.id;
+      const userId = req.userId;
       if (!userId) {
         res.status(401).json({ error: 'Authentication required' });
         return;
@@ -435,3 +431,4 @@ class FakeConversationsController {
 }
 
 export default FakeConversationsController;
+
