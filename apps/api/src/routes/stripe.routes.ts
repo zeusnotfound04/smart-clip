@@ -1,7 +1,7 @@
-import express from 'express';
+import express, { Router } from 'express';
 import { stripeWebhookController } from '../controllers/stripe-webhook.controller.js';
 
-const router = express.Router();
+const router: Router = express.Router();
 
 // Stripe webhook endpoint
 // Note: This route MUST use raw body, not JSON middleware

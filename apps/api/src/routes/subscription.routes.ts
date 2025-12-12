@@ -1,8 +1,8 @@
-import express from 'express';
+import express, { Router } from 'express';
 import { subscriptionController } from '../controllers/subscription.controller.js';
 import { authenticateToken } from '../middleware/auth.js';
 
-const router = express.Router();
+const router: Router = express.Router();
 
 // Get available plans (public)
 router.get('/plans', subscriptionController.getPlans);
