@@ -5,7 +5,7 @@ if (!process.env.STRIPE_SECRET_KEY) {
 }
 
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2024-12-18.acacia',
+  apiVersion: '2025-11-17.clover',
   typescript: true,
 });
 
@@ -27,6 +27,13 @@ export const SUBSCRIPTION_PLANS = {
     credits: 200,
     monthlyPrice: 20,
     yearlyPrice: 200,
+    hasWatermark: false,
+  },
+  pro: {
+    name: 'Pro',
+    credits: 350,
+    monthlyPrice: 27,
+    yearlyPrice: 270,
     hasWatermark: false,
   },
   premium: {
