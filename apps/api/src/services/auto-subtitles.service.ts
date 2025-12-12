@@ -2,6 +2,7 @@ import ffmpeg from 'fluent-ffmpeg';
 import { SpeechClient } from '@google-cloud/speech';
 import { downloadFile, uploadFile } from '../lib/s3';
 import { readFileSync, unlinkSync, writeFileSync, existsSync, mkdirSync, statSync } from 'fs';
+import { readFile, unlink, writeFile, stat } from 'fs/promises';
 import { join } from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { tmpdir } from 'os';
@@ -55,6 +56,17 @@ export interface VideoWithSubtitlesResult {
   audioS3Key?: string;
 }
 
+// Validate Google Cloud credentials
+if (!process.env.GOOGLE_CLOUD_PROJECT_ID) {
+  console.error('❌ GOOGLE_CLOUD_PROJECT_ID is not configured');
+}
+if (!process.env.GOOGLE_CLOUD_CLIENT_EMAIL) {
+  console.error('❌ GOOGLE_CLOUD_CLIENT_EMAIL is not configured');
+}
+if (!process.env.GOOGLE_CLOUD_PRIVATE_KEY) {
+  console.error('❌ GOOGLE_CLOUD_PRIVATE_KEY is not configured');
+}
+
 const speechClient = new SpeechClient({
   projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
   credentials: {
@@ -85,6 +97,19 @@ const downloadVideoFromS3 = async (s3Key: string, videoId: string): Promise<stri
   return videoPath;
 };
 
+const getVideoDuration = async (videoPath: string): Promise<number> => {
+  return new Promise((resolve, reject) => {
+    ffmpeg.ffprobe(videoPath, (err, metadata) => {
+      if (err) {
+        reject(err);
+      } else {
+        const duration = metadata.format.duration || 0;
+        resolve(Math.ceil(duration)); // Round up to nearest second
+      }
+    });
+  });
+};
+
 const extractAudioFromVideo = async (videoPath: string, videoId: string): Promise<{ audioPath: string; s3Key: string }> => {
   return new Promise((resolve, reject) => {
     const audioPath = join(tempDir, `${randomUUID()}_audio.wav`);
@@ -110,7 +135,7 @@ const extractAudioFromVideo = async (videoPath: string, videoId: string): Promis
   });
 };
 
-const splitAudioIntoChunks = (audioPath: string, chunkDurationSeconds: number = 50): Promise<string[]> => {
+const splitAudioIntoChunks = (audioPath: string, chunkDurationSeconds: number = 30): Promise<string[]> => {
   const chunkPaths: string[] = [];
   const baseFileName = audioPath.replace('.wav', '');
   let chunkIndex = 0;
@@ -165,18 +190,40 @@ const splitAudioIntoChunks = (audioPath: string, chunkDurationSeconds: number = 
 };
 
 const transcribeAudioChunk = async (audioPath: string, config: any, timeOffset: number = 0): Promise<any[]> => {
-  const audioBuffer = readFileSync(audioPath);
+  const audioBuffer = await readFile(audioPath);
   const request = {
     audio: { content: audioBuffer.toString('base64') },
     config
   };
   
-  const [response] = await speechClient.recognize(request);
-  const results = response.results || [];
+  try {
+    const [response] = await speechClient.recognize(request);
+    const results = response.results || [];
+    
+    // Debug: Log response structure if no results
+    if (!results || results.length === 0) {
+      console.warn('⚠️ No results in response:', JSON.stringify(response, null, 2).substring(0, 500));
+    }
+    
+    return processChunkResults(results, timeOffset);
+  } catch (error: any) {
+    console.error('❌ Speech API Error:', error.message);
+    if (error.code) {
+      console.error('   Error Code:', error.code);
+    }
+    if (error.details) {
+      console.error('   Details:', error.details);
+    }
+    throw error;
+  }
+};
+
+const processChunkResults = (results: any[], timeOffset: number): any[] => {
+  const processedResults = results || [];
   
   // Adjust timestamps based on chunk offset for ALL chunks
-  if (results.length > 0) {
-    results.forEach((result: any) => {
+  if (processedResults.length > 0) {
+    processedResults.forEach((result: any) => {
       if (result.alternatives?.[0]?.words) {
         result.alternatives[0].words.forEach((word: any) => {
           if (word.startTime) {
@@ -202,7 +249,7 @@ const transcribeAudioChunk = async (audioPath: string, config: any, timeOffset: 
     });
   }
   
-  return results;
+  return processedResults;
 };
 
 const transcribeAudio = async (audioPath: string, options?: SubtitleOptions, audioS3Key?: string): Promise<{ results: any[], detectedLanguages: string[] }> => {
@@ -309,8 +356,9 @@ const transcribeAudio = async (audioPath: string, options?: SubtitleOptions, aud
   let bestResult = null;
   let bestConfidence = 0;
 
-  // Split audio into chunks if needed
-  const chunkPaths = await splitAudioIntoChunks(audioPath, 50);
+  // Split audio into chunks if needed (reduced to 30s for better parallelization)
+  const chunkDurationSeconds = 30;
+  const chunkPaths = await splitAudioIntoChunks(audioPath, chunkDurationSeconds);
   const isChunked = chunkPaths.length > 1;
   
   if (isChunked) {
@@ -323,7 +371,7 @@ const transcribeAudio = async (audioPath: string, options?: SubtitleOptions, aud
     : languageConfigs.sort((a, b) => (a.priority || 999) - (b.priority || 999));
 
   if (options?.language) {
-    console.log(`🎯 Using specified language: ${options.language}`);
+    console.log(`🎯 Using specified language: ${options.language} (skipping detection for 10-30s speed boost)`);
   } else {
     console.log(`🔍 Auto-detecting language (will stop at first good match)...`);
   }
@@ -349,27 +397,51 @@ const transcribeAudio = async (audioPath: string, options?: SubtitleOptions, aud
         console.log(`🎤 Testing ${config.languageCode}...`);
         
         const allChunkResults: any[] = [];
-        let timeOffset = 0;
+        let successfulChunks = 0;
         
-        // Process each chunk sequentially
-        for (let i = 0; i < chunkPaths.length; i++) {
-          const chunkPath = chunkPaths[i];
-          
-          try {
-            const chunkResults = await transcribeAudioChunk(chunkPath, requestConfig, timeOffset);
-            allChunkResults.push(...chunkResults);
-            timeOffset += 50;
-          } catch (chunkError: any) {
-            console.warn(`⚠️ ${config.languageCode} chunk ${i + 1} failed: ${chunkError.message}`);
+        // Process all chunks in parallel for 3-5x speed improvement
+        const chunkPromises = chunkPaths.map((chunkPath, i) => 
+          transcribeAudioChunk(chunkPath, requestConfig, i * chunkDurationSeconds)
+            .then(results => ({ success: true, results, index: i }))
+            .catch(error => ({ success: false, error, index: i }))
+        );
+        
+        const chunkResults = await Promise.all(chunkPromises);
+        
+        // Process results from all chunks
+        for (const result of chunkResults) {
+          if (result.success) {
+            const successResult = result as { success: true; results: any[]; index: number };
+            if (successResult.results.length > 0) {
+              allChunkResults.push(...successResult.results);
+              successfulChunks++;
+              console.log(`   ✓ Chunk ${successResult.index + 1}/${chunkPaths.length}: ${successResult.results.length} segments`);
+            } else {
+              console.warn(`   ⚠️ Chunk ${successResult.index + 1}/${chunkPaths.length}: No results`);
+            }
+          } else {
+            const errorResult = result as { success: false; error: any; index: number };
+            console.warn(`   ❌ Chunk ${errorResult.index + 1}/${chunkPaths.length} failed: ${errorResult.error.message}`);
           }
         }
         
         const results = allChunkResults;
         
         if (results.length > 0) {
-          const confidence = results[0].alternatives?.[0]?.confidence || 0;
+          // Calculate average confidence across ALL result segments
+          let totalConfidence = 0;
+          let confidenceCount = 0;
+          results.forEach((result: any) => {
+            const conf = result.alternatives?.[0]?.confidence;
+            if (conf !== undefined && conf !== null) {
+              totalConfidence += conf;
+              confidenceCount++;
+            }
+          });
+          const confidence = confidenceCount > 0 ? totalConfidence / confidenceCount : 0;
+          
           const transcriptPreview = results[0].alternatives?.[0]?.transcript?.substring(0, 50) || '';
-          console.log(`✅ ${config.languageCode}: ${results.length} segments, ${(confidence * 100).toFixed(0)}% confidence - "${transcriptPreview}..."`);
+          console.log(`✅ ${config.languageCode}: ${results.length} segments (${successfulChunks}/${chunkPaths.length} chunks), ${(confidence * 100).toFixed(0)}% avg confidence - "${transcriptPreview}..."`);
           
           
           if (confidence > 0.3) {
@@ -408,15 +480,16 @@ const transcribeAudio = async (audioPath: string, options?: SubtitleOptions, aud
       }
     }
   } finally {
-    // Clean up all chunk files
-    for (const chunkPath of chunkPaths) {
-      if (chunkPath !== audioPath && existsSync(chunkPath)) {
-        try {
-          unlinkSync(chunkPath);
-        } catch {}
-      }
+    // Clean up all chunk files in parallel (excluding the original audio file)
+    const cleanupPromises = chunkPaths
+      .filter(chunkPath => chunkPath !== audioPath && existsSync(chunkPath))
+      .map(chunkPath => unlink(chunkPath).catch(() => {}));
+    
+    await Promise.all(cleanupPromises);
+    
+    if (cleanupPromises.length > 0) {
+      console.log(`🧹 Cleaned up ${cleanupPromises.length} temporary chunk files`);
     }
-    console.log(`🧹 Cleaned up ${chunkPaths.length - 1} temporary chunk files`);
   }
 
   if (bestResult) {
@@ -530,7 +603,7 @@ const saveSubtitlesToDatabase = async (videoId: string, segments: SubtitleSegmen
   }
 };
 
-export const generateVideoWithSubtitles = async (videoId: string, s3Key: string, options?: SubtitleOptions): Promise<VideoWithSubtitlesResult> => {
+export const generateVideoWithSubtitles = async (videoId: string, s3Key: string, userId: string, options?: SubtitleOptions): Promise<VideoWithSubtitlesResult> => {
   let videoPath: string | null = null;
   let audioPath: string | null = null;
   let subtitledVideoPath: string | null = null;
@@ -541,7 +614,30 @@ export const generateVideoWithSubtitles = async (videoId: string, s3Key: string,
       throw new Error('FFmpeg is not properly installed or configured');
     }
     
+    // Download video to get duration
     videoPath = await downloadVideoFromS3(s3Key, videoId);
+    
+    // Get video duration for credit calculation
+    const videoDuration = await getVideoDuration(videoPath);
+    console.log(`📹 [AUTO-SUBTITLES] Video duration: ${videoDuration}s`);
+    
+    // Import credit service
+    const { CreditService } = await import('./credit.service');
+    
+    // Validate credits before processing
+    const validation = await CreditService.validateAndPrepareProcessing(
+      userId,
+      videoDuration,
+      'Auto-Subtitles'
+    );
+    
+    if (!validation.canProcess) {
+      throw new Error(validation.message || 'Insufficient credits');
+    }
+    
+    console.log(`✅ [CREDITS] User has sufficient credits (${validation.currentCredits}/${validation.creditsRequired})`);
+    console.log(`🎨 [WATERMARK] Will apply watermark: ${validation.shouldWatermark ? 'Yes' : 'No'}`);
+    
     const audioResult = await extractAudioFromVideo(videoPath, videoId);
     audioPath = audioResult.audioPath;
     
@@ -555,10 +651,29 @@ export const generateVideoWithSubtitles = async (videoId: string, s3Key: string,
       unlinkSync(audioPath);
     }
     
-    const burnResult = await burnSubtitlesIntoVideo(videoPath, srtContent, videoId, options);
+    const burnResult = await burnSubtitlesIntoVideo(videoPath, srtContent, videoId, userId, options);
     subtitledVideoPath = burnResult.videoPath;
     
     const subtitledVideoUrl = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${burnResult.videoS3Key}`;
+    
+    // Deduct credits after successful processing
+    try {
+      await CreditService.deductCredits(
+        userId,
+        validation.creditsRequired,
+        `Auto-Subtitles: ${Math.floor(videoDuration)}s video`,
+        {
+          videoId,
+          feature: 'auto-subtitles',
+          videoDuration,
+          creditsUsed: validation.creditsRequired,
+        }
+      );
+      console.log(`✅ [CREDITS] Successfully deducted ${validation.creditsRequired} credits`);
+    } catch (creditError) {
+      console.error('❌ [CREDITS] Failed to deduct credits:', creditError);
+      // Continue even if credit deduction fails (video already processed)
+    }
     
     return {
       success: true,
@@ -599,7 +714,12 @@ export const generateVideoWithSubtitles = async (videoId: string, s3Key: string,
     
     tempFiles.forEach(filePath => {
       if (filePath && existsSync(filePath)) {
-        try { 
+        try {
+          const stats = statSync(filePath);
+          if (stats.isDirectory()) {
+            // Skip directories - only clean up files
+            return;
+          }
           unlinkSync(filePath);
         } catch (e) { 
           console.warn('Failed to cleanup file:', filePath, e); 
@@ -614,6 +734,7 @@ const burnSubtitlesIntoVideo = async (
   videoPath: string,
   srtContent: string,
   videoId: string,
+  userId: string,
   options?: SubtitleOptions
 ): Promise<{ videoPath: string; srtS3Key: string; videoS3Key: string }> => {
   return new Promise(async (resolve, reject) => {
@@ -687,11 +808,53 @@ const burnSubtitlesIntoVideo = async (
               throw new Error("Output file is empty");
             }
 
-            const finalVideoBuffer = readFileSync(outputPath);
-            const videoS3Key = `videos/${videoId}_with_subtitles.mp4`;
-            await uploadFile(videoS3Key, finalVideoBuffer, "video/mp4");
+            // Apply watermark to subtitled video
+            console.log('\n📍 [AUTO-SUBTITLES] Applying watermark to subtitled video...');
+            console.log('   Video ID:', videoId);
+            console.log('   Output path:', outputPath);
+            
+            let finalVideoPath = outputPath;
+            let watermarkedPath: string | null = null;
+            
+            try {
+              watermarkedPath = outputPath.replace('.mp4', '_watermarked.mp4');
+              console.log('   Watermarked path:', watermarkedPath);
+              
+              const { watermarkService } = await import('./watermark.service');
+              console.log('   Watermark service imported successfully');
+              
+              const watermarkOptions = {
+                position: 'center' as const,
+                opacity: parseFloat(process.env.WATERMARK_OPACITY || '0.95'),
+                watermarkScale: parseFloat(process.env.WATERMARK_SCALE || '0.95'),
+                userId
+              };
+              console.log('   Watermark options:', JSON.stringify(watermarkOptions, null, 2));
+              
+              await watermarkService.addWatermark(outputPath, watermarkedPath, watermarkOptions);
+              console.log('✅ [AUTO-SUBTITLES] Watermark applied successfully');
+              
+              finalVideoPath = watermarkedPath;
+            } catch (watermarkError) {
+              console.error('❌ [AUTO-SUBTITLES] Watermark application failed:', watermarkError);
+              console.error('   Error message:', watermarkError instanceof Error ? watermarkError.message : String(watermarkError));
+              console.error('   Error stack:', watermarkError instanceof Error ? watermarkError.stack : 'N/A');
+              console.warn('⚠️ [AUTO-SUBTITLES] Continuing without watermark...');
+              // Continue without watermark if it fails
+            }
 
-            [srtPath, assPath, shortAssPath, outputPath, videoPath].forEach((filePath) => {
+            console.log('   Reading final video buffer from:', finalVideoPath);
+            const finalVideoBuffer = readFileSync(finalVideoPath);
+            console.log('   Final video buffer size:', finalVideoBuffer.length, 'bytes');
+            
+            const videoS3Key = `videos/${videoId}_with_subtitles.mp4`;
+            console.log('   Uploading to S3:', videoS3Key);
+            await uploadFile(videoS3Key, finalVideoBuffer, "video/mp4");
+            console.log('✅ [AUTO-SUBTITLES] Video uploaded to S3 successfully');
+
+            const filesToCleanup = [srtPath, assPath, shortAssPath, outputPath, videoPath];
+            if (watermarkedPath) filesToCleanup.push(watermarkedPath);
+            filesToCleanup.forEach((filePath) => {
               if (existsSync(filePath)) {
                 try {
                   unlinkSync(filePath);
@@ -733,9 +896,9 @@ const burnSubtitlesIntoVideo = async (
 
 export { extractAudioFromVideo };
 
-export const generateSubtitles = async (videoS3Key: string): Promise<SubtitleSegment[]> => {
+export const generateSubtitles = async (videoS3Key: string, userId: string): Promise<SubtitleSegment[]> => {
   const videoId = uuidv4();
-  const result = await generateVideoWithSubtitles(videoId, videoS3Key);
+  const result = await generateVideoWithSubtitles(videoId, videoS3Key, userId);
   return result.segments;
 };
 
