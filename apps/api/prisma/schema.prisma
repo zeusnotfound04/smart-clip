@@ -536,6 +536,7 @@ model CreditTransaction {
   projectType     String?  @map("project_type")
   videoDuration   Float?   @map("video_duration")
   stripePaymentId String?  @map("stripe_payment_id")
+  metadata        Json?
   createdAt       DateTime @default(now()) @map("created_at")
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
