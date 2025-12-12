@@ -14,15 +14,14 @@ model Account {
   type              String
   provider          String
   providerAccountId String  @map("provider_account_id")
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
   @@map("accounts")
@@ -39,21 +38,35 @@ model Session {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime? @map("email_verified")
-  password      String?
-  image         String?
-  accounts      Account[]
-  sessions      Session[]
-  videos        Video[]
-  projects      Project[]
-  smartClipperProjects SmartClipperProject[]
-  segmentFeedback      SegmentFeedback[]
-  scriptProjects       ScriptProject[]
-  conversationProjects ConversationProject[]
+  id                      String                   @id @default(cuid())
+  name                    String?
+  email                   String?                  @unique
+  emailVerified           DateTime?                @map("email_verified")
+  image                   String?
+  password                String?
+  
+  // Credits and Subscription fields
+  credits                 Int                      @default(10)
+  totalCreditsUsed        Int                      @default(0) @map("total_credits_used")
+  subscriptionTier        String                   @default("free") @map("subscription_tier")
+  subscriptionStatus      String?                  @map("subscription_status")
+  stripeCustomerId        String?                  @unique @map("stripe_customer_id")
+  stripeSubscriptionId    String?                  @unique @map("stripe_subscription_id")
+  subscriptionStartDate   DateTime?                @map("subscription_start_date")
+  subscriptionEndDate     DateTime?                @map("subscription_end_date")
+  trialUsed               Boolean                  @default(false) @map("trial_used")
+  
+  accounts                Account[]
+  conversationProjects    ConversationProject[]
+  projects                Project[]
+  scriptProjects          ScriptProject[]
+  segmentFeedback         SegmentFeedback[]
+  sessions                Session[]
+  smartClipperProjects    SmartClipperProject[]
   videoGenerationProjects VideoGenerationProject[]
+  videos                  Video[]
+  creditTransactions      CreditTransaction[]
+  subscriptionHistory     SubscriptionHistory[]
 
   @@map("users")
 }
@@ -68,24 +81,23 @@ model VerificationToken {
 }
 
 model Video {
-  id             String    @id @default(cuid())
-  userId         String    @map("user_id")
-  originalName   String    @map("original_name")
-  filePath       String    @map("file_path")
-  thumbnailPath  String?   @map("thumbnail_path")
-  subtitledVideoUrl String? @map("subtitled_video_url")
-  subtitleConfig Json?     @map("subtitle_config")
-  duration       Float?
-  size           Int?
-  mimeType       String    @map("mime_type")
-  status         String    @default("uploaded")
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
-
-  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  projects  Project[]
-  subtitles Subtitle[]
+  id                   String                @id @default(cuid())
+  userId               String                @map("user_id")
+  originalName         String                @map("original_name")
+  filePath             String                @map("file_path")
+  thumbnailPath        String?               @map("thumbnail_path")
+  duration             Float?
+  size                 Int?
+  mimeType             String                @map("mime_type")
+  status               String                @default("uploaded")
+  createdAt            DateTime              @default(now()) @map("created_at")
+  updatedAt            DateTime              @updatedAt @map("updated_at")
+  subtitleConfig       Json?                 @map("subtitle_config")
+  subtitledVideoUrl    String?               @map("subtitled_video_url")
+  projects             Project[]
   smartClipperProjects SmartClipperProject[]
+  subtitles            Subtitle[]
+  user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("videos")
 }
@@ -102,53 +114,50 @@ model Project {
   progress   Int      @default(0)
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
-
-  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  video Video? @relation(fields: [videoId], references: [id], onDelete: SetNull)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video      Video?   @relation(fields: [videoId], references: [id])
 
   @@map("projects")
 }
 
 model Subtitle {
-  id         String  @id @default(cuid())
-  videoId    String  @map("video_id")
+  id         String   @id @default(cuid())
+  videoId    String   @map("video_id")
   text       String
-  startTime  Float   @map("start_time")
-  endTime    Float   @map("end_time")
+  startTime  Float    @map("start_time")
+  endTime    Float    @map("end_time")
   confidence Float?
   speaker    String?
   createdAt  DateTime @default(now()) @map("created_at")
-
-  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  video      Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
 
   @@map("subtitles")
 }
 
 model SmartClipperProject {
-  id                    String    @id @default(cuid())
-  userId                String    @map("user_id")
-  videoId               String    @map("video_id")
-  contentType           String    @map("content_type")
-  status                String    @default("analyzing")
+  id                    String             @id @default(cuid())
+  userId                String             @map("user_id")
+  videoId               String             @map("video_id")
+  contentType           String             @map("content_type")
+  status                String             @default("analyzing")
   config                Json
-  analysisResults       Json?     @map("analysis_results")
-  processingStage       String?   @default("preprocessing") @map("processing_stage")
-  geminiFlashResults    Json?     @map("gemini_flash_results")
-  geminiProResults      Json?     @map("gemini_pro_results")
-  embeddingScores       Json?     @map("embedding_scores")
-  scoringResults        Json?     @map("scoring_results")
-  totalSegmentsFound    Int?      @default(0) @map("total_segments_found")
-  estimatedCost         Decimal?  @map("estimated_cost") @db.Decimal(10,4)
-  actualCost            Decimal?  @map("actual_cost") @db.Decimal(10,4)
-  errorMessage          String?   @map("error_message")
-  lastFeedbackProcessed DateTime? @map("last_feedback_processed")
-  createdAt             DateTime  @default(now()) @map("created_at")
-  updatedAt             DateTime  @updatedAt @map("updated_at")
-
-  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  video              Video              @relation(fields: [videoId], references: [id], onDelete: Cascade)
-  highlightSegments  HighlightSegment[]
-  geminiApiUsage     GeminiApiUsage[]
+  analysisResults       Json?              @map("analysis_results")
+  processingStage       String?            @default("preprocessing") @map("processing_stage")
+  geminiFlashResults    Json?              @map("gemini_flash_results")
+  geminiProResults      Json?              @map("gemini_pro_results")
+  embeddingScores       Json?              @map("embedding_scores")
+  totalSegmentsFound    Int?               @default(0) @map("total_segments_found")
+  estimatedCost         Decimal?           @map("estimated_cost") @db.Decimal(10, 4)
+  actualCost            Decimal?           @map("actual_cost") @db.Decimal(10, 4)
+  errorMessage          String?            @map("error_message")
+  createdAt             DateTime           @default(now()) @map("created_at")
+  updatedAt             DateTime           @updatedAt @map("updated_at")
+  lastFeedbackProcessed DateTime?          @map("last_feedback_processed")
+  scoringResults        Json?              @map("scoring_results")
+  geminiApiUsage        GeminiApiUsage[]
+  highlightSegments     HighlightSegment[]
+  user                  User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video                 Video              @relation(fields: [videoId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([videoId])
@@ -157,36 +166,35 @@ model SmartClipperProject {
 }
 
 model HighlightSegment {
-  id                   String    @id @default(cuid())
-  projectId            String    @map("project_id")
-  startTime            Float     @map("start_time")
-  endTime              Float     @map("end_time")
+  id                   String              @id @default(cuid())
+  projectId            String              @map("project_id")
+  startTime            Float               @map("start_time")
+  endTime              Float               @map("end_time")
   duration             Float
-  flashScore           Int?      @map("flash_score")
-  proScore             Int       @map("pro_score")
-  embeddingScore       Float?    @map("embedding_score")
-  finalScore           Int       @map("final_score")
-  confidenceLevel      Float     @map("confidence_level")
-  highlightType        String?   @map("highlight_type")
+  flashScore           Int?                @map("flash_score")
+  proScore             Int                 @map("pro_score")
+  embeddingScore       Float?              @map("embedding_score")
+  finalScore           Int                 @map("final_score")
+  confidenceLevel      Float               @map("confidence_level")
+  highlightType        String?             @map("highlight_type")
   reasoning            String
-  geminiClassification String?   @map("gemini_classification")
-  contentTags          String[]  @map("content_tags")
-  audioEnergyAvg       Float?    @map("audio_energy_avg")
-  silenceRatio         Float?    @map("silence_ratio")
-  sceneChanges         Int?      @map("scene_changes")
-  status               String    @default("pending")
-  userApproval         String?   @map("user_approval")
-  customStartTime      Float?    @map("custom_start_time")
-  customEndTime        Float?    @map("custom_end_time")
-  outputPath           String?   @map("output_path")
-  s3Url                String?   @map("s3_url")
-  generatedAt          DateTime? @map("generated_at")
-  errorMessage         String?   @map("error_message")
-  createdAt            DateTime  @default(now()) @map("created_at")
-  updatedAt            DateTime  @updatedAt @map("updated_at")
-
-  project         SmartClipperProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  segmentFeedback SegmentFeedback[]
+  geminiClassification String?             @map("gemini_classification")
+  contentTags          String[]            @map("content_tags")
+  audioEnergyAvg       Float?              @map("audio_energy_avg")
+  silenceRatio         Float?              @map("silence_ratio")
+  sceneChanges         Int?                @map("scene_changes")
+  status               String              @default("pending")
+  userApproval         String?             @map("user_approval")
+  customStartTime      Float?              @map("custom_start_time")
+  customEndTime        Float?              @map("custom_end_time")
+  outputPath           String?             @map("output_path")
+  generatedAt          DateTime?           @map("generated_at")
+  createdAt            DateTime            @default(now()) @map("created_at")
+  updatedAt            DateTime            @updatedAt @map("updated_at")
+  errorMessage         String?             @map("error_message")
+  s3Url                String?             @map("s3_url")
+  project              SmartClipperProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  segmentFeedback      SegmentFeedback[]
 
   @@index([projectId])
   @@index([finalScore])
@@ -224,19 +232,18 @@ model ContentTypeConfig {
 }
 
 model SegmentFeedback {
-  id                      String  @id @default(cuid())
-  segmentId               String  @map("segment_id")
-  userId                  String  @map("user_id")
-  feedbackType            String  @map("feedback_type")
-  rating                  Int?
-  customStartTime         Float?  @map("custom_start_time")
-  customEndTime           Float?  @map("custom_end_time")
-  feedbackNotes           String? @map("feedback_notes")
-  improvementSuggestions  String? @map("improvement_suggestions")
-  createdAt               DateTime @default(now()) @map("created_at")
-
-  segment HighlightSegment @relation(fields: [segmentId], references: [id], onDelete: Cascade)
-  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                     String           @id @default(cuid())
+  segmentId              String           @map("segment_id")
+  userId                 String           @map("user_id")
+  feedbackType           String           @map("feedback_type")
+  rating                 Int?
+  customStartTime        Float?           @map("custom_start_time")
+  customEndTime          Float?           @map("custom_end_time")
+  feedbackNotes          String?          @map("feedback_notes")
+  improvementSuggestions String?          @map("improvement_suggestions")
+  createdAt              DateTime         @default(now()) @map("created_at")
+  segment                HighlightSegment @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+  user                   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([segmentId])
   @@index([userId])
@@ -244,20 +251,19 @@ model SegmentFeedback {
 }
 
 model GeminiApiUsage {
-  id                   String   @id @default(cuid())
-  projectId            String   @map("project_id")
-  modelName            String   @map("model_name")
-  operationType        String   @map("operation_type")
-  inputTokens          Int?     @map("input_tokens")
-  outputTokens         Int?     @map("output_tokens")
-  videoDurationSeconds Float?   @map("video_duration_seconds")
-  costUsd              Decimal? @map("cost_usd") @db.Decimal(10,6)
-  responseTimeMs       Int?     @map("response_time_ms")
-  success              Boolean  @default(true)
-  errorMessage         String?  @map("error_message")
-  createdAt            DateTime @default(now()) @map("created_at")
-
-  project SmartClipperProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id                   String              @id @default(cuid())
+  projectId            String              @map("project_id")
+  modelName            String              @map("model_name")
+  operationType        String              @map("operation_type")
+  inputTokens          Int?                @map("input_tokens")
+  outputTokens         Int?                @map("output_tokens")
+  videoDurationSeconds Float?              @map("video_duration_seconds")
+  costUsd              Decimal?            @map("cost_usd") @db.Decimal(10, 6)
+  responseTimeMs       Int?                @map("response_time_ms")
+  success              Boolean             @default(true)
+  errorMessage         String?             @map("error_message")
+  createdAt            DateTime            @default(now()) @map("created_at")
+  project              SmartClipperProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
   @@index([modelName])
@@ -270,18 +276,19 @@ model ScriptProject {
   userId           String            @map("user_id")
   title            String
   originalPrompt   String            @map("original_prompt")
+  target_audience  String?
   scriptLength     String?           @map("script_length")
-  tone             String?           
+  tone             String?
+  format           String?
   status           String            @default("generating")
-  estimatedCost    Decimal?          @map("estimated_cost") @db.Decimal(10,4)
-  actualCost       Decimal?          @map("actual_cost") @db.Decimal(10,4)
+  estimatedCost    Decimal?          @map("estimated_cost") @db.Decimal(10, 4)
+  actualCost       Decimal?          @map("actual_cost") @db.Decimal(10, 4)
   errorMessage     String?           @map("error_message")
   createdAt        DateTime          @default(now()) @map("created_at")
   updatedAt        DateTime          @updatedAt @map("updated_at")
-
-  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   generatedScripts GeneratedScript[]
   scriptApiUsage   ScriptApiUsage[]
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([status])
@@ -293,20 +300,19 @@ model GeneratedScript {
   id                String        @id @default(cuid())
   projectId         String        @map("project_id")
   version           Int           @default(1)
-  content           String        @db.Text
+  content           String
   structuredContent Json?         @map("structured_content")
-  hook              String?       @db.Text
+  hook              String?
   keyPoints         String[]      @map("key_points")
-  conclusion        String?       @db.Text
+  conclusion        String?
   wordCount         Int?          @map("word_count")
   estimatedDuration Int?          @map("estimated_duration")
-  confidence        Float?        
+  confidence        Float?
   userRating        Int?          @map("user_rating")
   userFeedback      String?       @map("user_feedback")
   isActive          Boolean       @default(true) @map("is_active")
   createdAt         DateTime      @default(now()) @map("created_at")
   updatedAt         DateTime      @updatedAt @map("updated_at")
-
   project           ScriptProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
@@ -316,21 +322,20 @@ model GeneratedScript {
 }
 
 model ScriptApiUsage {
-  id                   String        @id @default(cuid())
-  projectId            String        @map("project_id")
-  modelName            String        @map("model_name")
-  operationType        String        @map("operation_type")
-  inputTokens          Int?          @map("input_tokens")
-  outputTokens         Int?          @map("output_tokens")
-  promptLength         Int?          @map("prompt_length")
-  responseLength       Int?          @map("response_length")
-  costUsd              Decimal?      @map("cost_usd") @db.Decimal(10,6)
-  responseTimeMs       Int?          @map("response_time_ms")
-  success              Boolean       @default(true)
-  errorMessage         String?       @map("error_message")
-  createdAt            DateTime      @default(now()) @map("created_at")
-
-  project              ScriptProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id             String        @id @default(cuid())
+  projectId      String        @map("project_id")
+  modelName      String        @map("model_name")
+  operationType  String        @map("operation_type")
+  inputTokens    Int?          @map("input_tokens")
+  outputTokens   Int?          @map("output_tokens")
+  promptLength   Int?          @map("prompt_length")
+  responseLength Int?          @map("response_length")
+  costUsd        Decimal?      @map("cost_usd") @db.Decimal(10, 6)
+  responseTimeMs Int?          @map("response_time_ms")
+  success        Boolean       @default(true)
+  errorMessage   String?       @map("error_message")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  project        ScriptProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
   @@index([modelName])
@@ -339,30 +344,29 @@ model ScriptApiUsage {
 }
 
 model ConversationProject {
-  id               String                 @id @default(cuid())
-  userId           String                 @map("user_id")
-  title            String
-  description      String?
-  conversationType String                 @map("conversation_type")
-  chatStyle        String                 @default("iphone") @map("chat_style")
-  backgroundType   String?                @map("background_type")
-  backgroundUrl    String?                @map("background_url")
-  videoSettings    Json?                  @map("video_settings")
-  audioSettings    Json?                  @map("audio_settings")
-  status           String                 @default("draft")
-  estimatedCost    Decimal?               @map("estimated_cost") @db.Decimal(10,4)
-  actualCost       Decimal?               @map("actual_cost") @db.Decimal(10,4)
-  videoOutputPath  String?                @map("video_output_path")
-  videoDuration    Float?                 @map("video_duration")
-  errorMessage     String?                @map("error_message")
-  createdAt        DateTime               @default(now()) @map("created_at")
-  updatedAt        DateTime               @updatedAt @map("updated_at")
-
-  user             User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  characters       ConversationCharacter[]
-  messages         ConversationMessage[]
-  generations      ConversationGeneration[]
+  id                   String                   @id @default(cuid())
+  userId               String                   @map("user_id")
+  title                String
+  description          String?
+  conversationType     String                   @map("conversation_type")
+  chatStyle            String                   @default("iphone") @map("chat_style")
+  backgroundType       String?                  @map("background_type")
+  backgroundUrl        String?                  @map("background_url")
+  videoSettings        Json?                    @map("video_settings")
+  audioSettings        Json?                    @map("audio_settings")
+  status               String                   @default("draft")
+  estimatedCost        Decimal?                 @map("estimated_cost") @db.Decimal(10, 4)
+  actualCost           Decimal?                 @map("actual_cost") @db.Decimal(10, 4)
+  videoOutputPath      String?                  @map("video_output_path")
+  videoDuration        Float?                   @map("video_duration")
+  errorMessage         String?                  @map("error_message")
+  createdAt            DateTime                 @default(now()) @map("created_at")
+  updatedAt            DateTime                 @updatedAt @map("updated_at")
   conversationApiUsage ConversationApiUsage[]
+  characters           ConversationCharacter[]
+  generations          ConversationGeneration[]
+  messages             ConversationMessage[]
+  user                 User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([status])
@@ -371,22 +375,21 @@ model ConversationProject {
 }
 
 model ConversationCharacter {
-  id          String   @id @default(cuid())
-  projectId   String   @map("project_id")
-  name        String
-  displayName String?  @map("display_name")
-  avatarUrl   String?  @map("avatar_url")
-  voiceId     String?  @map("voice_id")
-  voiceName   String?  @map("voice_name")
-  voiceConfig Json?    @map("voice_config")
-  messageColor String? @map("message_color")
-  isUser      Boolean  @default(false) @map("is_user")
-  sortOrder   Int      @default(0) @map("sort_order")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  project  ConversationProject  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  messages ConversationMessage[]
+  id           String                @id @default(cuid())
+  projectId    String                @map("project_id")
+  name         String
+  displayName  String?               @map("display_name")
+  avatarUrl    String?               @map("avatar_url")
+  voiceId      String?               @map("voice_id")
+  voiceName    String?               @map("voice_name")
+  voiceConfig  Json?                 @map("voice_config")
+  messageColor String?               @map("message_color")
+  isUser       Boolean               @default(false) @map("is_user")
+  sortOrder    Int                   @default(0) @map("sort_order")
+  createdAt    DateTime              @default(now()) @map("created_at")
+  updatedAt    DateTime              @updatedAt @map("updated_at")
+  project      ConversationProject   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  messages     ConversationMessage[]
 
   @@index([projectId])
   @@index([sortOrder])
@@ -394,22 +397,21 @@ model ConversationCharacter {
 }
 
 model ConversationMessage {
-  id           String   @id @default(cuid())
-  projectId    String   @map("project_id")
-  characterId  String   @map("character_id")
-  content      String   @db.Text
-  messageType  String   @default("text") @map("message_type")
-  delay        Int      @default(1000)
-  duration     Float?
-  animationType String? @map("animation_type")
-  sortOrder    Int      @map("sort_order")
-  isVisible    Boolean  @default(true) @map("is_visible")
-  timestamp    DateTime? 
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
-
-  project   ConversationProject   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  character ConversationCharacter @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  id            String                @id @default(cuid())
+  projectId     String                @map("project_id")
+  characterId   String                @map("character_id")
+  content       String
+  messageType   String                @default("text") @map("message_type")
+  delay         Int                   @default(1000)
+  duration      Float?
+  animationType String?               @map("animation_type")
+  sortOrder     Int                   @map("sort_order")
+  isVisible     Boolean               @default(true) @map("is_visible")
+  timestamp     DateTime?
+  createdAt     DateTime              @default(now()) @map("created_at")
+  updatedAt     DateTime              @updatedAt @map("updated_at")
+  character     ConversationCharacter @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  project       ConversationProject   @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
   @@index([sortOrder])
@@ -418,18 +420,17 @@ model ConversationMessage {
 }
 
 model ConversationGeneration {
-  id             String   @id @default(cuid())
-  projectId      String   @map("project_id")
-  version        Int      @default(1)
-  prompt         String   @db.Text
-  generatedContent Json   @map("generated_content")
-  messageCount   Int      @map("message_count")
-  estimatedDuration Float? @map("estimated_duration")
-  isActive       Boolean  @default(true) @map("is_active")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
-
-  project ConversationProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id                String              @id @default(cuid())
+  projectId         String              @map("project_id")
+  version           Int                 @default(1)
+  prompt            String
+  generatedContent  Json                @map("generated_content")
+  messageCount      Int                 @map("message_count")
+  estimatedDuration Float?              @map("estimated_duration")
+  isActive          Boolean             @default(true) @map("is_active")
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+  project           ConversationProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
   @@index([version])
@@ -438,21 +439,20 @@ model ConversationGeneration {
 }
 
 model ConversationApiUsage {
-  id                   String              @id @default(cuid())
-  projectId            String              @map("project_id")
-  modelName            String              @map("model_name")
-  operationType        String              @map("operation_type")
-  inputTokens          Int?                @map("input_tokens")
-  outputTokens         Int?                @map("output_tokens")
-  promptLength         Int?                @map("prompt_length")
-  responseLength       Int?                @map("response_length")
-  costUsd              Decimal?            @map("cost_usd") @db.Decimal(10,6)
-  responseTimeMs       Int?                @map("response_time_ms")
-  success              Boolean             @default(true)
-  errorMessage         String?             @map("error_message")
-  createdAt            DateTime            @default(now()) @map("created_at")
-
-  project              ConversationProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id             String              @id @default(cuid())
+  projectId      String              @map("project_id")
+  modelName      String              @map("model_name")
+  operationType  String              @map("operation_type")
+  inputTokens    Int?                @map("input_tokens")
+  outputTokens   Int?                @map("output_tokens")
+  promptLength   Int?                @map("prompt_length")
+  responseLength Int?                @map("response_length")
+  costUsd        Decimal?            @map("cost_usd") @db.Decimal(10, 6)
+  responseTimeMs Int?                @map("response_time_ms")
+  success        Boolean             @default(true)
+  errorMessage   String?             @map("error_message")
+  createdAt      DateTime            @default(now()) @map("created_at")
+  project        ConversationProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
   @@index([modelName])
@@ -461,22 +461,21 @@ model ConversationApiUsage {
 }
 
 model Library {
-  id                String    @id @default(cuid())
-  title             String
-  description       String?
-  videoUrl          String    @map("video_url")
-  thumbnailUrl      String?   @map("thumbnail_url")
-  duration          Float?
-  fileSize          Int?      @map("file_size")
-  mimeType          String?   @map("mime_type")
-  category          String?   @default("gameplay")
-  tags              String[]  @default([])
-  uploadSource      String?   @default("seeded") @map("upload_source")
-  metadata          Json?
-  status            String    @default("active")
-  createdAt         DateTime  @default(now()) @map("created_at")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
-
+  id                      String                   @id @default(cuid())
+  title                   String
+  description             String?
+  videoUrl                String                   @map("video_url")
+  thumbnailUrl            String?                  @map("thumbnail_url")
+  duration                Float?
+  fileSize                Int?                     @map("file_size")
+  mimeType                String?                  @map("mime_type")
+  category                String?                  @default("gameplay")
+  tags                    String[]                 @default([])
+  uploadSource            String?                  @default("seeded") @map("upload_source")
+  metadata                Json?
+  status                  String                   @default("active")
+  createdAt               DateTime                 @default(now()) @map("created_at")
+  updatedAt               DateTime                 @updatedAt @map("updated_at")
   videoGenerationProjects VideoGenerationProject[]
 
   @@index([category])
@@ -486,49 +485,111 @@ model Library {
 }
 
 model VideoGenerationProject {
-  id                  String    @id @default(cuid())
-  userId              String    @map("user_id")
-  title               String
-  originalPrompt      String    @map("original_prompt")
-  scriptLength        String?   @map("script_length")
-  tone                String?
-  
-  // Phase 1: Script Generation
-  scriptStatus        String    @default("pending") @map("script_status")
-  generatedScript     Json?     @map("generated_script")
-  scriptProjectId     String?   @map("script_project_id")
-  
-  // Phase 2: Voice Selection  
-  voiceStatus         String    @default("pending") @map("voice_status")
-  selectedVoice       String?   @map("selected_voice")
-  voiceSpeed          Float?    @default(1.0) @map("voice_speed")
-  voicePitch          Float?    @default(0) @map("voice_pitch")
-  audioUrl            String?   @map("audio_url")
-  audioDuration       Float?    @map("audio_duration")
-  
-  // Phase 3: Video Selection & Generation
-  videoStatus         String    @default("pending") @map("video_status")
-  selectedVideoId     String?   @map("selected_video_id")
-  finalVideoUrl       String?   @map("final_video_url")
-  videoDuration       Float?    @map("video_duration")
-  
-  // Project metadata
-  currentPhase        Int       @default(1) @map("current_phase")
-  overallStatus       String    @default("script_generation")
-  estimatedCost       Decimal?  @map("estimated_cost") @db.Decimal(10,4)
-  actualCost          Decimal?  @map("actual_cost") @db.Decimal(10,4)
-  errorMessage        String?   @map("error_message")
-  processingLogs      Json?     @map("processing_logs")
-  
-  createdAt           DateTime  @default(now()) @map("created_at")
-  updatedAt           DateTime  @updatedAt @map("updated_at")
-
-  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  selectedVideo       Library?  @relation(fields: [selectedVideoId], references: [id], onDelete: SetNull)
+  id              String   @id @default(cuid())
+  userId          String   @map("user_id")
+  title           String
+  originalPrompt  String   @map("original_prompt")
+  target_audience String?
+  scriptLength    String?  @map("script_length")
+  tone            String?
+  format          String?
+  scriptStatus    String   @default("pending") @map("script_status")
+  generatedScript Json?    @map("generated_script")
+  scriptProjectId String?  @map("script_project_id")
+  voiceStatus     String   @default("pending") @map("voice_status")
+  selectedVoice   String?  @map("selected_voice")
+  voiceSpeed      Float?   @default(1.0) @map("voice_speed")
+  voicePitch      Float?   @default(0) @map("voice_pitch")
+  audioUrl        String?  @map("audio_url")
+  audioDuration   Float?   @map("audio_duration")
+  videoStatus     String   @default("pending") @map("video_status")
+  selectedVideoId String?  @map("selected_video_id")
+  finalVideoUrl   String?  @map("final_video_url")
+  videoDuration   Float?   @map("video_duration")
+  currentPhase    Int      @default(1) @map("current_phase")
+  overallStatus   String   @default("script_generation")
+  estimatedCost   Decimal? @map("estimated_cost") @db.Decimal(10, 4)
+  actualCost      Decimal? @map("actual_cost") @db.Decimal(10, 4)
+  errorMessage    String?  @map("error_message")
+  processingLogs  Json?    @map("processing_logs")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  selectedVideo   Library? @relation(fields: [selectedVideoId], references: [id])
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([overallStatus])
   @@index([currentPhase])
   @@index([createdAt])
   @@map("video_generation_projects")
+}
+
+model CreditTransaction {
+  id              String   @id @default(cuid())
+  userId          String   @map("user_id")
+  amount          Int
+  type            String   // 'usage', 'purchase', 'subscription', 'refund', 'bonus'
+  description     String
+  balanceBefore   Int      @map("balance_before")
+  balanceAfter    Int      @map("balance_after")
+  projectId       String?  @map("project_id")
+  projectType     String?  @map("project_type")
+  videoDuration   Float?   @map("video_duration")
+  stripePaymentId String?  @map("stripe_payment_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("credit_transactions")
+}
+
+model SubscriptionHistory {
+  id                 String    @id @default(cuid())
+  userId             String    @map("user_id")
+  tier               String
+  status             String
+  stripeSubscriptionId String? @map("stripe_subscription_id")
+  stripePriceId      String?  @map("stripe_price_id")
+  stripeCustomerId   String?  @map("stripe_customer_id")
+  creditsPerMonth    Int      @map("credits_per_month")
+  price              Float
+  currency           String   @default("usd")
+  billingPeriod      String   @map("billing_period") // 'monthly' or 'yearly'
+  startDate          DateTime @map("start_date")
+  endDate            DateTime? @map("end_date")
+  canceledAt         DateTime? @map("canceled_at")
+  cancelAtPeriodEnd  Boolean  @default(false) @map("cancel_at_period_end")
+  currentPeriodStart DateTime @map("current_period_start")
+  currentPeriodEnd   DateTime @map("current_period_end")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("subscription_history")
+}
+
+model SubscriptionPlan {
+  id                String   @id @default(cuid())
+  tier              String   @unique
+  name              String
+  description       String?
+  monthlyPrice      Float    @map("monthly_price")
+  yearlyPrice       Float?   @map("yearly_price")
+  credits           Int
+  features          Json?
+  stripePriceIdMonthly String? @map("stripe_price_id_monthly")
+  stripePriceIdYearly  String? @map("stripe_price_id_yearly")
+  isActive          Boolean  @default(true) @map("is_active")
+  displayOrder      Int      @default(0) @map("display_order")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@index([tier])
+  @@index([isActive])
+  @@map("subscription_plans")
 }
