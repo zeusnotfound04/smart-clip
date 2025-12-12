@@ -71,11 +71,32 @@ export class ClipGenerationService {
     videoPath: string,
     startTime: number,
     endTime: number,
+    userId: string,
     exportSettings: ClipExportSettings
   ): Promise<string> {
     console.log(`Generating clip for segment ${segmentId}: ${startTime}s - ${endTime}s`);
 
     try {
+      // Calculate clip duration for credits
+      const clipDuration = endTime - startTime;
+      
+      // Import credit service
+      const { CreditService } = await import('./credit.service');
+      
+      // Validate credits before processing
+      const validation = await CreditService.validateAndPrepareProcessing(
+        userId,
+        clipDuration,
+        'Clip Generation'
+      );
+      
+      if (!validation.canProcess) {
+        throw new Error(validation.message || 'Insufficient credits');
+      }
+      
+      console.log(`✅ [CREDITS] User has sufficient credits (${validation.currentCredits}/${validation.creditsRequired})`);
+      console.log(`🎨 [WATERMARK] Will apply watermark: ${validation.shouldWatermark ? 'Yes' : 'No'}`);
+
       // Ensure output directory exists
       await this.ensureOutputDirectory();
 
@@ -90,6 +111,7 @@ export class ClipGenerationService {
         startTime,
         endTime,
         segmentId,
+        userId,
         exportSettings
       );
 
@@ -102,7 +124,24 @@ export class ClipGenerationService {
           generatedAt: new Date()
         }
       });
-
+      // Deduct credits after successful clip generation
+      try {
+        await CreditService.deductCredits(
+          userId,
+          validation.creditsRequired,
+          `Clip Generation: ${Math.floor(clipDuration)}s clip`,
+          {
+            segmentId,
+            feature: 'clip-generation',
+            clipDuration,
+            creditsUsed: validation.creditsRequired,
+          }
+        );
+        console.log(`✅ [CREDITS] Successfully deducted ${validation.creditsRequired} credits`);
+      } catch (creditError) {
+        console.error('❌ [CREDITS] Failed to deduct credits:', creditError);
+        // Continue even if credit deduction fails (clip already generated)
+      }
       console.log(`Clip generated successfully: ${outputPath}`);
       return outputPath;
 
@@ -165,6 +204,7 @@ export class ClipGenerationService {
             project.video.filePath,
             segment.startTime,
             segment.endTime,
+            project.userId,
             options.exportSettings
           );
 
@@ -201,6 +241,7 @@ export class ClipGenerationService {
     startTime: number,
     endTime: number,
     segmentId: string,
+    userId: string,
     settings: ClipExportSettings
   ): Promise<string> {
     const duration = endTime - startTime;
@@ -261,6 +302,36 @@ export class ClipGenerationService {
         throw new Error('Generated file is empty');
       }
 
+      // Apply watermark if enabled
+      if (settings.addWatermark) {
+        console.log(`\n📍 [CLIP-GENERATION] Applying watermark to clip`);
+        console.log('   Segment ID:', segmentId);
+        console.log('   Output path:', outputPath);
+        
+        try {
+          const { watermarkService } = await import('./watermark.service');
+          const watermarkedPath = outputPath.replace(/(\.\w+)$/, '_watermarked$1');
+          console.log('   Watermarked path:', watermarkedPath);
+          
+          await watermarkService.addWatermark(outputPath, watermarkedPath, {
+            position: 'center' as const,
+            opacity: parseFloat(process.env.WATERMARK_OPACITY || '0.95'),
+            watermarkScale: parseFloat(process.env.WATERMARK_SCALE || '0.95'),
+            userId
+          });
+          
+          // Replace original with watermarked version
+          await fs.unlink(outputPath);
+          await fs.rename(watermarkedPath, outputPath);
+          console.log(`✅ [CLIP-GENERATION] Watermark applied successfully`);
+        } catch (watermarkError) {
+          console.error('❌ [CLIP-GENERATION] Watermark failed:', watermarkError);
+          console.error('   Error:', watermarkError instanceof Error ? watermarkError.message : String(watermarkError));
+          console.warn('⚠️ [CLIP-GENERATION] Continuing without watermark...');
+          // Continue without watermark if it fails
+        }
+      }
+
       return outputPath;
 
     } catch (error) {
@@ -308,11 +379,8 @@ export class ClipGenerationService {
       filters.push('fade=in:0:15,fade=out:st=0:d=1');
     }
 
-    // Watermark
-    if (settings.addWatermark && settings.watermarkText) {
-      const watermarkFilter = `drawtext=text='${settings.watermarkText}':fontsize=24:fontcolor=white:x=w-tw-10:y=h-th-10:alpha=0.7`;
-      filters.push(watermarkFilter);
-    }
+    // Watermark - now handled via watermarkService after clip generation
+    // Image watermark will be applied post-processing for better quality
 
     return filters.length > 0 ? ` -vf "${filters.join(',')}"` : '';
   }
@@ -356,7 +424,8 @@ export class ClipGenerationService {
     // Create file list for FFmpeg concat
     const fileListPath = path.join(this.outputDir, `filelist_${projectId}_${timestamp}.txt`);
     const fileList = completedClips
-      .map(clip => `file '${this.normalizePathForFFmpeg(clip.outputPath)}'`)
+      .filter(clip => clip.outputPath)
+      .map(clip => `file '${this.normalizePathForFFmpeg(clip.outputPath!)}'`)
       .join('\n');
     
     await fs.writeFile(fileListPath, fileList);
