@@ -18,6 +18,10 @@ import videoProcessingRoutes from './routes/video-processing.routes';
 import videoGenerationRoutes from './routes/video-generation.routes';
 import healthRoutes from './routes/health.routes';
 import docsRoutes from './routes/docs.routes';
+import creditsRoutes from './routes/credits.routes.js';
+import subscriptionRoutes from './routes/subscription.routes.js';
+import stripeRoutes from './routes/stripe.routes.js';
+import testRoutes from './routes/test.routes.js';
 import { 
   errorHandler, 
   notFoundHandler, 
@@ -114,6 +118,17 @@ app.use('/api/status', statusRoutes);
 app.use('/api/thumbnails', thumbnailRoutes);
 app.use('/api/video-processing', videoProcessingRoutes);
 app.use('/api/video-generation', videoGenerationRoutes);
+
+// Credits and Subscription routes
+app.use('/api/credits', creditsRoutes);
+app.use('/api/subscriptions', subscriptionRoutes);
+app.use('/api/stripe', stripeRoutes);
+
+// TEMPORARY: Test routes for local development (remove in production)
+if (process.env.NODE_ENV !== 'production') {
+  app.use('/api/test', testRoutes);
+  console.log('⚠️  Test routes enabled (development mode only)');
+}
 
 app.use('/api/health', healthRoutes);
 app.use('/api/docs', docsRoutes);

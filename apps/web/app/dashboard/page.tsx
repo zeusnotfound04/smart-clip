@@ -16,6 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useAuth } from '@/lib/auth-context';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { apiClient, Project } from '@/lib/api-client';
+import { CreditsDisplay } from '@/components/credits-display';
 
 
 
@@ -108,6 +109,7 @@ export default function DashboardPage() {
               Ready to create amazing content with AI?
             </motion.p>
           </div>
+          <CreditsDisplay />
         </header>
 
         {/* Main Content */}
