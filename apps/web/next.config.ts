@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
   // Allow cross-origin requests from your domain
@@ -9,7 +10,7 @@ const nextConfig: NextConfig = {
   
   // Turbopack configuration
   turbopack: {
-    root: '../../', // Set to monorepo root
+    root: path.resolve(__dirname, '../../'), // Set to monorepo root with absolute path
   },
   
   // Image optimization

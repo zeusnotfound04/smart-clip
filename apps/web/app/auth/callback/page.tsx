@@ -1,32 +1,40 @@
 "use client";
 
-import { useEffect, Suspense } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Spinner } from "@/components/ui/spinner";
 
 function AuthCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
-    const token = searchParams.get("token");
-    const error = searchParams.get("error");
+    const processCallback = async () => {
+      if (isProcessing) return;
+      setIsProcessing(true);
 
-    if (error) {
-      router.push(`/auth/signin?error=${error}`);
-      return;
-    }
+      const token = searchParams.get("token");
+      const error = searchParams.get("error");
 
-    if (token) {
-      localStorage.setItem("smartclips_token", token);
-      
-      setTimeout(() => {
-        router.push("/dashboard");
-      }, 100);
-    } else {
-      router.push("/auth/signin?error=no_token");
-    }
-  }, [searchParams, router]);
+      if (error) {
+        router.push(`/auth/signin?error=${error}`);
+        return;
+      }
+
+      if (token) {
+        localStorage.setItem("smartclips_token", token);
+        
+        // Trigger a page reload to let AuthProvider fetch the user
+        // This ensures the auth context is updated before navigating
+        window.location.href = "/dashboard";
+      } else {
+        router.push("/auth/signin?error=no_token");
+      }
+    };
+
+    processCallback();
+  }, [searchParams, router, isProcessing]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">

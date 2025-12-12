@@ -108,15 +108,18 @@ export const watermarkService = {
     return new Promise((resolve, reject) => {
       console.log('🎥 [WATERMARK DEBUG] Starting FFmpeg process...');
       
+      // Use a temporary output file to avoid faststart reopen issues
+      const tempOutputPath = outputPath + '.tmp.mp4';
+      
       const ffmpegCommand = ffmpeg(inputPath)
         .input(watermarkImagePath) // Add watermark image as second input
         .complexFilter(watermarkFilter)
         .outputOptions([
           '-c:a copy', // Copy audio without re-encoding
           '-preset fast',
-          '-movflags', '+faststart', // Enable fast start for web playback
+          '-movflags', 'faststart', // Enable fast start for web playback (without +)
         ])
-        .output(outputPath)
+        .output(tempOutputPath)
         .on('start', (commandLine) => {
           console.log('   FFmpeg command:', commandLine);
         })
@@ -130,6 +133,9 @@ export const watermarkService = {
         })
         .on('end', async () => {
           try {
+            // Move temp file to final output path
+            await fs.rename(tempOutputPath, outputPath);
+            
             const outputStats = await fs.stat(outputPath);
             console.log(`✅ [WATERMARK DEBUG] Watermark applied successfully`);
             console.log('   Output file:', outputPath);
@@ -137,15 +143,25 @@ export const watermarkService = {
             resolve(outputPath);
           } catch (statError) {
             console.error('❌ [WATERMARK DEBUG] Output file verification failed:', statError);
+            // Clean up temp file if it exists
+            try {
+              await fs.unlink(tempOutputPath);
+            } catch {}
             reject(new Error(`Output file not created: ${outputPath}`));
           }
         })
-        .on('error', (err, stdout, stderr) => {
+        .on('error', async (err, stdout, stderr) => {
           console.error('❌ [WATERMARK DEBUG] FFmpeg error occurred');
           console.error('   Error message:', err.message);
           console.error('   Error stack:', err.stack);
           if (stdout) console.error('   stdout:', stdout);
           if (stderr) console.error('   stderr:', stderr);
+          
+          // Clean up temp file if it exists
+          try {
+            await fs.unlink(tempOutputPath);
+          } catch {}
+          
           reject(new Error(`Watermark error: ${err.message}`));
         });
       
