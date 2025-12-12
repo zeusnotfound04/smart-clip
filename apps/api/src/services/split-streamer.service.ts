@@ -361,8 +361,38 @@ export const combineVideos = async (
       throw new Error('FFmpeg failed to create output file');
     }
     
-    const outputBuffer = await fs.readFile(outputPath);
-    console.log('Video combination completed successfully');
+    // Apply watermark to combined video
+    console.log('\n📍 [SPLIT-STREAMER] Applying watermark to combined video...');
+    console.log('   Output path:', outputPath);
+    
+    let finalOutputPath = outputPath;
+    
+    try {
+      const watermarkedPath = outputPath.replace('.mp4', '_watermarked.mp4');
+      console.log('   Watermarked path:', watermarkedPath);
+      
+      const { watermarkService } = await import('./watermark.service');
+      console.log('   Watermark service imported');
+      
+      await watermarkService.addWatermark(outputPath, watermarkedPath, {
+        position: 'center' as const,
+        opacity: parseFloat(process.env.WATERMARK_OPACITY || '0.95'),
+        watermarkScale: parseFloat(process.env.WATERMARK_SCALE || '0.95')
+      });
+      
+      finalOutputPath = watermarkedPath;
+      console.log('✅ [SPLIT-STREAMER] Watermark applied successfully');
+    } catch (watermarkError) {
+      console.error('❌ [SPLIT-STREAMER] Watermark failed:', watermarkError);
+      console.error('   Error:', watermarkError instanceof Error ? watermarkError.message : String(watermarkError));
+      console.warn('⚠️ [SPLIT-STREAMER] Continuing without watermark...');
+      // Continue without watermark if it fails
+    }
+    
+    console.log('   Reading final output buffer from:', finalOutputPath);
+    const outputBuffer = await fs.readFile(finalOutputPath);
+    console.log('   Buffer size:', outputBuffer.length, 'bytes');
+    console.log('✅ [SPLIT-STREAMER] Video combination completed successfully');
     
     return outputBuffer;
   } finally {
