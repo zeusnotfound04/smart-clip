@@ -57,6 +57,7 @@ export default function CreditsPage() {
   const [currentSubscription, setCurrentSubscription] = useState<any>(null);
   const [selectedBilling, setSelectedBilling] = useState<'monthly' | 'yearly'>('monthly');
   const [processingPlan, setProcessingPlan] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   // Fallback plans if API fails
   const fallbackPlans: SubscriptionPlan[] = [
@@ -123,29 +124,42 @@ export default function CreditsPage() {
   const loadData = async () => {
     try {
       setLoading(true);
+      setError(null);
       
-      // Always set fallback plans first
+      // Use fallback plans as main plans
       setPlans(fallbackPlans);
       
-      const [balanceRes, historyRes, plansRes, subRes] = await Promise.all([
-        apiClient.getCreditsBalance().catch(() => ({ success: false, data: null })),
-        apiClient.getCreditsHistory(10, 0).catch(() => ({ success: false, data: null })),
-        apiClient.getSubscriptionPlans().catch(() => ({ success: false, data: null })),
-        apiClient.getSubscriptionDetails().catch(() => ({ success: false, data: null })),
+      const [balanceRes, historyRes, subRes] = await Promise.all([
+        apiClient.getCreditsBalance().catch((err) => {
+          console.error('Credits balance API error:', err);
+          return { success: false, data: null, error: err };
+        }),
+        apiClient.getCreditsHistory(10, 0).catch((err) => {
+          console.error('Credits history API error:', err);
+          return { success: false, data: null };
+        }),
+        apiClient.getSubscriptionDetails().catch((err) => {
+          console.error('Subscription details API error:', err);
+          return { success: false, data: null };
+        }),
       ]);
 
+      console.log('Balance API Response:', balanceRes);
+      console.log('History API Response:', historyRes);
+      console.log('Subscription API Response:', subRes);
+
       if (balanceRes.success && balanceRes.data) {
+        console.log('Setting balance to:', balanceRes.data.balance);
+        console.log('Setting stats to:', balanceRes.data.stats);
         setBalance(balanceRes.data.balance);
         setStats(balanceRes.data.stats);
+      } else {
+        console.warn('Balance API call failed or returned no data');
+        setError('Failed to load credits balance. Please refresh the page.');
       }
 
       if (historyRes.success && historyRes.data) {
         setTransactions(historyRes.data);
-      }
-
-      if (plansRes.success && plansRes.data && plansRes.data.length > 0) {
-        // Override with API plans if available
-        setPlans(plansRes.data);
       }
 
       if (subRes.success && subRes.data) {
@@ -153,8 +167,7 @@ export default function CreditsPage() {
       }
     } catch (error: any) {
       console.error('Failed to load credits data:', error);
-      // Ensure fallback plans are set on error
-      setPlans(fallbackPlans);
+      setError('An error occurred while loading your credits. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -238,6 +251,23 @@ export default function CreditsPage() {
           </div>
           {getTierBadge(currentTier)}
         </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+            <div className="flex items-center gap-2 text-red-800 dark:text-red-200">
+              <div className="text-sm">{error}</div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => loadData()}
+                className="ml-auto"
+              >
+                Retry
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Credits Overview */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
