@@ -76,7 +76,7 @@ export const generate = async (req: AuthRequest, res: Response) => {
       language: language || options?.language
     } : language ? { language } : undefined;
 
-    const result = await generateVideoWithSubtitles(videoId, video.filePath, subtitleOptions);
+    const result = await generateVideoWithSubtitles(videoId, video.filePath, req.userId!, subtitleOptions);
 
     // Update video with subtitled video URL and mark as completed
     await prisma.video.update({
@@ -335,7 +335,7 @@ export const updateConfiguration = async (req: AuthRequest, res: Response) => {
 
     // Regenerate the video with new subtitle configuration
     try {
-      const result = await generateVideoWithSubtitles(videoId, video.filePath, options);
+      const result = await generateVideoWithSubtitles(videoId, video.filePath, req.userId!, options);
       
       // Update video with new subtitled video URL
       await prisma.video.update({
