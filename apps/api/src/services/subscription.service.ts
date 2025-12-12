@@ -163,7 +163,7 @@ export const subscriptionService = {
 
     // Update user in database
     const now = new Date();
-    const periodEnd = new Date(subscription.current_period_end * 1000);
+    const periodEnd = new Date((subscription as any).current_period_end * 1000);
 
     await prisma.user.update({
       where: { id: userId },
@@ -191,7 +191,7 @@ export const subscriptionService = {
         currency: 'usd',
         billingPeriod,
         startDate: now,
-        currentPeriodStart: new Date(subscription.current_period_start * 1000),
+        currentPeriodStart: new Date((subscription as any).current_period_start * 1000),
         currentPeriodEnd: periodEnd,
       },
     });
