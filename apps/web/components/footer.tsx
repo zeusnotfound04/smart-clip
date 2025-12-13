@@ -1,7 +1,7 @@
 "use client"
 
 import { motion, useScroll, useTransform } from "framer-motion"
-import { Zap } from "lucide-react"
+import Image from "next/image"
 import { useRef } from "react"
 
 export default function Footer() {
@@ -49,7 +49,7 @@ export default function Footer() {
               viewport={{ once: true }}
             >
               <div className="flex items-center gap-2 mb-4">
-                 <Zap className="size-6" />
+                 <Image src="/logo.jpg" alt="SmartClip Logo" width={32} height={24} className="rounded object-contain" />
                 <span className="font-semibold text-foreground">SmartClip</span>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed">

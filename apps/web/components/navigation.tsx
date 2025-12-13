@@ -2,9 +2,9 @@
 
 import { motion } from "framer-motion"
 import Link from "next/link"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/lib/auth-context"
-import { Zap } from "lucide-react"
 
 export default function Navigation() {
   const navItems = ["Features", "How it Works", "Pricing"]
@@ -24,7 +24,7 @@ export default function Navigation() {
             transition={{ type: "spring", stiffness: 400 }}
             className="flex items-center gap-3 cursor-pointer"
           >
-             <Zap className="size-6" />
+             <Image src="/logo.jpg" alt="SmartClip Logo" width={32} height={24} className="rounded object-contain" />
             <span className="font-semibold text-lg text-foreground tracking-tight">SmartClip</span>
           </motion.div>
         </Link>

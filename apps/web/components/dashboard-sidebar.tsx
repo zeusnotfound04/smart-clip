@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import {
@@ -30,7 +31,6 @@ import {
   Play,
   Layers,
   Briefcase,
-  Zap,
   ChevronRight,
   MessageCircle,
   Wand2,
@@ -125,18 +125,14 @@ export function DashboardSidebar() {
       className="border-r border-border bg-sidebar"
     >
       <SidebarHeader className="border-b border-gray-800 p-4">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center justify-center">
           <motion.div
-            className="flex size-10 items-center justify-center rounded-lg bg-white text-black font-bold"
+            className="flex h-10 w-48 items-center justify-center rounded-lg bg-white overflow-hidden"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            <Zap className="size-6" />
+            <Image src="/logo.jpg" alt="SmartClip Logo" width={192} height={40} className="object-contain" />
           </motion.div>
-          <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-            <span className="text-white font-semibold text-lg">Smart Clip</span>
-            <span className="text-gray-400 text-xs">AI-Powered Video Tools</span>
-          </div>
         </div>
       </SidebarHeader>
 
