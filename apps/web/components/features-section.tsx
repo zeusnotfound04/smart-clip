@@ -97,16 +97,16 @@ export default function FeaturesSection() {
     <section
       id="features"
       ref={containerRef}
-      className="relative py-32 px-6 bg-gradient-to-b from-slate-50 via-white to-slate-50 overflow-hidden"
+      className="relative py-32 px-6 bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950 overflow-hidden"
     >
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div
           style={{ y }}
-          className="absolute top-20 -left-40 w-96 h-96 bg-violet-200/30 rounded-full blur-3xl"
+          className="absolute top-20 -left-40 w-96 h-96 bg-violet-500/20 rounded-full blur-3xl"
         />
         <motion.div
           style={{ y: useTransform(scrollYProgress, [0, 1], [-100, 100]) }}
-          className="absolute bottom-20 -right-40 w-96 h-96 bg-cyan-200/30 rounded-full blur-3xl"
+          className="absolute bottom-20 -right-40 w-96 h-96 bg-cyan-500/20 rounded-full blur-3xl"
         />
       </div>
 
@@ -123,15 +123,15 @@ export default function FeaturesSection() {
             whileInView={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
             viewport={{ once: true }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-violet-500/10 to-cyan-500/10 border border-violet-500/20 mb-6"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-violet-500/10 to-cyan-500/10 border border-violet-400/30 mb-6"
           >
-            <Sparkles className="w-4 h-4 text-violet-600" />
-            <span className="text-sm font-semibold text-violet-600">Powered by AI</span>
+            <Sparkles className="w-4 h-4 text-violet-400" />
+            <span className="text-sm font-semibold text-violet-400">Powered by AI</span>
           </motion.div>
 
-          <h2 className="text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 mb-6 text-balance">
+          <h2 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 text-balance">
             Built for clippers and{" "}
-            <span className="bg-gradient-to-r from-violet-600 via-purple-600 to-cyan-600 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-violet-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">
               content creators
             </span>
           </h2>
@@ -150,8 +150,8 @@ export default function FeaturesSection() {
                 viewport={{ once: true }}
                 className={`inline-block mr-2 ${
                   word === "viral"
-                    ? "bg-gradient-to-r from-violet-600 via-purple-600 to-pink-600 bg-clip-text text-transparent font-bold"
-                    : "text-gray-700"
+                    ? "bg-gradient-to-r from-violet-400 via-purple-400 to-pink-400 bg-clip-text text-transparent font-bold"
+                    : "text-gray-200"
                 }`}
               >
                 {word}
@@ -188,9 +188,9 @@ export default function FeaturesSection() {
                     }}
                   />
 
-                  <div className="relative h-full p-8 lg:p-10 rounded-3xl bg-white/80 backdrop-blur-sm border border-gray-200/50 overflow-hidden shadow-lg group-hover:shadow-2xl transition-shadow duration-500">
+                  <div className="relative h-full p-8 lg:p-10 rounded-3xl bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 overflow-hidden shadow-lg group-hover:shadow-2xl transition-shadow duration-500">
                     <motion.div
-                      className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-[0.03] transition-opacity duration-700`}
+                      className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-[0.08] transition-opacity duration-700`}
                     />
 
                     <motion.div
@@ -221,11 +221,11 @@ export default function FeaturesSection() {
                         </div>
                       </motion.div>
 
-                      <h3 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-4 group-hover:bg-gradient-to-r group-hover:from-gray-900 group-hover:to-gray-600 group-hover:bg-clip-text group-hover:text-transparent transition-all duration-300 text-balance">
+                      <h3 className="text-2xl lg:text-3xl font-bold text-white mb-4 group-hover:bg-gradient-to-r group-hover:from-white group-hover:to-gray-300 group-hover:bg-clip-text group-hover:text-transparent transition-all duration-300 text-balance">
                         {feature.title}
                       </h3>
 
-                      <p className="text-gray-600 text-lg leading-relaxed text-pretty">{feature.description}</p>
+                      <p className="text-gray-300 text-lg leading-relaxed text-pretty">{feature.description}</p>
 
                       <motion.div
                         initial={{ x: 0, opacity: 0 }}

@@ -15,7 +15,7 @@ export default function Navigation() {
       initial={{ y: -100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-      className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200"
+      className="fixed top-0 left-0 right-0 z-50 bg-gray-900/95 backdrop-blur-sm border-b border-gray-800"
     >
       <div className="max-w-7xl mx-auto px-6 py-1.5 flex items-center justify-between">
         <Link href="/">
@@ -34,7 +34,7 @@ export default function Navigation() {
             <a
               key={item}
               href={`#${item.toLowerCase().replace(/\s+/g, "-")}`}
-              className="text-gray-600 hover:text-blue-600 transition-colors text-sm font-medium"
+              className="text-gray-300 hover:text-blue-400 transition-colors text-sm font-medium"
             >
               {item}
             </a>
@@ -46,14 +46,14 @@ export default function Navigation() {
             // Authenticated user buttons
             <>
               <Link href="/dashboard">
-                <Button variant="ghost" className="text-gray-700 hover:text-gray-900 hover:bg-gray-100">
+                <Button variant="ghost" className="text-gray-200 hover:text-white hover:bg-gray-800">
                   Dashboard
                 </Button>
               </Link>
               <Button 
                 variant="outline" 
                 onClick={signOut}
-                className="text-gray-700 border-gray-300 hover:bg-gray-100"
+                className="text-gray-200 border-gray-600 hover:bg-gray-800"
               >
                 Sign Out
               </Button>
@@ -62,7 +62,7 @@ export default function Navigation() {
             // Guest user buttons
             <>
               <Link href="/auth/signin">
-                <Button variant="ghost" className="text-gray-700 hover:text-gray-900 hover:bg-gray-100">
+                <Button variant="ghost" className="text-gray-200 hover:text-white hover:bg-gray-800">
                   Sign In
                 </Button>
               </Link>

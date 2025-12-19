@@ -73,7 +73,7 @@ export default function VideoCreationVisualizer() {
               <div className="absolute top-2 left-1/2 -translate-x-1/2 w-20 h-5 bg-gray-900 rounded-full z-20 border-b border-gray-700" />
 
               {/* Screen content */}
-              <div className="absolute inset-2 rounded-[2rem] overflow-hidden bg-gradient-to-b from-gray-50 to-white">
+              <div className="absolute inset-2 rounded-[2rem] overflow-hidden bg-gradient-to-b from-gray-800 to-gray-900">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={activeFeature}
@@ -144,7 +144,7 @@ export default function VideoCreationVisualizer() {
               className={`px-4 py-2 rounded-full text-xs font-medium transition-all duration-300 ${
                 index === activeFeature
                   ? "bg-blue-600 text-white"
-                  : "bg-white text-gray-600 border border-gray-200"
+                  : "bg-gray-800 text-gray-300 border border-gray-700"
               }`}
               whileTap={{ scale: 0.95 }}
             >
@@ -159,7 +159,7 @@ export default function VideoCreationVisualizer() {
             <motion.button
               key={index}
               onClick={() => setActiveFeature(index)}
-              className="relative h-1 rounded-full bg-gray-200 overflow-hidden cursor-pointer"
+              className="relative h-1 rounded-full bg-gray-700 overflow-hidden cursor-pointer"
               animate={{ width: index === activeFeature ? 48 : 12 }}
               transition={{ duration: 0.4 }}
             >
@@ -198,7 +198,7 @@ function FeaturePill({
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.6 }}
       className={`group relative px-5 py-3 rounded-2xl border transition-all duration-500 text-${align} ${
-        isActive ? "bg-blue-50 border-blue-600" : "bg-white border-gray-200 hover:border-blue-400"
+        isActive ? "bg-blue-600/20 border-blue-500" : "bg-gray-800/50 border-gray-700 hover:border-blue-500"
       }`}
     >
       {/* Connection line */}
@@ -215,7 +215,7 @@ function FeaturePill({
       <div className={`flex flex-col ${align === "left" ? "items-start" : "items-end"}`}>
         <span
           className={`text-sm font-medium transition-colors duration-300 ${
-            isActive ? "text-blue-600" : "text-gray-600 group-hover:text-gray-900"
+            isActive ? "text-blue-400" : "text-gray-300 group-hover:text-white"
           }`}
         >
           {feature.label}
@@ -223,7 +223,7 @@ function FeaturePill({
         <motion.span
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: isActive ? 1 : 0, height: isActive ? "auto" : 0 }}
-          className="text-xs text-gray-500 mt-1 overflow-hidden"
+          className="text-xs text-gray-400 mt-1 overflow-hidden"
         >
           {feature.description}
         </motion.span>

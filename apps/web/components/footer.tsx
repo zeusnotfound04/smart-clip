@@ -21,7 +21,7 @@ export default function Footer() {
   }
 
   return (
-    <footer ref={containerRef} className="relative bg-gray-50 border-t border-gray-200 overflow-hidden">
+    <footer ref={containerRef} className="relative bg-gray-950 border-t border-gray-800 overflow-hidden">
       {/* Footer content */}
       <div className="relative py-16 px-6">
         <div className="max-w-6xl mx-auto">
@@ -36,7 +36,7 @@ export default function Footer() {
               <div className="mb-6">
                  <img src="/logo.jpg" alt="SmartClip Logo" className="h-20 w-auto rounded-lg object-contain" />
               </div>
-              <p className="text-sm text-gray-600 leading-relaxed">
+              <p className="text-sm text-gray-400 leading-relaxed">
                 Turn videos into viral clips automatically. Built for clippers.
               </p>
             </motion.div>
@@ -50,13 +50,13 @@ export default function Footer() {
                 transition={{ delay: categoryIndex * 0.1, duration: 0.6 }}
                 viewport={{ once: true }}
               >
-                <h4 className="font-semibold text-gray-900 mb-4 text-sm">{category}</h4>
+                <h4 className="font-semibold text-white mb-4 text-sm">{category}</h4>
                 <div className="flex flex-col gap-3">
                   {links.map((link) => (
                     <a
                       key={link}
                       href="#"
-                      className="text-sm text-gray-600 hover:text-blue-600 transition-colors duration-300"
+                      className="text-sm text-gray-400 hover:text-blue-400 transition-colors duration-300"
                     >
                       {link}
                     </a>
@@ -72,9 +72,9 @@ export default function Footer() {
             whileInView={{ opacity: 1 }}
             transition={{ duration: 0.6 }}
             viewport={{ once: true }}
-            className="pt-8 border-t border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4"
+            className="pt-8 border-t border-gray-800 flex flex-col md:flex-row justify-between items-center gap-4"
           >
-            <p className="text-sm text-gray-600">© 2025 SmartClip. All rights reserved.</p>
+            <p className="text-sm text-gray-400">© 2025 SmartClip. All rights reserved.</p>
             <div className="flex gap-6">
               {["Twitter", "LinkedIn", "YouTube"].map((social) => (
                 <a
