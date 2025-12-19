@@ -121,6 +121,22 @@ export const generate = async (req: AuthRequest, res: Response) => {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.issues[0].message });
     }
+    
+    // Check if it's a credit error
+    const errorMessage = error?.message || '';
+    const isInsufficientCredits = 
+      errorMessage.toLowerCase().includes('insufficient credit') ||
+      errorMessage.toLowerCase().includes('out of credit') ||
+      errorMessage.toLowerCase().includes('not enough credit');
+    
+    if (isInsufficientCredits) {
+      return res.status(402).json({ 
+        error: 'Insufficient Credits',
+        message: 'Hey! You ran out of credits. Please upgrade to remove watermark and generate videos!',
+        details: errorMessage
+      });
+    }
+    
     res.status(500).json({ error: 'Failed to generate subtitles' });
   }
 };

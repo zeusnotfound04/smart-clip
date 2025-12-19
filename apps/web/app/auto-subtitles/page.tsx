@@ -6,6 +6,12 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { useState, useRef } from "react";
 import { apiClient } from "@/lib/api-client";
 import { useRouter } from "next/navigation";
+import { CreditExhaustedDialog } from "@/components/credit-exhausted-dialog";
+import { useCreditError } from "@/hooks/use-credit-error";
+import { SubtitleConfigurationPanel } from "@/components/auto-subtitles/SubtitleConfigurationPanel";
+import { Button } from "@/components/ui/button";
+import { Settings, Upload } from "lucide-react";
+import { VideoSelectorModal } from "@/components/video-selector-modal";
 
 export default function AutoSubtitlesPage() {
   const { user, loading } = useAuth();
@@ -17,7 +23,41 @@ export default function AutoSubtitlesPage() {
   const [debugData, setDebugData] = useState<{[key: string]: any}>({});
   const [showDebugModal, setShowDebugModal] = useState(false);
   const [currentDebugVideoId, setCurrentDebugVideoId] = useState<string | null>(null);
+  const [showConfiguration, setShowConfiguration] = useState(false);
+  const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
+  const [showVideoSelector, setShowVideoSelector] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { creditError, hideCreditError, handleApiError } = useCreditError();
+  
+  const [subtitleOptions, setSubtitleOptions] = useState<{
+    detectAllLanguages: boolean;
+    style: {
+      textCase: 'normal' | 'uppercase' | 'lowercase' | 'capitalize';
+      fontFamily: string;
+      fontSize: number;
+      primaryColor: string;
+      outlineColor: string;
+      shadowColor: string;
+      bold: boolean;
+      italic: boolean;
+      alignment: 'left' | 'center' | 'right';
+      showShadow: boolean;
+    };
+  }>({
+    detectAllLanguages: false,
+    style: {
+      textCase: 'normal',
+      fontFamily: 'Bangers',
+      fontSize: 34,
+      primaryColor: '#FFFF00',
+      outlineColor: '#000000',
+      shadowColor: '#000000',
+      bold: true,
+      italic: false,
+      alignment: 'center',
+      showShadow: true
+    }
+  });
 
   if (loading) {
     return (
@@ -31,6 +71,14 @@ export default function AutoSubtitlesPage() {
     router.push("/auth/signin");
     return null;
   }
+
+  const handleVideoSelect = async (video: any) => {
+    // If video is already in the list, don't add it again
+    if (!videos.find(v => v.id === video.id)) {
+      setVideos(prev => [video, ...prev]);
+    }
+    setShowVideoSelector(false);
+  };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -51,10 +99,16 @@ export default function AutoSubtitlesPage() {
     }
   };
 
+  const handleConfigureAndGenerate = (videoId: string) => {
+    setSelectedVideoId(videoId);
+    setShowConfiguration(true);
+  };
+
   const handleGenerateSubtitles = async (videoId: string) => {
     setProcessing(true);
+    setShowConfiguration(false);
     try {
-      const result = await apiClient.generateSubtitles(videoId);
+      const result = await apiClient.generateSubtitles(videoId, subtitleOptions);
       
       console.log('API Response:', result); // Debug log
       
@@ -79,9 +133,14 @@ export default function AutoSubtitlesPage() {
         alert('Subtitles generated but video URL not available. Check console for details.');
         console.error('No video URL in response:', result);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Subtitle generation failed:', error);
-      alert('Failed to generate subtitles. Please try again.');
+      
+      // Check if it's a credit error
+      if (!handleApiError(error)) {
+        // Not a credit error, show generic error
+        alert('Failed to generate subtitles. Please try again.');
+      }
     } finally {
       setProcessing(false);
     }
@@ -139,25 +198,23 @@ export default function AutoSubtitlesPage() {
           </div>
 
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="video/*"
-              onChange={handleFileUpload}
-              className="hidden"
-              id="video-upload"
-            />
-            <label
-              htmlFor="video-upload"
-              className={`cursor-pointer inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 ${
-                uploading ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-            >
-              {uploading ? 'Uploading...' : 'Upload Video'}
-            </label>
-            <p className="text-sm text-muted-foreground mt-2">
-              Supported formats: MP4, MOV, AVI, WebM (Max: 500MB)
-            </p>
+            <div className="flex flex-col items-center gap-4">
+              <Button
+                onClick={() => setShowVideoSelector(true)}
+                disabled={uploading}
+                size="lg"
+                className="gap-2"
+              >
+                <Upload className="w-5 h-5" />
+                {uploading ? 'Uploading...' : 'Select Video'}
+              </Button>
+              <p className="text-sm text-muted-foreground">
+                Choose from My Clips or upload a new video
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Supported formats: MP4, MOV, AVI, WebM (Max: 500MB)
+              </p>
+            </div>
           </div>
 
           {videos.length > 0 && (
@@ -174,13 +231,24 @@ export default function AutoSubtitlesPage() {
                     </div>
                     <div className="flex gap-2">
                       {video.status === 'uploaded' && (
-                        <button
-                          onClick={() => handleGenerateSubtitles(video.id)}
-                          disabled={processing}
-                          className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-8 px-3 py-2"
-                        >
-                          {processing ? 'Processing...' : 'Generate Subtitles'}
-                        </button>
+                        <>
+                          <Button
+                            onClick={() => handleConfigureAndGenerate(video.id)}
+                            disabled={processing}
+                            variant="outline"
+                            size="sm"
+                          >
+                            <Settings className="w-4 h-4 mr-2" />
+                            Configure & Generate
+                          </Button>
+                          <button
+                            onClick={() => handleGenerateSubtitles(video.id)}
+                            disabled={processing}
+                            className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-8 px-3 py-2"
+                          >
+                            {processing ? 'Processing...' : 'Quick Generate'}
+                          </button>
+                        </>
                       )}
                       {video.status === 'processing' && (
                         <div className="text-sm text-blue-600 font-medium px-3 py-2">
@@ -546,6 +614,42 @@ ${data.subtitles?.map((sub: any, i: number) =>
           </div>
         </div>
       )}
+      
+      {/* Credit Exhausted Dialog */}
+      <CreditExhaustedDialog
+        open={creditError.show}
+        onOpenChange={hideCreditError}
+        message={creditError.message}
+      />
+      
+      {/* Subtitle Configuration Panel */}
+      {showConfiguration && selectedVideoId && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-background rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <SubtitleConfigurationPanel
+              subtitleOptions={subtitleOptions}
+              onOptionsChange={setSubtitleOptions}
+              onApplyTheme={(theme) => {
+                setSubtitleOptions({
+                  ...subtitleOptions,
+                  style: { ...subtitleOptions.style, ...theme.style }
+                });
+              }}
+              onBack={() => setShowConfiguration(false)}
+              onGenerate={() => handleGenerateSubtitles(selectedVideoId)}
+            />
+          </div>
+        </div>
+      )}
+      
+      {/* Video Selector Modal - My Clips + Upload */}
+      <VideoSelectorModal
+        isOpen={showVideoSelector}
+        onClose={() => setShowVideoSelector(false)}
+        onSelect={handleVideoSelect}
+        acceptedFileTypes="video/*"
+        maxFileSize={500}
+      />
     </SidebarProvider>
   );
 }

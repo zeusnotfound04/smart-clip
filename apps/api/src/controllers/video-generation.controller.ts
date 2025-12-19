@@ -108,7 +108,16 @@ export class VideoGenerationController {
       let statusCode = 500;
       let errorMessage = 'Failed to generate video';
 
-      if (error.message?.includes('Library video not found')) {
+      // Check for credit errors
+      const isInsufficientCredits = 
+        error.message?.toLowerCase().includes('insufficient credit') ||
+        error.message?.toLowerCase().includes('out of credit') ||
+        error.message?.toLowerCase().includes('not enough credit');
+      
+      if (isInsufficientCredits) {
+        statusCode = 402;
+        errorMessage = 'Insufficient Credits';
+      } else if (error.message?.includes('Library video not found')) {
         statusCode = 404;
         errorMessage = 'Selected video not found in library';
       } else if (error.message?.includes('quota') || error.message?.includes('rate limit')) {
@@ -122,6 +131,7 @@ export class VideoGenerationController {
       res.status(statusCode).json({
         success: false,
         error: errorMessage,
+        message: isInsufficientCredits ? 'Hey! You ran out of credits. Please upgrade to remove watermark and generate videos!' : undefined,
         details: process.env.NODE_ENV === 'development' ? error.message : undefined,
         processingTime: totalTime
       });

@@ -1,9 +1,11 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, FileVideo, Settings } from 'lucide-react';
+import { Upload, FileVideo, Settings, Folder } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { VideoSelectorModal } from '@/components/video-selector-modal';
+import { useState } from 'react';
 
 type UploadStage = 'idle' | 'configuring' | 'uploading' | 'processing' | 'completed' | 'error';
 
@@ -11,6 +13,7 @@ interface VideoUploadPanelProps {
   selectedFile: File | null;
   uploadStage: UploadStage;
   onFileSelect: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onVideoSelect?: (video: any) => void;
   onReset: () => void;
   onConfigure: () => void;
   availableLanguages: Array<{ code: string; name: string; priority: number }>;
@@ -22,13 +25,31 @@ export function VideoUploadPanel({
   selectedFile,
   uploadStage,
   onFileSelect,
+  onVideoSelect,
   onReset,
   onConfigure,
   availableLanguages,
   selectedLanguage,
   onLanguageChange
 }: VideoUploadPanelProps) {
+  const [showVideoSelector, setShowVideoSelector] = useState(false);
+
+  const handleVideoSelect = (video: any) => {
+    if (onVideoSelect) {
+      onVideoSelect(video);
+    }
+    setShowVideoSelector(false);
+  };
+
   return (
+    <>
+      <VideoSelectorModal
+        isOpen={showVideoSelector}
+        onClose={() => setShowVideoSelector(false)}
+        onSelect={handleVideoSelect}
+        acceptedFileTypes="video/*"
+        maxFileSize={500}
+      />
     <Card className="h-full border-2 border-dashed border-gray-600 hover:border-blue-400 transition-colors duration-300">
       <CardHeader>
         <CardTitle className="text-center text-lg">
@@ -77,27 +98,39 @@ export function VideoUploadPanel({
                   ))}
                 </select>
               </div>
-            
-              <input
-                type="file"
-                accept="video/*"
-                onChange={onFileSelect}
-                className="hidden"
-                id="video-upload"
-              />
-              
-              <label htmlFor="video-upload">
+
+              <div className="flex gap-2 justify-center">
                 <Button 
-                  asChild
                   size="lg"
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 cursor-pointer"
+                  onClick={() => setShowVideoSelector(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3"
                 >
-                  <span>
-                    <Upload className="w-4 h-4 mr-2" />
-                    Select File
-                  </span>
+                  <Folder className="w-4 h-4 mr-2" />
+                  My Clips
                 </Button>
-              </label>
+                
+                <input
+                  type="file"
+                  accept="video/*"
+                  onChange={onFileSelect}
+                  className="hidden"
+                  id="video-upload"
+                />
+                
+                <label htmlFor="video-upload">
+                  <Button 
+                    asChild
+                    size="lg"
+                    variant="outline"
+                    className="px-6 py-3 cursor-pointer"
+                  >
+                    <span>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Upload New
+                    </span>
+                  </Button>
+                </label>
+              </div>
               
               <p className="text-xs text-muted-foreground">
                 Maximum: 500MB
@@ -148,5 +181,6 @@ export function VideoUploadPanel({
         </AnimatePresence>
       </CardContent>
     </Card>
+    </>
   );
 }

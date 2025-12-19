@@ -95,6 +95,28 @@ export default function AutoSubtitlesPage() {
     }
   };
 
+  const handleVideoSelect = async (video: any) => {
+    try {
+      // Create a File-like object from the selected video
+      const response = await fetch(video.s3Url || video.videoUrl);
+      const blob = await response.blob();
+      const file = new File([blob], video.originalName || video.name, { type: 'video/mp4' });
+      
+      setSelectedFile(file);
+      setVideoData({
+        id: video.id,
+        name: video.originalName || video.name,
+        size: video.size,
+        filePath: video.s3Url || video.videoUrl
+      });
+      setVideoPreviewUrl(video.s3Url || video.videoUrl);
+      setError('');
+    } catch (err) {
+      console.error('Error loading video:', err);
+      setError('Failed to load video from My Clips');
+    }
+  };
+
   const proceedToConfiguration = () => {
     handleUpload();
   };
@@ -259,6 +281,7 @@ export default function AutoSubtitlesPage() {
               selectedFile={selectedFile}
               uploadStage={uploadStage}
               onFileSelect={handleFileSelect}
+              onVideoSelect={handleVideoSelect}
               onReset={resetUpload}
               onConfigure={proceedToConfiguration}
               availableLanguages={availableLanguages}
