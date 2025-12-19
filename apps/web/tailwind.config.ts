@@ -8,6 +8,19 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['var(--font-inter)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-jetbrains-mono)', 'ui-monospace', 'monospace'],
+        bangers: ['var(--font-bangers)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        anton: ['var(--font-anton)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        montserrat: ['var(--font-montserrat)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        rubik: ['var(--font-rubik)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        gabarito: ['var(--font-gabarito)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        poppins: ['var(--font-poppins)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        roboto: ['var(--font-roboto)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        'dm-serif': ['var(--font-dm-serif)', 'ui-serif', 'Georgia', 'serif'],
+        circular: ['var(--font-circular)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+      },
       colors: {
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',

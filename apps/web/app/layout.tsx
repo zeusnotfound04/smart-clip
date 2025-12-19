@@ -3,7 +3,19 @@ import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
-import { inter, jetbrainsMono, poppins } from "@/lib/fonts";
+import { 
+  inter, 
+  jetbrainsMono, 
+  poppins, 
+  montserrat, 
+  rubik, 
+  roboto, 
+  dmSerifDisplay,
+  gabarito,
+  circular,
+  bangers,
+  anton
+} from "@/lib/fonts";
 
 export const metadata: Metadata = {
   title: "Smart Clip",
@@ -18,7 +30,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${jetbrainsMono.variable} ${poppins.variable} antialiased font-sans bg-background text-foreground`}
+        className={`${inter.variable} ${jetbrainsMono.variable} ${poppins.variable} ${montserrat.variable} ${rubik.variable} ${roboto.variable} ${dmSerifDisplay.variable} ${gabarito.variable} ${circular.variable} ${bangers.variable} ${anton.variable} antialiased font-sans bg-background text-foreground`}
         suppressHydrationWarning
       >
         <ThemeProvider

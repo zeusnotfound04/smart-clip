@@ -8,7 +8,15 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+  --font-bangers: var(--font-bangers), ui-sans-serif, system-ui, sans-serif;
+  --font-anton: var(--font-anton), ui-sans-serif, system-ui, sans-serif;
   --font-poppins: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+  --font-montserrat: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
+  --font-rubik: var(--font-rubik), ui-sans-serif, system-ui, sans-serif;
+  --font-roboto: var(--font-roboto), ui-sans-serif, system-ui, sans-serif;
+  --font-dm-serif: var(--font-dm-serif), ui-serif, Georgia, serif;
+  --font-gabarito: var(--font-gabarito), ui-sans-serif, system-ui, sans-serif;
+  --font-circular: var(--font-circular), ui-sans-serif, system-ui, sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
