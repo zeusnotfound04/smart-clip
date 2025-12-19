@@ -15,30 +15,29 @@ export default function Navigation() {
       initial={{ y: -100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-      className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-background/60 border-b border-border/50"
+      className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200"
     >
-      <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-6 py-1.5 flex items-center justify-between">
         <Link href="/">
-          <motion.div
-            whileHover={{ scale: 1.02 }}
+          <motion.div 
+            className="cursor-pointer"
+            initial={{ scale: 1 }}
+            whileHover={{ scale: 1.1 }}
             transition={{ type: "spring", stiffness: 400 }}
-            className="flex items-center gap-3 cursor-pointer"
           >
-             <Image src="/logo.jpg" alt="SmartClip Logo" width={32} height={24} className="rounded object-contain" />
-            <span className="font-semibold text-lg text-foreground tracking-tight">SmartClip</span>
+            <img src="/logo.jpg" alt="SmartClip Logo" className="h-20 w-auto rounded-lg object-contain" />
           </motion.div>
         </Link>
 
-        <div className="hidden md:flex gap-10">
+        <div className="hidden md:flex gap-8">
           {navItems.map((item) => (
-            <motion.a
+            <a
               key={item}
               href={`#${item.toLowerCase().replace(/\s+/g, "-")}`}
-              whileHover={{ opacity: 1 }}
-              className="text-muted-foreground hover:text-foreground transition-colors duration-300 text-sm font-medium"
+              className="text-gray-600 hover:text-blue-600 transition-colors text-sm font-medium"
             >
               {item}
-            </motion.a>
+            </a>
           ))}
         </div>
 
@@ -47,14 +46,14 @@ export default function Navigation() {
             // Authenticated user buttons
             <>
               <Link href="/dashboard">
-                <Button variant="ghost" className="text-foreground hover:bg-muted/50">
+                <Button variant="ghost" className="text-gray-700 hover:text-gray-900 hover:bg-gray-100">
                   Dashboard
                 </Button>
               </Link>
               <Button 
                 variant="outline" 
                 onClick={signOut}
-                className="text-foreground hover:bg-muted/50"
+                className="text-gray-700 border-gray-300 hover:bg-gray-100"
               >
                 Sign Out
               </Button>
@@ -63,12 +62,12 @@ export default function Navigation() {
             // Guest user buttons
             <>
               <Link href="/auth/signin">
-                <Button variant="ghost" className="text-foreground hover:bg-muted/50">
+                <Button variant="ghost" className="text-gray-700 hover:text-gray-900 hover:bg-gray-100">
                   Sign In
                 </Button>
               </Link>
               <Link href="/auth/signup">
-                <Button className="bg-foreground text-background hover:bg-foreground/90 rounded-full px-6">
+                <Button className="bg-blue-600 text-white hover:bg-blue-700 rounded-lg px-6 font-semibold">
                   Get Started
                 </Button>
               </Link>
