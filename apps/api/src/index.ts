@@ -22,6 +22,7 @@ import creditsRoutes from './routes/credits.routes.js';
 import subscriptionRoutes from './routes/subscription.routes.js';
 import stripeRoutes from './routes/stripe.routes.js';
 import testRoutes from './routes/test.routes.js';
+import myClipsRoutes from './routes/my-clips.routes';
 import { 
   errorHandler, 
   notFoundHandler, 
@@ -107,6 +108,7 @@ app.use((req, res, next) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/videos', videoRoutes);
+app.use('/api/my-clips', myClipsRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/subtitles', subtitleRoutes);
 app.use('/api/split-streamer', splitStreamerRoutes);
