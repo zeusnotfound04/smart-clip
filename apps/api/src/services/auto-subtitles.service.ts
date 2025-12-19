@@ -82,6 +82,66 @@ if (!existsSync(tempDir)) {
   mkdirSync(tempDir, { recursive: true });
 }
 
+// Font file path mapping for FFmpeg
+const FONT_FILE_MAP: Record<string, { regular: string; bold?: string }> = {
+  'Bangers': {
+    regular: join(process.cwd(), '..', '..', 'apps', 'web', 'public', 'fonts', 'Bangers', 'Bangers-Regular.ttf')
+  },
+  'Anton': {
+    regular: join(process.cwd(), '..', '..', 'apps', 'web', 'public', 'fonts', 'Anton', 'Anton-Regular.ttf')
+  },
+  'Montserrat': {
+    regular: join(process.cwd(), '..', '..', 'apps', 'web', 'public', 'fonts', 'Montserrat', 'Montserrat-Regular.ttf'),
+    bold: join(process.cwd(), '..', '..', 'apps', 'web', 'public', 'fonts', 'Montserrat', 'Montserrat-Black.ttf')
+  },
+  'Rubik': {
+    regular: join(process.cwd(), '..', '..', 'apps', 'web', 'public', 'fonts', 'Rubik', 'Rubik-Regular.ttf'),
+    bold: join(process.cwd(), '..', '..', 'apps', 'web', 'public', 'fonts', 'Rubik', 'Rubik-Black.ttf')
+  },
+  'Gabarito': {
+    regular: join(process.cwd(), '..', '..', 'apps', 'web', 'public', 'fonts', 'Gabarito', 'Gabarito-Regular.ttf'),
+    bold: join(process.cwd(), '..', '..', 'apps', 'web', 'public', 'fonts', 'Gabarito', 'Gabarito-Black.ttf')
+  },
+  'Poppins': {
+    regular: join(process.cwd(), '..', '..', 'apps', 'web', 'public', 'fonts', 'Poppins', 'Poppins-Regular.ttf'),
+    bold: join(process.cwd(), '..', '..', 'apps', 'web', 'public', 'fonts', 'Poppins', 'Poppins-Black.ttf')
+  },
+  'Roboto': {
+    regular: join(process.cwd(), '..', '..', 'apps', 'web', 'public', 'fonts', 'Roboto', 'Roboto-Regular.ttf'),
+    bold: join(process.cwd(), '..', '..', 'apps', 'web', 'public', 'fonts', 'Roboto', 'Roboto-Black.ttf')
+  },
+  'DM Serif Display': {
+    regular: join(process.cwd(), '..', '..', 'apps', 'web', 'public', 'fonts', 'DM_Serif_Display', 'DMSerifDisplay-Regular.ttf')
+  },
+  'Fira Sans Condensed': {
+    regular: join(process.cwd(), '..', '..', 'apps', 'web', 'public', 'fonts', 'Fira_Sans_Condensed', 'FiraSansCondensed-Regular.ttf'),
+    bold: join(process.cwd(), '..', '..', 'apps', 'web', 'public', 'fonts', 'Fira_Sans_Condensed', 'FiraSansCondensed-Black.ttf')
+  },
+  'Arial': {
+    regular: 'Arial' // System font fallback
+  }
+};
+
+// Helper function to get font file path
+const getFontFilePath = (fontFamily: string, bold: boolean = false): string => {
+  const fontConfig = FONT_FILE_MAP[fontFamily] || FONT_FILE_MAP['Arial'];
+  const fontPath = bold && fontConfig.bold ? fontConfig.bold : fontConfig.regular;
+  
+  // For system fonts (like Arial), return the name
+  if (fontPath === fontFamily) {
+    return fontFamily;
+  }
+  
+  // Check if font file exists
+  if (existsSync(fontPath)) {
+    console.log(`✅ Font found: ${fontFamily} -> ${fontPath}`);
+    return fontPath;
+  }
+  
+  console.warn(`⚠️ Font not found: ${fontPath}, falling back to Arial`);
+  return 'Arial';
+};
+
 const validateFFmpeg = (): Promise<boolean> => {
   return new Promise((resolve) => {
     ffmpeg.getAvailableFormats((err) => {
@@ -761,7 +821,32 @@ const burnSubtitlesIntoVideo = async (
         throw new Error("No subtitle content generated - transcription may have failed");
       }
 
-      const assContent = convertSRTToASS(srtContent, options?.style);
+      // Get video dimensions for proper ASS scaling
+      let videoWidth = 1920;
+      let videoHeight = 1080;
+      
+      try {
+        await new Promise<void>((resolveProbe, rejectProbe) => {
+          ffmpeg.ffprobe(videoPath, (err, metadata) => {
+            if (err) {
+              console.warn('⚠️ Could not probe video dimensions, using defaults');
+              resolveProbe();
+              return;
+            }
+            const videoStream = metadata.streams?.find((s: any) => s.codec_type === 'video');
+            if (videoStream) {
+              videoWidth = videoStream.width || 1920;
+              videoHeight = videoStream.height || 1080;
+              console.log(`📐 Video dimensions: ${videoWidth}x${videoHeight}`);
+            }
+            resolveProbe();
+          });
+        });
+      } catch (probeError) {
+        console.warn('⚠️ Error probing video:', probeError);
+      }
+
+      const assContent = convertSRTToASS(srtContent, options?.style, videoWidth, videoHeight);
       const assPath = join(tempDir, `${videoId}.ass`);
       writeFileSync(assPath, assContent, "utf8");
 
@@ -781,12 +866,97 @@ const burnSubtitlesIntoVideo = async (
       
       const assPathForFFmpeg = `./${shortAssFilename}`;
 
+      // Build subtitles filter with font configuration
+      const fontFile = options?.style ? getFontFilePath(options.style.fontFamily, options.style.bold) : 'Arial';
+      
+      console.log(`\n🎬 [FFMPEG DEBUG] Path Information:`);
+      console.log(`   Current working directory: ${process.cwd()}`);
+      console.log(`   Short ASS filename: ${shortAssFilename}`);
+      console.log(`   Short ASS full path: ${shortAssPath}`);
+      console.log(`   ASS file exists: ${existsSync(shortAssPath)}`);
+      console.log(`   Font file: ${fontFile}`);
+      
+      // SOLUTION: Install font to Windows system or user fonts directory
+      const fontsTempDir = join(process.cwd(), 'fonts');
+      if (!existsSync(fontsTempDir)) {
+        mkdirSync(fontsTempDir, { recursive: true });
+      }
+      
+      // Install the required font to Windows
+      if (fontFile !== 'Arial' && fontFile !== options?.style?.fontFamily && existsSync(fontFile)) {
+        try {
+          const fontFileName = fontFile.split(/[\\\/]/).pop() || 'font.ttf';
+          
+          // Try to install to Windows user fonts directory (no admin required)
+          const userFontsDir = join(process.env.LOCALAPPDATA || '', 'Microsoft', 'Windows', 'Fonts');
+          const systemFontsDir = 'C:\\Windows\\Fonts';
+          
+          // First, try user fonts directory
+          if (existsSync(userFontsDir)) {
+            const userFontPath = join(userFontsDir, fontFileName);
+            if (!existsSync(userFontPath)) {
+              try {
+                const fontBuffer = readFileSync(fontFile);
+                writeFileSync(userFontPath, fontBuffer);
+                
+                // Register font in Windows registry (user scope)
+                const { execSync } = await import('child_process');
+                const fontNameBase = fontFileName.replace(/\.[^.]+$/, '');
+                try {
+                  execSync(`reg add "HKCU\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts" /v "${fontNameBase} (TrueType)" /t REG_SZ /d "${userFontPath}" /f`, { 
+                    stdio: 'pipe',
+                    windowsHide: true 
+                  });
+                  console.log(`   ✅ Installed font to Windows (user): ${fontFileName}`);
+                } catch (regError) {
+                  console.log(`   ⚠️ Font copied but registry update failed (font may still work)`);
+                }
+              } catch (userInstallError) {
+                console.error(`   ⚠️ Failed to install to user fonts:`, userInstallError);
+              }
+            } else {
+              console.log(`   ✅ Font already installed in Windows: ${fontFileName}`);
+            }
+          }
+          
+          // Copy to local directory as fallback
+          const tempFontPath = join(fontsTempDir, fontFileName);
+          if (!existsSync(tempFontPath)) {
+            const fontBuffer = readFileSync(fontFile);
+            writeFileSync(tempFontPath, fontBuffer);
+            console.log(`   ✅ Copied font to: ${tempFontPath}`);
+          }
+          
+          const assDirFontPath = join(process.cwd(), fontFileName);
+          if (!existsSync(assDirFontPath)) {
+            writeFileSync(assDirFontPath, readFileSync(fontFile));
+            console.log(`   ✅ Copied font to ASS directory: ${assDirFontPath}`);
+          }
+        } catch (fontInstallError) {
+          console.error(`   ⚠️ Failed to install font:`, fontInstallError);
+        }
+      }
+      
+      // Try using relative path from current working directory
+      const relativeAssPath = shortAssFilename;
+      
+      console.log(`   Relative ASS path for FFmpeg: ${relativeAssPath}`);
+      console.log(`   Fonts directory: ${fontsTempDir}`);
+      console.log(`\n🎬 [FFMPEG] Using ASS filter\n`);
+      
+      // Read ASS content to verify it's valid
+      const assContentCheck = readFileSync(shortAssPath, 'utf8');
+      console.log(`   ASS file size: ${assContentCheck.length} bytes`);
+      console.log(`   ASS first 200 chars: ${assContentCheck.substring(0, 200)}`);
+      console.log(`\n🎬 [FFMPEG] Starting video processing...`);
+      console.log(`   Input: ${videoPath}`);
+      console.log(`   Output: ${outputPath}\n`);
+      
       const command = ffmpeg(videoPath)
         .videoCodec("libx264")
         .audioCodec("copy")
         .outputOptions([
-          "-vf",
-          `ass=${assPathForFFmpeg}`,
+          "-vf", `ass=${relativeAssPath}`,
           "-preset",
           "ultrafast",
           "-pix_fmt",
@@ -797,6 +967,17 @@ const burnSubtitlesIntoVideo = async (
         .format("mp4");
 
       command
+        .on("start", (commandLine) => {
+          console.log(`🎬 [FFMPEG] Command: ${commandLine}`);
+        })
+        .on("progress", (progress) => {
+          if (progress.percent) {
+            console.log(`🎬 [FFMPEG] Progress: ${Math.round(progress.percent)}%`);
+          }
+        })
+        .on("stderr", (stderrLine) => {
+          console.log(`🎬 [FFMPEG] ${stderrLine}`);
+        })
         .on("end", async () => {
           try {
             if (!existsSync(outputPath)) {
@@ -878,6 +1059,30 @@ const burnSubtitlesIntoVideo = async (
           }
         })
         .on("error", (err, stdout, stderr) => {
+          console.error('\n❌ [FFMPEG ERROR] Video processing failed');
+          console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          console.error('📋 Error Message:', err.message);
+          console.error('📋 Error Code:', (err as any).code);
+          console.error('\n📝 STDOUT:');
+          console.error(stdout || '(empty)');
+          console.error('\n📝 STDERR:');
+          console.error(stderr || '(empty)');
+          console.error('\n🎯 Configuration:');
+          console.error('   - Video Path:', videoPath);
+          console.error('   - Output Path:', outputPath);
+          console.error('   - ASS Path (relative):', relativeAssPath);
+          console.error('   - ASS Path (full):', shortAssPath);
+          console.error('   - Font Family:', options?.style?.fontFamily);
+          console.error('   - Font File:', fontFile);
+          console.error('\n📂 File Checks:');
+          console.error('   - ASS file exists:', existsSync(shortAssPath));
+          console.error('   - Video file exists:', existsSync(videoPath));
+          console.error('   - Fonts dir exists:', existsSync(fontsTempDir));
+          if (fontFile !== 'Arial' && fontFile !== options?.style?.fontFamily) {
+            console.error('   - Font file exists:', existsSync(fontFile));
+          }
+          console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+          
           try {
             if (existsSync(srtPath)) unlinkSync(srtPath);
             if (existsSync(assPath)) unlinkSync(assPath);
@@ -885,7 +1090,7 @@ const burnSubtitlesIntoVideo = async (
             if (existsSync(outputPath)) unlinkSync(outputPath);
           } catch {}
 
-          reject(new Error(`FFmpeg failed: ${err.message}`));
+          reject(new Error(`FFmpeg failed: ${err.message}. Check server logs for details.`));
         })
         .save(outputPath);
     } catch (setupError: any) {
@@ -935,7 +1140,7 @@ const formatASSTime = (seconds: number): string => {
   return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${centiseconds.toString().padStart(2, '0')}`;
 };
 
-export const convertSRTToASS = (srtContent: string, style?: SubtitleStyle): string => {
+export const convertSRTToASS = (srtContent: string, style?: SubtitleStyle, videoWidth: number = 1920, videoHeight: number = 1080): string => {
   const lines = srtContent.trim().split('\n');
   
   const defaultStyle = {
@@ -970,8 +1175,11 @@ export const convertSRTToASS = (srtContent: string, style?: SubtitleStyle): stri
     return `&H${alpha}FFFFFF`; // Default to white
   };
 
+  const fontFilePath = style ? getFontFilePath(style.fontFamily, style.bold) : 'Arial';
+  
   const finalStyle = style ? {
     fontFamily: style.fontFamily,
+    fontFile: fontFilePath,
     fontSize: style.fontSize,
     primaryColor: style.primaryColor.startsWith('&H') ? style.primaryColor : hexToAssBgr(style.primaryColor),
     outlineColor: style.outlineColor.startsWith('&H') ? style.outlineColor : hexToAssBgr(style.outlineColor),
@@ -981,9 +1189,14 @@ export const convertSRTToASS = (srtContent: string, style?: SubtitleStyle): stri
     italic: style.italic ? 1 : 0,
     alignment: getAlignment(style.alignment),
     shadow: style.showShadow ? 3 : 0 // Shadow depth
-  } : {...defaultStyle, alignment: 2, shadow: 0};
+  } : {...defaultStyle, fontFile: 'Arial', alignment: 2, shadow: 0};
   
-  let assContent = `[Script Info]\nTitle: SmartClip Subtitles\nScriptType: v4.00+\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Default,${finalStyle.fontFamily},${finalStyle.fontSize},${finalStyle.primaryColor},&H000000FF,${finalStyle.outlineColor},${finalStyle.backgroundColor},${finalStyle.bold},${finalStyle.italic},0,0,100,100,0,0,1,2,${finalStyle.shadow},${finalStyle.alignment},10,10,10,1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`;
+  console.log(`📝 [ASS] Using font: ${finalStyle.fontFamily} (${finalStyle.fontSize}px, bold: ${!!finalStyle.bold})`);
+  console.log(`📝 [ASS] Font file path: ${finalStyle.fontFile}`);
+  console.log(`📐 [ASS] Video resolution: ${videoWidth}x${videoHeight}`);
+  
+  // Build ASS header with actual video dimensions for proper font scaling
+  let assContent = `[Script Info]\nTitle: SmartClip Subtitles\nScriptType: v4.00+\nPlayResX: ${videoWidth}\nPlayResY: ${videoHeight}\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Default,${finalStyle.fontFamily},${finalStyle.fontSize},${finalStyle.primaryColor},&H000000FF,${finalStyle.outlineColor},${finalStyle.backgroundColor},${finalStyle.bold},${finalStyle.italic},0,0,100,100,0,0,1,3,${finalStyle.shadow},${finalStyle.alignment},10,10,30,1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`;
   
   let i = 0;
   while (i < lines.length) {

@@ -36,52 +36,110 @@ interface SubtitleConfigurationPanelProps {
 }
 
 const FONT_FAMILIES = [
-  { value: 'Inter', label: 'Inter (Modern Sans-serif)' },
-  { value: 'Poppins', label: 'Poppins (Trendy Geometric)' },
-  { value: 'Montserrat', label: 'Montserrat (Clean & Bold)' },
-  { value: 'Roboto', label: 'Roboto (Google\'s Classic)' },
-  { value: 'Open Sans', label: 'Open Sans (Friendly)' },
-  { value: 'Lato', label: 'Lato (Professional)' },
-  { value: 'Source Sans Pro', label: 'Source Sans Pro (Adobe)' },
-  { value: 'Nunito', label: 'Nunito (Rounded & Soft)' },
-  { value: 'Raleway', label: 'Raleway (Elegant Thin)' },
-  { value: 'Oswald', label: 'Oswald (Condensed Bold)' },
-  { value: 'Playfair Display', label: 'Playfair Display (Luxury Serif)' },
-  { value: 'Merriweather', label: 'Merriweather (Readable Serif)' },
-  { value: 'Bebas Neue', label: 'Bebas Neue (Impact Style)' },
-  { value: 'Quicksand', label: 'Quicksand (Modern Rounded)' },
-  { value: 'Dancing Script', label: 'Dancing Script (Handwritten)' },
-  { value: 'Pacifico', label: 'Pacifico (Fun Script)' },
-  { value: 'Fira Code', label: 'Fira Code (Code Style)' },
-  { value: 'JetBrains Mono', label: 'JetBrains Mono (Developer)' },
-  { value: 'Arial', label: 'Arial (Classic)' },
-  { value: 'Helvetica', label: 'Helvetica (Swiss)' },
-  { value: 'Times New Roman', label: 'Times New Roman (Traditional)' },
-  { value: 'Georgia', label: 'Georgia (Web Serif)' }
+  { value: 'Bangers', label: 'Bangers - VIRAL CHAMPION' },
+  { value: 'Anton', label: 'Anton - BOLD IMPACT' },
+  { value: 'Montserrat', label: 'Montserrat - Best Overall' },
+  { value: 'Rubik', label: 'Rubik - Punchy Messages' },
+  { value: 'Gabarito', label: 'Gabarito - Fitness & TikTok' },
+  { value: 'Poppins', label: 'Poppins - Educational Videos' },
+  { value: 'DM Serif Display', label: 'DM Serif - Storytelling' },
+  { value: 'Fira Sans Condensed', label: 'Fira Sans - Strong Visuals' },
+  { value: 'Roboto', label: 'Roboto - Health Videos' },
+  { value: 'Arial', label: 'Arial - Professional' }
 ];
 
 const STYLE_THEMES = [
   {
-    name: 'Modern White',
+    name: 'Subtitle',
+    style: {
+      primaryColor: '#00FF00',
+      outlineColor: '#000000',
+      shadowColor: '#000000',
+      fontFamily: 'Bangers',
+      fontSize: 34,
+      bold: true,
+      italic: false,
+      alignment: 'center' as const,
+      showShadow: true
+    }
+  },
+  {
+    name: 'Subtitle',
+    style: {
+      primaryColor: '#FF0000',
+      outlineColor: '#000000',
+      shadowColor: '#000000',
+      fontFamily: 'Bangers',
+      fontSize: 34,
+      bold: true,
+      italic: false,
+      alignment: 'center' as const,
+      showShadow: true
+    }
+  },
+  {
+    name: 'Subtitle',
     style: {
       primaryColor: '#FFFFFF',
       outlineColor: '#000000',
       shadowColor: '#000000',
-      fontFamily: 'Inter',
-      fontSize: 22,
-      bold: false,
+      fontFamily: 'Bangers',
+      fontSize: 34,
+      bold: true,
       italic: false,
       alignment: 'center' as const,
-      showBackground: true
+      showShadow: true
     }
   },
   {
-    name: 'Bold Impact',
+    name: 'Subtitle',
     style: {
-      primaryColor: '#FFFF00',
+      primaryColor: '#FFFFFF',
       outlineColor: '#000000',
+      shadowColor: '#1a1a1a',
+      fontFamily: 'Montserrat',
+      fontSize: 28,
+      bold: true,
+      italic: false,
+      alignment: 'center' as const,
+      showShadow: true
+    }
+  },
+  {
+    name: 'Subtitle',
+    style: {
+      primaryColor: '#FFE600',
+      outlineColor: '#000000',
+      shadowColor: '#333333',
+      fontFamily: 'Rubik',
+      fontSize: 30,
+      bold: true,
+      italic: false,
+      alignment: 'center' as const,
+      showShadow: true
+    }
+  },
+  {
+    name: 'Subtitle',
+    style: {
+      primaryColor: '#FF4444',
+      outlineColor: '#FFFFFF',
       shadowColor: '#000000',
-      fontFamily: 'Bebas Neue',
+      fontFamily: 'Gabarito',
+      fontSize: 32,
+      bold: true,
+      italic: false,
+      alignment: 'center' as const,
+      showShadow: true
+    }
+  },
+  {
+    name: 'Subtitle',
+    style: {
+      primaryColor: '#4A90E2',
+      outlineColor: '#FFFFFF',
+      shadowColor: '#1a1a1a',
+      fontFamily: 'Poppins',
       fontSize: 26,
       bold: true,
       italic: false,
@@ -89,13 +147,30 @@ const STYLE_THEMES = [
       showShadow: true
     }
   },
+
   {
-    name: 'Netflix Style',
+    name: 'Subtitle',
+    
     style: {
-      primaryColor: '#E50914',
+      primaryColor: '#FFFFFF',
+      outlineColor: '#1a1a1a',
+      shadowColor: '#000000',
+      fontFamily: 'Fira Sans Condensed',
+      fontSize: 27,
+      bold: true,
+      italic: false,
+      alignment: 'center' as const,
+      showShadow: true
+    }
+  },
+
+  {
+    name: 'Subtitle',
+    style: {
+      primaryColor: '#2C3E50',
       outlineColor: '#FFFFFF',
       shadowColor: '#000000',
-      fontFamily: 'Montserrat',
+      fontFamily: 'Arial',
       fontSize: 24,
       bold: true,
       italic: false,
@@ -103,43 +178,73 @@ const STYLE_THEMES = [
       showShadow: true
     }
   },
+ 
   {
-    name: 'Luxury Serif',
+    name: 'Subtitle',
     style: {
-      primaryColor: '#FFD700',
-      outlineColor: '#000000',
+      primaryColor: '#FF0000',
+      outlineColor: '#FFFFFF',
       shadowColor: '#000000',
-      fontFamily: 'Playfair Display',
-      fontSize: 20,
-      bold: false,
-      italic: true,
-      alignment: 'center' as const,
-      showShadow: true
-    }
-  },
-  {
-    name: 'Tech Mono',
-    style: {
-      primaryColor: '#00FF41',
-      outlineColor: '#000000',
-      shadowColor: '#000000',
-      fontFamily: 'JetBrains Mono',
-      fontSize: 18,
-      bold: false,
+      fontFamily: 'Montserrat',
+      fontSize: 32,
+      bold: true,
       italic: false,
       alignment: 'center' as const,
       showShadow: true
     }
   },
   {
-    name: 'Friendly Pop',
+    name: 'Subtitle',
     style: {
-      primaryColor: '#FF6B9D',
-      outlineColor: '#FFFFFF',
+      primaryColor: '#00FF00',
+      outlineColor: '#000000',
+      shadowColor: '#1a5c1a',
+      fontFamily: 'Poppins',
+      fontSize: 28,
+      bold: true,
+      italic: false,
+      alignment: 'center' as const,
+      showShadow: true
+    }
+  },
+  {
+    name: 'Subtitle',
+    style: {
+      primaryColor: '#E0E0E0',
+      outlineColor: '#2C2C2C',
       shadowColor: '#000000',
-      fontFamily: 'Quicksand',
-      fontSize: 22,
-      bold: false,
+      fontFamily: 'Roboto',
+      fontSize: 26,
+      bold: true,
+      italic: false,
+      alignment: 'center' as const,
+      showShadow: true
+    }
+  },
+  // Anton Font Viral Presets
+  {
+    name: 'Subtitle',
+    style: {
+      primaryColor: '#FF0000',
+      outlineColor: '#000000',
+      shadowColor: '#660000',
+      fontFamily: 'Anton',
+      fontSize: 36,
+      bold: true,
+      italic: false,
+      alignment: 'center' as const,
+      showShadow: true
+    }
+  },
+  {
+    name: 'Subtitle',
+    style: {
+      primaryColor: '#FFFFFF',
+      outlineColor: '#000000',
+      shadowColor: '#333333',
+      fontFamily: 'Anton',
+      fontSize: 36,
+      bold: true,
       italic: false,
       alignment: 'center' as const,
       showShadow: true
@@ -348,27 +453,38 @@ export function SubtitleConfigurationPanel({
           </div>
         </div>
 
+        
+
         {/* Color Options */}
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <Palette className="w-4 h-4 text-purple-400" />
-            <h4 className="font-medium">Colors & Themes</h4>
+            <h4 className="font-semibold">Viral Subtitle Presets</h4>
           </div>
           
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {STYLE_THEMES.map((theme, index) => (
               <Button
                 key={index}
                 variant="outline"
                 size="sm"
                 onClick={() => onApplyTheme(theme)}
-                className="h-12 p-2 flex flex-col items-center gap-1"
+                className="h-auto p-2 flex flex-col items-center gap-1 hover:bg-black/80 hover:scale-105 transition-all bg-black"
               >
-                <div 
-                  className="w-4 h-4 rounded border border-gray-600" 
-                  style={{ backgroundColor: theme.style.primaryColor }} 
-                />
-                <span className="text-xs leading-none">{theme.name}</span>
+                <span 
+                  className="text-[20px] leading-tight"
+                  style={{
+                    fontFamily: theme.style.fontFamily,
+                    color: theme.style.primaryColor,
+                    fontWeight: theme.style.bold ? 'bold' : 'normal',
+                    fontStyle: theme.style.italic ? 'italic' : 'normal',
+                    textShadow: theme.style.showShadow 
+                      ? `-1px -1px 0 ${theme.style.outlineColor}, 1px -1px 0 ${theme.style.outlineColor}, -1px 1px 0 ${theme.style.outlineColor}, 1px 1px 0 ${theme.style.outlineColor}, 0 0 4px ${theme.style.shadowColor}`
+                      : `-1px -1px 0 ${theme.style.outlineColor}, 1px -1px 0 ${theme.style.outlineColor}, -1px 1px 0 ${theme.style.outlineColor}, 1px 1px 0 ${theme.style.outlineColor}`,
+                  }}
+                >
+                  {theme.name}
+                </span>
               </Button>
             ))}
           </div>
@@ -434,29 +550,37 @@ export function SubtitleConfigurationPanel({
 
       {/* Fixed Preview and Action Buttons */}
       <div className="shrink-0 border-t bg-background">
-        {/* Quick Preview */}
+
         <div className="p-4 pb-2 space-y-2">
-          <Label className="text-xs font-medium">Preview</Label>
+          {/* <Label className="text-xs font-medium">Live Preview</Label>
           <div 
-            className="bg-gray-900/30 p-3 rounded-lg" 
+            className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-6 rounded-lg relative overflow-hidden" 
             style={{ textAlign: subtitleOptions.style.alignment }}
           >
+            <div className="absolute inset-0 opacity-10" style={{
+              backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px)',
+              backgroundSize: '20px 20px'
+            }} />
+            
             <span 
               style={{
                 fontFamily: subtitleOptions.style.fontFamily,
-                fontSize: `${Math.max(12, subtitleOptions.style.fontSize * 0.6)}px`,
+                fontSize: `${Math.max(14, subtitleOptions.style.fontSize * 0.7)}px`,
                 color: subtitleOptions.style.primaryColor,
                 fontWeight: subtitleOptions.style.bold ? 'bold' : 'normal',
                 fontStyle: subtitleOptions.style.italic ? 'italic' : 'normal',
                 textShadow: subtitleOptions.style.showShadow 
-                  ? `2px 2px 4px ${subtitleOptions.style.shadowColor}, 1px 1px 2px ${subtitleOptions.style.outlineColor}`
-                  : `1px 1px 2px ${subtitleOptions.style.outlineColor}`,
-                display: 'inline-block'
+                  ? `-2px -2px 0 ${subtitleOptions.style.outlineColor}, 2px -2px 0 ${subtitleOptions.style.outlineColor}, -2px 2px 0 ${subtitleOptions.style.outlineColor}, 2px 2px 0 ${subtitleOptions.style.outlineColor}, 0 0 8px ${subtitleOptions.style.shadowColor}, 0 0 16px ${subtitleOptions.style.shadowColor}`
+                  : `-2px -2px 0 ${subtitleOptions.style.outlineColor}, 2px -2px 0 ${subtitleOptions.style.outlineColor}, -2px 2px 0 ${subtitleOptions.style.outlineColor}, 2px 2px 0 ${subtitleOptions.style.outlineColor}`,
+                display: 'inline-block',
+                letterSpacing: '0.5px',
+                position: 'relative',
+                zIndex: 1
               }}
             >
-              Sample Text
+              THIS IS A VIRAL CAPTION! 🔥
             </span>
-          </div>
+          </div> */}
         </div>
         
         {/* Action Buttons */}
