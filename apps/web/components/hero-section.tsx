@@ -1,16 +1,29 @@
 "use client"
 
-import { motion } from "framer-motion"
+import { motion, useMotionValue, useTransform, animate } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { CheckCircle2 } from "lucide-react"
 import Link from "next/link"
 import VideoCreationVisualizer from "@/components/video-creation-visualizer"
+import { useEffect } from "react"
 
 interface HeroSectionProps {
   scrollY: number
 }
 
 export default function HeroSection({ scrollY }: HeroSectionProps) {
+  const count = useMotionValue(0)
+  const rounded = useTransform(count, (latest) => Math.round(latest))
+
+  useEffect(() => {
+    const controls = animate(count, 10000, {
+      duration: 2,
+      ease: "easeOut"
+    })
+
+    return controls.stop
+  }, [count])
+
   return (
     <section className="relative min-h-screen flex items-center justify-center pt-24 pb-12 px-6 overflow-hidden">
       {/* Subtle animated background */}
@@ -34,7 +47,7 @@ export default function HeroSection({ scrollY }: HeroSectionProps) {
         >
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-50 text-gray-600 text-sm font-medium">
             <CheckCircle2 className="w-4 h-4 text-blue-600" />
-            Trusted by 10,000+ clippers
+            Trusted by <motion.span>{rounded}</motion.span>+ clippers
           </div>
         </motion.div>
 
@@ -65,7 +78,7 @@ export default function HeroSection({ scrollY }: HeroSectionProps) {
         >
           <Link href="/auth/signup">
             <Button className="bg-blue-600 text-white hover:bg-blue-700 text-lg px-10 py-6 rounded-lg font-semibold shadow-sm">
-              Start Clipping Automatically
+              Start making viral content
             </Button>
           </Link>
         </motion.div>
@@ -110,7 +123,7 @@ export default function HeroSection({ scrollY }: HeroSectionProps) {
           className="mt-24 text-center"
         >
           <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-8">
-            Why clippers trust SmartClip
+            Why clippers trust SmartClips
           </h3>
           <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
             <div>
