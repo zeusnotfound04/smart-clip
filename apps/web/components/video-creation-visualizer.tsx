@@ -7,7 +7,7 @@ const features = [
   {
     id: "subtitles",
     label: "Auto Subtitles",
-    description: "AI-powered captions in 90+ languages",
+    description: "Viral captions in 90+ languages",
   },
   {
     id: "split",
@@ -17,12 +17,12 @@ const features = [
   {
     id: "clip",
     label: "Smart Clipper",
-    description: "Find viral moments automatically",
+    description: "AI finds viral moments",
   },
   {
     id: "script",
     label: "Script AI",
-    description: "Generate engaging video scripts",
+    description: "Generate engaging scripts",
   },
 ]
 
@@ -58,22 +58,22 @@ export default function VideoCreationVisualizer() {
           <div className="relative">
             {/* Glow effect */}
             <motion.div
-              className="absolute -inset-8 rounded-[3rem] bg-accent/10 blur-3xl"
+              className="absolute -inset-8 rounded-[3rem] bg-blue-500/10 blur-3xl"
               animate={{ opacity: [0.3, 0.5, 0.3] }}
               transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY }}
             />
 
             {/* Phone frame */}
             <motion.div
-              className="relative w-[260px] md:w-[300px] aspect-[9/16] bg-background rounded-[2.5rem] border border-foreground/20 overflow-hidden shadow-2xl shadow-black/50"
+              className="relative w-[260px] md:w-[300px] aspect-[9/16] bg-gray-900 rounded-[2.5rem] border border-gray-700 overflow-hidden shadow-2xl shadow-blue-600/20"
               animate={{ y: [0, -8, 0] }}
               transition={{ duration: 4, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
             >
               {/* Notch */}
-              <div className="absolute top-2 left-1/2 -translate-x-1/2 w-20 h-5 bg-background rounded-full z-20 border-b border-foreground/10" />
+              <div className="absolute top-2 left-1/2 -translate-x-1/2 w-20 h-5 bg-gray-900 rounded-full z-20 border-b border-gray-700" />
 
               {/* Screen content */}
-              <div className="absolute inset-2 rounded-[2rem] overflow-hidden bg-gradient-to-b from-muted/30 to-background">
+              <div className="absolute inset-2 rounded-[2rem] overflow-hidden bg-gradient-to-b from-gray-50 to-white">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={activeFeature}
@@ -93,8 +93,8 @@ export default function VideoCreationVisualizer() {
 
               {/* Screen reflection */}
               <motion.div
-                className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none"
-                animate={{ opacity: [0.5, 0.8, 0.5] }}
+                className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent pointer-events-none"
+                animate={{ opacity: [0.3, 0.6, 0.3] }}
                 transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY }}
               />
             </motion.div>
@@ -103,7 +103,7 @@ export default function VideoCreationVisualizer() {
             {[...Array(6)].map((_, i) => (
               <motion.div
                 key={i}
-                className="absolute w-1 h-1 rounded-full bg-accent/50"
+                className="absolute w-1 h-1 rounded-full bg-blue-500/40"
                 style={{
                   left: `${20 + Math.random() * 60}%`,
                   top: `${10 + Math.random() * 80}%`,
@@ -143,8 +143,8 @@ export default function VideoCreationVisualizer() {
               onClick={() => setActiveFeature(index)}
               className={`px-4 py-2 rounded-full text-xs font-medium transition-all duration-300 ${
                 index === activeFeature
-                  ? "bg-foreground text-background"
-                  : "bg-foreground/5 text-muted-foreground border border-border"
+                  ? "bg-blue-600 text-white"
+                  : "bg-white text-gray-600 border border-gray-200"
               }`}
               whileTap={{ scale: 0.95 }}
             >
@@ -159,13 +159,13 @@ export default function VideoCreationVisualizer() {
             <motion.button
               key={index}
               onClick={() => setActiveFeature(index)}
-              className="relative h-1 rounded-full bg-foreground/10 overflow-hidden cursor-pointer"
+              className="relative h-1 rounded-full bg-gray-200 overflow-hidden cursor-pointer"
               animate={{ width: index === activeFeature ? 48 : 12 }}
               transition={{ duration: 0.4 }}
             >
               {index === activeFeature && (
                 <motion.div
-                  className="absolute inset-0 bg-foreground rounded-full"
+                  className="absolute inset-0 bg-blue-600 rounded-full"
                   initial={{ scaleX: 0 }}
                   animate={{ scaleX: 1 }}
                   transition={{ duration: 4, ease: "linear" }}
@@ -197,8 +197,8 @@ function FeaturePill({
       initial={{ opacity: 0, x: align === "left" ? 20 : -20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.6 }}
-      className={`group relative px-5 py-3 rounded-2xl border backdrop-blur-sm transition-all duration-500 text-${align} ${
-        isActive ? "bg-foreground/10 border-foreground/30" : "bg-card/30 border-border hover:border-foreground/20"
+      className={`group relative px-5 py-3 rounded-2xl border transition-all duration-500 text-${align} ${
+        isActive ? "bg-blue-50 border-blue-600" : "bg-white border-gray-200 hover:border-blue-400"
       }`}
     >
       {/* Connection line */}
@@ -206,8 +206,8 @@ function FeaturePill({
         className={`absolute top-1/2 ${align === "left" ? "-left-8" : "-right-8"} w-8 h-[1px]`}
         animate={{
           background: isActive
-            ? "linear-gradient(90deg, rgba(255,255,255,0.3), rgba(255,255,255,0))"
-            : "linear-gradient(90deg, rgba(255,255,255,0.1), rgba(255,255,255,0))",
+            ? "linear-gradient(90deg, rgba(37, 99, 235, 0.4), rgba(37, 99, 235, 0))"
+            : "linear-gradient(90deg, rgba(156, 163, 175, 0.2), rgba(156, 163, 175, 0))",
         }}
         style={{ transform: align === "right" ? "scaleX(-1)" : "none" }}
       />
@@ -215,7 +215,7 @@ function FeaturePill({
       <div className={`flex flex-col ${align === "left" ? "items-start" : "items-end"}`}>
         <span
           className={`text-sm font-medium transition-colors duration-300 ${
-            isActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"
+            isActive ? "text-blue-600" : "text-gray-600 group-hover:text-gray-900"
           }`}
         >
           {feature.label}
@@ -223,7 +223,7 @@ function FeaturePill({
         <motion.span
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: isActive ? 1 : 0, height: isActive ? "auto" : 0 }}
-          className="text-xs text-muted-foreground mt-1 overflow-hidden"
+          className="text-xs text-gray-500 mt-1 overflow-hidden"
         >
           {feature.description}
         </motion.span>
@@ -243,11 +243,11 @@ function SubtitlesPreview() {
   return (
     <div className="flex flex-col h-full">
       {/* Video placeholder with person */}
-      <div className="flex-1 relative bg-gradient-to-b from-muted/50 to-muted/20">
+      <div className="flex-1 relative bg-gradient-to-b from-gray-100 to-gray-50">
         {/* Simulated video content */}
         <div className="absolute inset-0 flex items-center justify-center">
           <motion.div
-            className="w-20 h-20 rounded-full bg-foreground/10 border border-foreground/20"
+            className="w-20 h-20 rounded-full bg-blue-100 border-2 border-blue-200"
             animate={{ scale: [1, 1.05, 1] }}
             transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
           />
@@ -258,7 +258,7 @@ function SubtitlesPreview() {
           {[...Array(12)].map((_, i) => (
             <motion.div
               key={i}
-              className="w-1 bg-accent/60 rounded-full"
+              className="w-1 bg-blue-500/70 rounded-full"
               animate={{
                 height: [8, 20 + Math.random() * 20, 8],
               }}
@@ -283,7 +283,7 @@ function SubtitlesPreview() {
             className="relative"
           >
             <motion.div
-              className="bg-foreground text-background px-3 py-2 rounded-lg text-sm font-semibold text-center mx-auto w-fit"
+              className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-semibold text-center mx-auto w-fit shadow-sm"
               initial={{ width: 0 }}
               animate={{ width: "auto" }}
               transition={{ delay: caption.delay, duration: 0.3 }}
@@ -300,7 +300,7 @@ function SubtitlesPreview() {
           transition={{ delay: 2.5 }}
           className="flex items-center justify-center gap-2 mt-3"
         >
-          <span className="text-[10px] text-muted-foreground">90+ Languages</span>
+          <span className="text-[10px] text-gray-500">90+ Languages</span>
           <div className="flex -space-x-1">
             {["EN", "ES", "FR"].map((lang, i) => (
               <motion.div
@@ -308,7 +308,7 @@ function SubtitlesPreview() {
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ delay: 2.7 + i * 0.1 }}
-                className="w-5 h-5 rounded-full bg-foreground/10 border border-foreground/20 flex items-center justify-center text-[8px] text-foreground/60"
+                className="w-5 h-5 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center text-[8px] text-blue-600 font-medium"
               >
                 {lang}
               </motion.div>
@@ -337,7 +337,7 @@ function SplitScreenPreview() {
           <motion.div
             key={l}
             className={`px-2 py-1 rounded text-[10px] font-medium transition-all ${
-              layout === i ? "bg-foreground text-background" : "bg-foreground/10 text-muted-foreground"
+              layout === i ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600"
             }`}
           >
             {l}
@@ -346,7 +346,7 @@ function SplitScreenPreview() {
       </div>
 
       {/* Split screen preview */}
-      <div className="flex-1 rounded-xl overflow-hidden border border-foreground/10">
+      <div className="flex-1 rounded-xl overflow-hidden border border-gray-200">
         <AnimatePresence mode="wait">
           {layout === 0 && (
             <motion.div
@@ -356,11 +356,11 @@ function SplitScreenPreview() {
               exit={{ opacity: 0 }}
               className="h-full flex flex-col"
             >
-              <div className="flex-1 bg-muted/40 flex items-center justify-center border-b border-foreground/10">
-                <div className="w-12 h-12 rounded-full bg-foreground/20 border border-foreground/30" />
+              <div className="flex-1 bg-gray-100 flex items-center justify-center border-b border-gray-200">
+                <div className="w-12 h-12 rounded-full bg-blue-100 border-2 border-blue-200" />
               </div>
-              <div className="flex-1 bg-muted/20 flex items-center justify-center">
-                <div className="w-12 h-12 rounded-full bg-foreground/15 border border-foreground/20" />
+              <div className="flex-1 bg-gray-50 flex items-center justify-center">
+                <div className="w-12 h-12 rounded-full bg-blue-50 border-2 border-blue-100" />
               </div>
             </motion.div>
           )}
@@ -372,11 +372,11 @@ function SplitScreenPreview() {
               exit={{ opacity: 0 }}
               className="h-full flex flex-col"
             >
-              <div className="h-2/3 bg-muted/40 flex items-center justify-center border-b border-foreground/10">
-                <div className="w-14 h-14 rounded-full bg-foreground/20 border border-foreground/30" />
+              <div className="h-2/3 bg-gray-100 flex items-center justify-center border-b border-gray-200">
+                <div className="w-14 h-14 rounded-full bg-blue-100 border-2 border-blue-200" />
               </div>
-              <div className="h-1/3 bg-muted/20 flex items-center justify-center">
-                <div className="w-8 h-8 rounded-full bg-foreground/15 border border-foreground/20" />
+              <div className="h-1/3 bg-gray-50 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-full bg-blue-50 border-2 border-blue-100" />
               </div>
             </motion.div>
           )}
@@ -388,14 +388,14 @@ function SplitScreenPreview() {
               exit={{ opacity: 0 }}
               className="h-full relative"
             >
-              <div className="absolute inset-0 bg-muted/30">
+              <div className="absolute inset-0 bg-gray-100">
                 {/* Game content simulation */}
-                <div className="absolute inset-4 border border-foreground/10 rounded-lg flex items-center justify-center">
+                <div className="absolute inset-4 border border-gray-300 rounded-lg flex items-center justify-center">
                   <div className="grid grid-cols-3 gap-1">
                     {[...Array(9)].map((_, i) => (
                       <motion.div
                         key={i}
-                        className="w-3 h-3 bg-accent/20 rounded"
+                        className="w-3 h-3 bg-blue-200 rounded"
                         animate={{ opacity: [0.3, 0.7, 0.3] }}
                         transition={{ duration: 1, delay: i * 0.1, repeat: Number.POSITIVE_INFINITY }}
                       />
@@ -407,9 +407,9 @@ function SplitScreenPreview() {
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                className="absolute bottom-3 right-3 w-16 h-20 rounded-lg bg-muted/60 border border-foreground/20 flex items-center justify-center"
+                className="absolute bottom-3 right-3 w-16 h-20 rounded-lg bg-white/90 border-2 border-blue-200 flex items-center justify-center shadow-lg"
               >
-                <div className="w-8 h-8 rounded-full bg-foreground/20" />
+                <div className="w-8 h-8 rounded-full bg-blue-100 border border-blue-200" />
               </motion.div>
             </motion.div>
           )}
@@ -423,7 +423,7 @@ function SplitScreenPreview() {
         transition={{ delay: 0.5 }}
         className="mt-3 text-center"
       >
-        <span className="text-[10px] text-muted-foreground px-3 py-1 rounded-full bg-foreground/5 border border-foreground/10">
+        <span className="text-[10px] text-gray-600 px-3 py-1 rounded-full bg-blue-50 border border-blue-200">
           Perfect for Streamers
         </span>
       </motion.div>
@@ -437,18 +437,18 @@ function ClipperPreview() {
     <div className="flex flex-col h-full p-3">
       {/* Timeline header */}
       <div className="flex items-center justify-between mb-3">
-        <span className="text-[10px] text-muted-foreground">2hr Stream</span>
-        <span className="text-[10px] text-accent">8 clips found</span>
+        <span className="text-[10px] text-gray-600">2hr Stream</span>
+        <span className="text-[10px] text-blue-600 font-medium">8 clips found</span>
       </div>
 
       {/* Video timeline */}
-      <div className="relative h-12 bg-foreground/5 rounded-lg overflow-hidden mb-4">
+      <div className="relative h-12 bg-gray-100 rounded-lg overflow-hidden mb-4">
         {/* Timeline segments */}
         <div className="absolute inset-0 flex">
           {[...Array(20)].map((_, i) => (
             <div
               key={i}
-              className="flex-1 border-r border-foreground/5"
+              className="flex-1 border-r border-gray-200"
               style={{ opacity: 0.3 + Math.random() * 0.7 }}
             />
           ))}
@@ -461,14 +461,14 @@ function ClipperPreview() {
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.5 + i * 0.2, type: "spring" }}
-            className="absolute top-1/2 -translate-y-1/2 w-3 h-8 bg-accent/50 rounded-sm border border-accent"
+            className="absolute top-1/2 -translate-y-1/2 w-3 h-8 bg-blue-500 rounded-sm border border-blue-600 shadow-sm"
             style={{ left: `${pos}%` }}
           />
         ))}
 
         {/* Scanning line */}
         <motion.div
-          className="absolute top-0 bottom-0 w-[2px] bg-foreground"
+          className="absolute top-0 bottom-0 w-[2px] bg-blue-600"
           initial={{ left: "0%" }}
           animate={{ left: "100%" }}
           transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
@@ -487,10 +487,10 @@ function ClipperPreview() {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 1 + i * 0.2 }}
-            className="flex items-center gap-3 p-2 rounded-lg bg-foreground/5 border border-foreground/10"
+            className="flex items-center gap-3 p-2 rounded-lg bg-white border border-gray-200"
           >
-            <div className="w-10 h-10 rounded bg-muted/50 flex items-center justify-center">
-              <svg className="w-4 h-4 text-foreground/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="w-10 h-10 rounded bg-blue-50 flex items-center justify-center">
+              <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -500,10 +500,10 @@ function ClipperPreview() {
               </svg>
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-xs font-medium text-foreground truncate">{clip.label}</div>
-              <div className="text-[10px] text-muted-foreground">Viral Score</div>
+              <div className="text-xs font-medium text-gray-900 truncate">{clip.label}</div>
+              <div className="text-[10px] text-gray-500">Viral Score</div>
             </div>
-            <div className="text-sm font-bold text-accent">{clip.score}</div>
+            <div className="text-sm font-bold text-blue-600">{clip.score}</div>
           </motion.div>
         ))}
       </div>
@@ -518,9 +518,9 @@ function ClipperPreview() {
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 8, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-          className="w-4 h-4 rounded-full border border-dashed border-accent/50"
+          className="w-4 h-4 rounded-full border-2 border-dashed border-blue-500"
         />
-        <span className="text-[10px] text-muted-foreground">AI analyzing...</span>
+        <span className="text-[10px] text-gray-600">AI analyzing...</span>
       </motion.div>
     </div>
   )
@@ -542,11 +542,11 @@ function ScriptPreview() {
         <motion.div
           animate={{ scale: [1, 1.2, 1] }}
           transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY }}
-          className="w-6 h-6 rounded-full bg-accent/20 border border-accent/30 flex items-center justify-center"
+          className="w-6 h-6 rounded-full bg-blue-100 border border-blue-300 flex items-center justify-center"
         >
-          <span className="text-[10px] text-accent font-bold">AI</span>
+          <span className="text-[10px] text-blue-600 font-bold">AI</span>
         </motion.div>
-        <span className="text-xs text-foreground font-medium">Script Generator</span>
+        <span className="text-xs text-gray-900 font-medium">Script Generator</span>
       </div>
 
       {/* Generated script */}
@@ -559,11 +559,11 @@ function ScriptPreview() {
             transition={{ delay: i * 0.5, duration: 0.4 }}
             className="flex gap-2"
           >
-            <div className="w-1 h-full bg-accent/30 rounded-full flex-shrink-0" />
+            <div className="w-1 h-full bg-blue-300 rounded-full flex-shrink-0" />
             <div>
-              <div className="text-[10px] text-accent/70 mb-0.5">Step {i + 1}</div>
+              <div className="text-[10px] text-blue-600 font-medium mb-0.5">Step {i + 1}</div>
               <motion.div
-                className="text-xs text-foreground/80"
+                className="text-xs text-gray-700"
                 initial={{ width: 0 }}
                 animate={{ width: "auto" }}
                 transition={{ delay: i * 0.5 + 0.2, duration: 0.5 }}
@@ -581,15 +581,15 @@ function ScriptPreview() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 2.5 }}
-        className="mt-4 p-3 rounded-lg bg-foreground/5 border border-foreground/10"
+        className="mt-4 p-3 rounded-lg bg-gray-50 border border-gray-200"
       >
         <div className="flex items-center gap-2">
           <motion.div
             animate={{ opacity: [1, 0, 1] }}
             transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY }}
-            className="w-2 h-4 bg-accent"
+            className="w-2 h-4 bg-blue-600"
           />
-          <span className="text-[10px] text-muted-foreground">Type your topic...</span>
+          <span className="text-[10px] text-gray-500">Type your topic...</span>
         </div>
       </motion.div>
 
@@ -601,7 +601,7 @@ function ScriptPreview() {
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 3 + i * 0.1 }}
-            className="px-2 py-1 rounded-full bg-foreground/5 border border-foreground/10 text-[10px] text-muted-foreground"
+            className="px-2 py-1 rounded-full bg-blue-50 border border-blue-200 text-[10px] text-blue-600"
           >
             {prompt}
           </motion.div>

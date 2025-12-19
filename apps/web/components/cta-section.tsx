@@ -2,10 +2,11 @@
 
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
+import Link from "next/link"
 
 export default function CTASection() {
   return (
-    <section className="relative py-32 px-6">
+    <section className="relative py-24 px-6 bg-white">
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -13,14 +14,26 @@ export default function CTASection() {
         viewport={{ once: true }}
         className="max-w-3xl mx-auto text-center"
       >
-        <h2 className="text-4xl md:text-6xl font-bold text-foreground mb-6 tracking-tight">Ready to go viral?</h2>
-        <p className="text-lg text-muted-foreground mb-10 max-w-lg mx-auto">
-          Join thousands of creators already using SmartClip to transform their content.
+        <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+          Stop paying editors.
+          <br />
+          Start clipping automatically.
+        </h2>
+        <p className="text-xl text-gray-600 mb-10 max-w-2xl mx-auto">
+          Join 10,000+ clippers who automated their workflow with SmartClip
         </p>
 
-        <Button className="bg-foreground text-background hover:bg-foreground/90 text-base px-10 py-6 rounded-full font-medium">
-          Start Creating Free
-        </Button>
+        <Link href="/auth/signup">
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <Button className="bg-blue-600 text-white hover:bg-blue-700 text-lg px-10 py-6 rounded-lg font-semibold shadow-sm">
+              Start Clipping Automatically
+            </Button>
+          </motion.div>
+        </Link>
+        
+        <p className="text-sm text-gray-500 mt-6">
+          Free to start • No credit card required
+        </p>
       </motion.div>
     </section>
   )

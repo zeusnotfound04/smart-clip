@@ -44,14 +44,12 @@ export default function Home() {
   }
 
   return (
-    <div className="bg-background min-h-screen overflow-hidden">
+    <div className="bg-white min-h-screen overflow-hidden">
       <AnimatedBackground scrollY={scrollY} />
       <Navigation />
       <main>
         <HeroSection scrollY={scrollY} />
         <FeaturesSection />
-        <DemoSection />
-        <PricingSection />
         <CTASection />
       </main>
       <Footer />
