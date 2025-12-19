@@ -84,12 +84,18 @@ model Video {
   id                   String                @id @default(cuid())
   userId               String                @map("user_id")
   originalName         String                @map("original_name")
+  title                String?               // User-friendly name for My Clips
+  description          String?               // Optional description
   filePath             String                @map("file_path")
   thumbnailPath        String?               @map("thumbnail_path")
   duration             Float?
   size                 Int?
   mimeType             String                @map("mime_type")
   status               String                @default("uploaded")
+  tags                 String[]              @default([]) // For categorization
+  isFavorite           Boolean               @default(false) @map("is_favorite")
+  usageCount           Int                   @default(0) @map("usage_count") // Track reuse
+  lastUsedAt           DateTime?             @map("last_used_at")
   createdAt            DateTime              @default(now()) @map("created_at")
   updatedAt            DateTime              @updatedAt @map("updated_at")
   subtitleConfig       Json?                 @map("subtitle_config")
@@ -99,6 +105,9 @@ model Video {
   subtitles            Subtitle[]
   user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
+  @@index([isFavorite])
+  @@index([createdAt])
   @@map("videos")
 }
 
