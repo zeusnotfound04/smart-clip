@@ -51,6 +51,8 @@ export interface User {
   name: string;
   email: string;
   image?: string;
+  isAdmin?: boolean;
+  credits?: number;
   createdAt: string;
 }
 

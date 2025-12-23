@@ -548,14 +548,14 @@ export const generateNarration = async (req: AuthRequest, res: Response) => {
 
     try {
       // Use the modern TTS service
-      console.log('🎙️ [TTS] Using modern Google Cloud Text-to-Speech service...');
+      console.log('🎙️ [TTS] Using Fish Audio TTS service...');
       
       // Configure TTS options
       const ttsOptions = {
         text: textToNarrate,
         voice: {
           languageCode: 'en-US',
-          name: voice || 'en-US-Neural2-J',
+          name: voice || 'default',
           ssmlGender: 'MALE' as const,
         },
         audioConfig: {

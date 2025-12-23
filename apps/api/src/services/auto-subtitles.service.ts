@@ -805,6 +805,19 @@ const burnSubtitlesIntoVideo = async (
     const srtPath = join(tempDir, srtFilename);
 
     try {
+      // Set up fontconfig to use custom font directory
+      const fontsDir = join(process.cwd(), 'fonts');
+      const fontConfigPath = join(fontsDir, 'fonts.conf');
+      
+      if (existsSync(fontConfigPath)) {
+        process.env.FONTCONFIG_FILE = fontConfigPath;
+        process.env.FONTCONFIG_PATH = fontsDir;
+        console.log(`🎨 [FONT CONFIG] Set FONTCONFIG_FILE: ${fontConfigPath}`);
+        console.log(`🎨 [FONT CONFIG] Set FONTCONFIG_PATH: ${fontsDir}`);
+      } else {
+        console.warn(`⚠️ [FONT CONFIG] fonts.conf not found at ${fontConfigPath}`);
+      }
+      
       [outputPath, srtPath].forEach((filePath) => {
         if (existsSync(filePath)) {
           try {

@@ -51,6 +51,7 @@ interface VideoGenerationProject {
 
 interface VoiceOption {
   name: string;
+  referenceId?: string;
   languageCode: string;
   ssmlGender: 'MALE' | 'FEMALE' | 'NEUTRAL';
   naturalSampleRateHertz: number;
@@ -131,7 +132,7 @@ export default function VideoGenerationPage() {
       
       // Set default voice
       if (data.voices && data.voices.length > 0) {
-        const defaultVoice = data.voices.find((v: VoiceOption) => v.name === 'en-US-Journey-F') || data.voices[0];
+        const defaultVoice = data.voices.find((v: VoiceOption) => v.name === 'default') || data.voices[0];
         setSelectedVoice(defaultVoice);
       }
     } catch (error) {
@@ -238,6 +239,7 @@ export default function VideoGenerationPage() {
           script: project.script,
           voiceConfig: {
             name: selectedVoice.name,
+            referenceId: selectedVoice.referenceId,
             languageCode: selectedVoice.languageCode,
             ssmlGender: selectedVoice.ssmlGender,
             audioEncoding: 'MP3',
@@ -560,7 +562,7 @@ export default function VideoGenerationPage() {
           Phase 2: Choose Voice & Generate Audio
         </CardTitle>
         <p className="text-muted-foreground">
-          Select a Google Cloud Text-to-Speech voice for narration
+          Select a Fish Audio voice for narration
         </p>
       </CardHeader>
       <CardContent className="space-y-6">

@@ -1,6 +1,6 @@
 import { SpeechClient } from '@google-cloud/speech';
 import { VideoIntelligenceServiceClient, protos } from '@google-cloud/video-intelligence';
-import { TextToSpeechClient } from '@google-cloud/text-to-speech';
+import { fishAudioService } from './fish-audio.service';
 
 const config = {
   keyFilename: process.env.GOOGLE_CLOUD_KEY_FILE,
@@ -9,7 +9,6 @@ const config = {
 
 const speechClient = new SpeechClient(config);
 const videoIntelligenceClient = new VideoIntelligenceServiceClient(config);
-const ttsClient = new TextToSpeechClient(config);
 
 export const speechToText = async (audioBuffer: Buffer, customConfig?: any) => {
   const request = {
@@ -43,20 +42,28 @@ export const analyzeVideo = async (videoBuffer: Buffer) => {
 };
 
 export const textToSpeech = async (text: string, voiceConfig?: any) => {
-  const request = {
-    input: { text },
-    voice: {
-      languageCode: 'en-US',
-      ssmlGender: 'NEUTRAL' as const,
-      ...voiceConfig
-    },
-    audioConfig: {
-      audioEncoding: 'MP3' as const
-    }
-  };
+  try {
+    console.log(`🎙️ [AI-SERVICE] Generating speech with Fish Audio`);
+    
+    const result = await fishAudioService.generateTTS({
+      text,
+      format: 'mp3',
+      mp3Bitrate: 192,
+      model: 's1',
+      speed: voiceConfig?.speakingRate || 1.0,
+      volume: voiceConfig?.pitch || 0,
+    });
 
-  const [response] = await ttsClient.synthesizeSpeech(request);
-  return response.audioContent;
+    if (!result.success) {
+      throw new Error(result.error || 'Speech generation failed');
+    }
+
+    console.log(`✅ [AI-SERVICE] Speech generated: ${result.audioUrl}`);
+    return result.audioUrl; // Return URL instead of audio content
+  } catch (error) {
+    console.error('❌ [AI-SERVICE] Speech generation failed:', error);
+    throw error;
+  }
 };
 
 export const generateScript = async (prompt: string) => {

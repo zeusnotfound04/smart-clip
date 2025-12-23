@@ -1,15 +1,7 @@
-import AWS from 'aws-sdk';
 import { PrismaClient } from '@prisma/client';
-import gtts from 'google-tts-api';
+import { fishAudioService } from './fish-audio.service';
 
 const prisma = new PrismaClient();
-
-// Configure AWS S3
-const s3 = new AWS.S3({
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  region: process.env.AWS_REGION || 'ap-south-1',
-});
 
 interface TTSOptions {
   text: string;
@@ -30,152 +22,64 @@ interface AudioResult {
   audioUrl?: string;
   duration?: number;
   error?: string;
-  type: 'tts' | 'fallback' | 'mock';
-}
-
-
-
-/**
- * Remove stage directions and instructions in parentheses from text
- */
-function removeStageDirections(text: string): string {
-  // Remove text within parentheses (like "(Upbeat music)" or "(Quick whoosh sound effect)")
-  let cleanedText = text.replace(/\([^)]*\)/g, '');
-  
-  // Remove extra whitespace and blank lines
-  cleanedText = cleanedText.replace(/\n\s*\n\s*\n/g, '\n\n'); // Remove triple+ newlines
-  cleanedText = cleanedText.trim();
-  
-  return cleanedText;
+  type: 'fish-audio';
 }
 
 /**
- * Generate TTS audio using Google Translate TTS (Free & Unlimited)
+ * Generate TTS audio using Fish Audio
  */
 export async function generateTTSAudio(options: TTSOptions): Promise<AudioResult> {
   const startTime = Date.now();
   
-  // Remove stage directions before generating audio
-  const cleanedText = removeStageDirections(options.text);
-  console.log(`🎵 [TTS] Original text length: ${options.text.length} characters`);
-  console.log(`🎵 [TTS] Cleaned text length: ${cleanedText.length} characters`);
-  console.log(`🎵 [TTS] Starting Google Translate TTS for cleaned text`);
+  console.log(`🎵 [TTS] Text length: ${options.text.length} characters`);
+  console.log(`🎵 [TTS] Using Fish Audio for TTS generation`);
 
   try {
-    // Generate audio using Google Translate TTS with cleaned text
-    const audioBuffer = await generateGoogleTranslateTTS(cleanedText, options);
-    
-    // Upload to S3
-    const audioUrl = await uploadAudioToS3(audioBuffer, 'tts');
-    
-    // Calculate duration (estimate: ~150 words per minute, ~5 characters per word)
-    const wordCount = Math.ceil(options.text.length / 5);
-    const estimatedDuration = Math.ceil((wordCount / 150) * 60);
+    // Generate audio using Fish Audio
+    const result = await fishAudioService.generateTTS({
+      text: options.text,
+      format: 'mp3',
+      mp3Bitrate: 192,
+      latency: 'normal',
+      model: 's1',
+      speed: options.audioConfig?.speakingRate || 1.0,
+      volume: options.audioConfig?.pitch || 0, // pitch mapped to volume in dB
+    });
+
+    if (!result.success || !result.audioUrl) {
+      throw new Error(result.error || 'Fish Audio generation failed');
+    }
 
     const processingTime = Date.now() - startTime;
-    console.log(`✅ [TTS] Audio generated successfully with Google Translate TTS in ${processingTime}ms`);
-    console.log(`✅ [TTS] Audio uploaded to S3: ${audioUrl}`);
+    console.log(`✅ [TTS] Audio generated successfully with Fish Audio in ${processingTime}ms`);
+    console.log(`✅ [TTS] Audio URL: ${result.audioUrl}`);
 
     return {
       success: true,
-      audioUrl,
-      duration: estimatedDuration,
-      type: 'tts'
+      audioUrl: result.audioUrl,
+      duration: result.duration,
+      type: 'fish-audio'
     };
 
   } catch (error) {
-    console.error(`❌ [TTS] Google Translate TTS failed:`, error instanceof Error ? error.message : 'Unknown error');
+    console.error(`❌ [TTS] Fish Audio TTS failed:`, error instanceof Error ? error.message : 'Unknown error');
     throw new Error(`TTS generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
 /**
- * Generate TTS audio using Google Translate TTS (Free & Unlimited)
+ * Upload audio buffer to S3 (kept for compatibility but not used with Fish Audio)
  */
-async function generateGoogleTranslateTTS(text: string, options: TTSOptions): Promise<Buffer> {
-  try {
-    console.log(`🎵 [GTTS] Generating audio for text: "${text.substring(0, 50)}..."`);
-    
-    // Configure language and speed
-    const lang = options.voice?.languageCode?.split('-')[0] || 'en';
-    const slow = (options.audioConfig?.speakingRate || 1.0) < 0.8;
-    
-    // Get TTS URLs from Google Translate
-    const urls = await gtts.getAllAudioUrls(text, {
-      lang: lang,
-      slow: slow,
-      host: 'https://translate.google.com',
-    });
-    
-    if (!urls || urls.length === 0) {
-      throw new Error('No audio URLs received from Google Translate TTS');
-    }
-    
-    console.log(`🎵 [GTTS] Received ${urls.length} audio segments`);
-    
-    // Download and combine all audio segments
-    const audioBuffers: Buffer[] = [];
-    
-    for (const urlObj of urls) {
-      console.log(`🔽 [GTTS] Downloading segment: ${urlObj.url.substring(0, 100)}...`);
-      const response = await fetch(urlObj.url);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to download audio segment: ${response.statusText}`);
-      }
-      
-      const arrayBuffer = await response.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      audioBuffers.push(buffer);
-    }
-    
-    // Combine all audio buffers
-    const totalLength = audioBuffers.reduce((sum, buffer) => sum + buffer.length, 0);
-    const combinedBuffer = Buffer.concat(audioBuffers, totalLength);
-    
-    console.log(`✅ [GTTS] Combined ${audioBuffers.length} segments into ${combinedBuffer.length} bytes`);
-    return combinedBuffer;
-    
-  } catch (error) {
-    console.error(`❌ [GTTS] Google Translate TTS failed:`, error instanceof Error ? error.message : 'Unknown error');
-    throw new Error(`Google Translate TTS failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
-}
-
-
-
-/**
- * Upload audio buffer to S3
- */
-async function uploadAudioToS3(audioBuffer: Buffer, type: 'tts' | 'fallback'): Promise<string> {
-  const fileName = `${type}-audio-${Date.now()}.mp3`;
-  const bucketName = process.env.AWS_S3_BUCKET || 'smart-clip-storage';
-  const bucketRegion = process.env.AWS_REGION || 'ap-south-1';
-
-  try {
-    const uploadParams = {
-      Bucket: bucketName,
-      Key: `narrations/${fileName}`,
-      Body: audioBuffer,
-      ContentType: 'audio/mpeg',
-    };
-
-    const result = await s3.upload(uploadParams).promise();
-    
-    // Construct the proper S3 URL with the correct region
-    const s3Url = `https://${bucketName}.s3.${bucketRegion}.amazonaws.com/narrations/${fileName}`;
-    return s3Url;
-  } catch (error) {
-    console.error(`❌ [S3] Upload failed:`, error instanceof Error ? error.message : 'Unknown error');
-    // Throw error instead of returning mock URL
-    throw new Error(`S3 upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
+async function uploadAudioToS3(audioBuffer: Buffer, type: string): Promise<string> {
+  // This function is kept for backward compatibility but not used with Fish Audio
+  // Fish Audio service handles S3 uploads internally
+  return '';
 }
 
 /**
  * Store audio information in database
  */
-export async function storeAudioInfo(scriptProjectId: string, audioUrl: string, duration: number, type: 'tts' | 'fallback' | 'mock', userId?: string): Promise<void> {
+export async function storeAudioInfo(scriptProjectId: string, audioUrl: string, duration: number, type: 'fish-audio', userId?: string): Promise<void> {
   try {
     console.log(`🎵 [SERVICE] Storing audio info for script project ${scriptProjectId}`);
 
@@ -190,7 +94,7 @@ export async function storeAudioInfo(scriptProjectId: string, audioUrl: string, 
         data: {
           userId: userId || 'temp-user',
           title: 'Auto-generated from TTS',
-          originalPrompt: 'Generated via TTS service',
+          originalPrompt: 'Generated via Fish Audio TTS',
           scriptProjectId,
           audioUrl,
           audioDuration: duration,
@@ -215,7 +119,7 @@ export async function storeAudioInfo(scriptProjectId: string, audioUrl: string, 
       console.log(`✅ [SERVICE] Updated VideoGenerationProject: ${videoProject.id}`);
     }
 
-    console.log(`✅ [SERVICE] Audio info stored successfully (${type} audio)`);
+    console.log(`✅ [SERVICE] Audio info stored successfully (Fish Audio)`);
   } catch (error) {
     console.error(`❌ [SERVICE] Failed to store audio info:`, error);
     throw error;

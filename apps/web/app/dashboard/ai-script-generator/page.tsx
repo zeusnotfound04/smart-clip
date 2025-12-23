@@ -59,6 +59,7 @@ interface VideoGenerationProject {
 
 interface VoiceOption {
   name: string;
+  referenceId?: string;
   languageCode: string;
   ssmlGender: 'MALE' | 'FEMALE' | 'NEUTRAL';
   naturalSampleRateHertz: number;
@@ -117,45 +118,77 @@ export default function AIScriptGenerator() {
   // Phase 2: Voice Selection
   const [availableVoices, setAvailableVoices] = useState<VoiceOption[]>([
     {
-      name: 'en-US-Neural2-J',
+      name: 'Adam',
+      referenceId: '728f6ff2240d49308e8137ffe66008e2',
       languageCode: 'en-US',
       ssmlGender: 'MALE',
-      naturalSampleRateHertz: 24000,
-      displayName: 'Journey (Male, Dramatic)',
-      category: 'neural'
+      naturalSampleRateHertz: 44100,
+      displayName: 'Adam',
+      category: 'fish-audio'
     },
     {
-      name: 'en-US-Neural2-F',
-      languageCode: 'en-US', 
+      name: 'Grandma',
+      referenceId: '26de115f3ab4476bbc529906d4675a6d',
+      languageCode: 'en-US',
       ssmlGender: 'FEMALE',
-      naturalSampleRateHertz: 24000,
-      displayName: 'Luna (Female, Professional)',
-      category: 'neural'
+      naturalSampleRateHertz: 44100,
+      displayName: 'Grandma',
+      category: 'fish-audio'
     },
     {
-      name: 'en-US-Neural2-A',
+      name: 'Khai Le',
+      referenceId: '1936333080804be19655c6749b2ae7b2',
       languageCode: 'en-US',
       ssmlGender: 'MALE',
-      naturalSampleRateHertz: 24000,
-      displayName: 'Alex (Male, Conversational)',
-      category: 'neural'
+      naturalSampleRateHertz: 44100,
+      displayName: 'Khai Le',
+      category: 'fish-audio'
     },
     {
-      name: 'en-US-Neural2-C',
+      name: 'Mr.puzzles',
+      referenceId: '036ad8aaa86b4bf286058d6533cb723a',
+      languageCode: 'en-US',
+      ssmlGender: 'MALE',
+      naturalSampleRateHertz: 44100,
+      displayName: 'Mr.puzzles',
+      category: 'fish-audio'
+    },
+    {
+      name: 'Adrian',
+      referenceId: 'bf322df2096a46f18c579d0baa36f41d',
+      languageCode: 'en-US',
+      ssmlGender: 'MALE',
+      naturalSampleRateHertz: 44100,
+      displayName: 'Adrian',
+      category: 'fish-audio'
+    },
+    {
+      name: 'Sonic',
+      referenceId: 'e1ccd2d156104873a651bd3916951e8a',
+      languageCode: 'en-US',
+      ssmlGender: 'MALE',
+      naturalSampleRateHertz: 44100,
+      displayName: 'Sonic',
+      category: 'fish-audio'
+    },
+    {
+      name: 'WNBA',
+      referenceId: 'fb7ec16ca51a45a5a4db881244d7990a',
       languageCode: 'en-US',
       ssmlGender: 'FEMALE',
-      naturalSampleRateHertz: 24000,
-      displayName: 'Clara (Female, Casual)',
-      category: 'neural'
+      naturalSampleRateHertz: 44100,
+      displayName: 'WNBA',
+      category: 'fish-audio'
     }
   ]);
   const [selectedVoice, setSelectedVoice] = useState<VoiceOption | null>({
-    name: 'en-US-Neural2-J',
+    name: 'Adam',
+    referenceId: '728f6ff2240d49308e8137ffe66008e2',
     languageCode: 'en-US',
     ssmlGender: 'MALE',
-    naturalSampleRateHertz: 24000,
-    displayName: 'Journey (Male, Dramatic)',
-    category: 'neural'
+    naturalSampleRateHertz: 44100,
+    displayName: 'Adam',
+    category: 'fish-audio'
   });
   const [voiceSpeed, setVoiceSpeed] = useState<number>(1.0);
   const [voicePitch, setVoicePitch] = useState<number>(0);
@@ -309,7 +342,7 @@ export default function AIScriptGenerator() {
         },
         body: JSON.stringify({
           scriptId: project.projectId,
-          voice: selectedVoice.name,
+          voice: selectedVoice.referenceId || selectedVoice.name,
           speed: voiceSpeed
         }),
       });
@@ -639,7 +672,7 @@ export default function AIScriptGenerator() {
           Phase 2: Choose Voice & Generate Audio
         </CardTitle>
         <p className="text-muted-foreground">
-          Select a Google Cloud Text-to-Speech voice for narration
+          Select a Fish Audio voice for narration
         </p>
       </CardHeader>
       <CardContent className="space-y-6">

@@ -46,6 +46,8 @@ router.post('/signup', async (req: Request, res: Response) => {
         id: user.id,
         name: user.name,
         email: user.email,
+        isAdmin: user.isAdmin,
+        credits: user.credits,
       },
       token
     });
@@ -83,6 +85,8 @@ router.post('/signin', async (req: Request, res: Response) => {
         id: user.id,
         name: user.name,
         email: user.email,
+        isAdmin: user.isAdmin,
+        credits: user.credits,
       },
       token
     });
@@ -118,6 +122,8 @@ router.get('/me', async (req: Request, res: Response) => {
         id: user.id,
         name: user.name,
         email: user.email,
+        isAdmin: user.isAdmin,
+        credits: user.credits,
       }
     });
   } catch (error) {

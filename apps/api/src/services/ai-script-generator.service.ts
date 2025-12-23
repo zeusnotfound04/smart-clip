@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { prisma } from '../lib/prisma';
-import { TextToSpeechClient } from '@google-cloud/text-to-speech';
+import { fishAudioService } from './fish-audio.service';
 import * as fs from 'fs/promises';
 import * as fsSync from 'fs';
 import * as path from 'path';
@@ -38,7 +38,6 @@ export class AIScriptGeneratorService {
   private model: any;
   private modelName: string = '';
   private static availableModels: string[] | null = null;
-  private ttsClient!: TextToSpeechClient;
   private s3Client!: S3Client;
 
   constructor() {
@@ -49,21 +48,6 @@ export class AIScriptGeneratorService {
     this.genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
     
     try {
-      // Initialize Text-to-Speech client
-      if (!process.env.GOOGLE_CLOUD_PROJECT_ID) {
-        console.warn('⚠️ Google Cloud credentials not found. Text-to-Speech will not work.');
-        console.warn('⚠️ Please set GOOGLE_CLOUD_PROJECT_ID and other Google Cloud environment variables.');
-      }
-
-      this.ttsClient = new TextToSpeechClient({
-        projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
-        credentials: {
-          client_email: 'api-ai-intel@gen-lang-client-0546762479.iam.gserviceaccount.com',
-          private_key: process.env.GOOGLE_CLOUD_PRIVATE_KEY?.replace(/\\n/g, '\n') || '',
-          private_key_id: process.env.GOOGLE_CLOUD_PRIVATE_KEY_ID,
-        },
-      });
-      
       // Initialize S3 client
       if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
         console.warn('⚠️ AWS credentials not found. Video upload to S3 will not work.');
@@ -730,58 +714,28 @@ Please regenerate the script with these modifications while maintaining the same
     try {
       console.log(`🎙️ [TTS] Generating audio for script: "${script.substring(0, 50)}..."`);
       
-      // Configure Text-to-Speech request
-      const request = {
-        input: { text: script },
-        voice: {
-          languageCode: 'en-US',
-          name: voiceConfig?.voice || 'en-US-Neural2-J', // Premium neural voice
-          ssmlGender: 'MALE' as const
-        },
-        audioConfig: {
-          audioEncoding: 'MP3' as const,
-          speakingRate: voiceConfig?.speed || 1.0,
-          pitch: voiceConfig?.pitch || 0,
-          effectsProfileId: ['headphone-class-device'] // Better quality
-        }
-      };
+      // Use Fish Audio for TTS
+      const result = await fishAudioService.generateTTS({
+        text: script,
+        format: 'mp3',
+        mp3Bitrate: 192,
+        latency: 'normal',
+        model: 's1',
+        speed: voiceConfig?.speed || 1.0,
+        volume: voiceConfig?.pitch || 0,
+        referenceId: voiceConfig?.voice || process.env.FISH_AUDIO_REFERENCE_ID,
+      });
 
-      // Generate the narration
-      const [response] = await this.ttsClient.synthesizeSpeech(request);
-      
-      if (!response.audioContent) {
-        throw new Error('No audio content generated');
+      if (!result.success || !result.audioUrl) {
+        throw new Error(result.error || 'Fish Audio generation failed');
       }
 
-      // Save audio file locally first
-      const audioFilename = `narration_${uuidv4()}.mp3`;
-      const tempDir = path.join(process.cwd(), 'temp');
-      if (!fsSync.existsSync(tempDir)) {
-        await fs.mkdir(tempDir, { recursive: true });
-      }
-      
-      const audioPath = path.join(tempDir, audioFilename);
-      await fs.writeFile(audioPath, response.audioContent);
-      
-      // Get audio duration using ffmpeg
-      const duration = await this.getAudioDuration(audioPath);
-      
-      // Upload to S3
-      const s3Key = `narrations/${audioFilename}`;
-      const audioUrl = await this.uploadToS3(audioPath, s3Key, 'audio/mpeg');
-      
-      // Cleanup temp audio file after successful S3 upload
-      await fs.unlink(audioPath).catch((err) => 
-        console.warn(`⚠️ [TTS] Failed to cleanup temp audio file ${audioPath}:`, err)
-      );
-      
-      console.log(`🎙️ [TTS] Audio generated successfully: ${duration}s, uploaded to ${audioUrl}`);
-      console.log(`🗑️ [TTS] Temp audio file cleaned up: ${audioPath}`);
+      console.log(`🎙️ [TTS] Audio generated successfully: ${result.duration}s, uploaded to ${result.audioUrl}`);
       
       return {
-        audioPath, // Return path for backward compatibility, but file is already deleted
-        audioUrl,
-        duration
+        audioPath: result.audioPath || '',
+        audioUrl: result.audioUrl,
+        duration: result.duration || 0
       };
       
     } catch (error) {
@@ -1052,37 +1006,77 @@ Please regenerate the script with these modifications while maintaining the same
   // 🎤 Get Available TTS Voices
   async getAvailableVoices() {
     try {
-      console.log(`🎤 [SERVICE] Fetching available TTS voices`);
+      console.log(`🎤 [SERVICE] Fetching available Fish Audio TTS voices`);
       
-      const client = new TextToSpeechClient({
-        projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
-        credentials: {
-          client_email: 'api-ai-intel@gen-lang-client-0546762479.iam.gserviceaccount.com',
-          private_key: process.env.GOOGLE_CLOUD_PRIVATE_KEY?.replace(/\\n/g, '\n') || '',
-          private_key_id: process.env.GOOGLE_CLOUD_PRIVATE_KEY_ID,
+      // Return predefined Fish Audio voice options with reference IDs
+      const voices = [
+        {
+          name: 'Adam',
+          referenceId: '728f6ff2240d49308e8137ffe66008e2',
+          languageCode: 'en-US',
+          ssmlGender: 'MALE',
+          naturalSampleRateHertz: 44100,
+          displayName: 'Adam',
+          category: 'fish-audio'
         },
-      });
-
-      const [result] = await client.listVoices({});
+        {
+          name: 'Grandma',
+          referenceId: '26de115f3ab4476bbc529906d4675a6d',
+          languageCode: 'en-US',
+          ssmlGender: 'FEMALE',
+          naturalSampleRateHertz: 44100,
+          displayName: 'Grandma',
+          category: 'fish-audio'
+        },
+        {
+          name: 'Khai Le',
+          referenceId: '1936333080804be19655c6749b2ae7b2',
+          languageCode: 'en-US',
+          ssmlGender: 'MALE',
+          naturalSampleRateHertz: 44100,
+          displayName: 'Khai Le',
+          category: 'fish-audio'
+        },
+        {
+          name: 'Mr.puzzles',
+          referenceId: '036ad8aaa86b4bf286058d6533cb723a',
+          languageCode: 'en-US',
+          ssmlGender: 'MALE',
+          naturalSampleRateHertz: 44100,
+          displayName: 'Mr.puzzles',
+          category: 'fish-audio'
+        },
+        {
+          name: 'Adrian',
+          referenceId: 'bf322df2096a46f18c579d0baa36f41d',
+          languageCode: 'en-US',
+          ssmlGender: 'MALE',
+          naturalSampleRateHertz: 44100,
+          displayName: 'Adrian',
+          category: 'fish-audio'
+        },
+        {
+          name: 'Sonic',
+          referenceId: 'e1ccd2d156104873a651bd3916951e8a',
+          languageCode: 'en-US',
+          ssmlGender: 'MALE',
+          naturalSampleRateHertz: 44100,
+          displayName: 'Sonic',
+          category: 'fish-audio'
+        },
+        {
+          name: 'WNBA',
+          referenceId: 'fb7ec16ca51a45a5a4db881244d7990a',
+          languageCode: 'en-US',
+          ssmlGender: 'FEMALE',
+          naturalSampleRateHertz: 44100,
+          displayName: 'WNBA',
+          category: 'fish-audio'
+        }
+      ];
       
-      const voices = result.voices?.map(voice => ({
-        name: voice.name || '',
-        languageCode: voice.languageCodes?.[0] || '',
-        ssmlGender: voice.ssmlGender || 'NEUTRAL',
-        naturalSampleRateHertz: voice.naturalSampleRateHertz || 24000,
-        displayName: `${voice.name} (${voice.ssmlGender})`,
-        category: voice.languageCodes?.[0]?.split('-')[0] || 'en'
-      })) || [];
-
-      // Filter for high-quality voices
-      const qualityVoices = voices.filter(voice => 
-        voice.name.includes('Neural') || 
-        voice.name.includes('Journey') || 
-        voice.name.includes('Studio')
-      );
-
-      console.log(`🎤 [SERVICE] Found ${voices.length} total voices, ${qualityVoices.length} high-quality`);
-      return qualityVoices.length > 0 ? qualityVoices : voices.slice(0, 20); // Return top 20 if no Neural voices
+      console.log(`🎤 [SERVICE] Found ${voices.length} Fish Audio voices`);
+      return voices;
       
     } catch (error) {
       console.error('❌ [SERVICE] Failed to get available voices:', error);
@@ -1201,86 +1195,33 @@ Please regenerate the script with these modifications while maintaining the same
   // 🎵 Generate TTS Audio Only
   async generateTTSAudio(script: string, voiceConfig: any) {
     try {
-      console.log(`🎵 [SERVICE] Generating TTS audio`);
+      console.log(`🎵 [SERVICE] Generating TTS audio with Fish Audio`);
       console.log(`🎵 [SERVICE] Voice: ${voiceConfig.name}`);
+      console.log(`🎵 [SERVICE] Reference ID: ${voiceConfig.referenceId}`);
       console.log(`🎵 [SERVICE] Script length: ${script.length} characters`);
       
-      // Check if Google Cloud TTS is properly configured
-      const hasGoogleCloudCredentials = process.env.GOOGLE_CLOUD_PROJECT_ID && 
-                                      process.env.GOOGLE_CLOUD_PRIVATE_KEY && 
-                                      process.env.GOOGLE_CLOUD_PRIVATE_KEY_ID;
+      // Use Fish Audio for TTS
+      const result = await fishAudioService.generateTTS({
+        text: script,
+        format: 'mp3',
+        mp3Bitrate: 192,
+        latency: 'normal',
+        model: 's1',
+        speed: voiceConfig.speed || 1.0,
+        volume: voiceConfig.pitch || 0,
+        referenceId: voiceConfig.referenceId || voiceConfig.name || process.env.FISH_AUDIO_REFERENCE_ID,
+      });
 
-      if (!hasGoogleCloudCredentials) {
-        console.warn('⚠️ [TTS] Google Cloud TTS not configured, using fallback audio generation');
-        return await this.generateFallbackAudio(script, voiceConfig);
+      if (!result.success || !result.audioUrl) {
+        throw new Error(result.error || 'Fish Audio generation failed');
       }
 
-      if (!process.env.AWS_S3_BUCKET || !process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
-        throw new Error('AWS S3 credentials not configured. Please set AWS_S3_BUCKET, AWS_ACCESS_KEY_ID, and AWS_SECRET_ACCESS_KEY environment variables.');
-      }
-
-      try {
-        // Use service account JSON file for more reliable authentication
-        const client = new TextToSpeechClient({
-          keyFilename: path.join(process.cwd(), 'google-service-account.json'),
-          projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
-        });
-
-        // Prepare TTS request
-        const request = {
-          input: { text: script },
-          voice: {
-            languageCode: voiceConfig.languageCode || 'en-US',
-            name: voiceConfig.name || 'en-US-Neural2-J',
-            ssmlGender: voiceConfig.ssmlGender || 'MALE'
-          },
-          audioConfig: {
-            audioEncoding: 'MP3' as const,
-            speakingRate: voiceConfig.speed || 1.0,
-            pitch: voiceConfig.pitch || 0
-          }
-        };
-
-        console.log(`🎵 [TTS] Sending request to Google Cloud TTS...`);
-        const [response] = await client.synthesizeSpeech(request);
-
-        if (!response.audioContent) {
-          throw new Error('No audio content received from TTS service');
-        }
-
-        // Generate unique filename for S3
-        const fileName = `narrations/tts_audio_${uuidv4()}.mp3`;
-        const audioPath = path.join(process.cwd(), 'temp', `temp_${uuidv4()}.mp3`);
-        
-        // Ensure temp directory exists
-        const tempDir = path.dirname(audioPath);
-        await fs.mkdir(tempDir, { recursive: true });
-        
-        // Save audio file temporarily
-        await fs.writeFile(audioPath, response.audioContent, 'binary');
-        
-        // Get audio duration using ffprobe
-        const audioDuration = await this.getAudioDuration(audioPath);
-        
-        // Upload to S3
-        const audioUrl = await this.uploadToS3(audioPath, fileName, 'audio/mpeg');
-        
-        // Cleanup temp file
-        await fs.unlink(audioPath).catch(console.error);
-        
-        console.log(`✅ [TTS] Audio generated successfully: ${audioDuration}s`);
-        console.log(`✅ [TTS] Audio uploaded to S3: ${audioUrl}`);
-        
-        return {
-          audioUrl,
-          duration: audioDuration
-        };
-
-      } catch (ttsError) {
-        console.error('❌ [TTS] Google Cloud TTS failed, using fallback:', ttsError);
-        // Fall back to mock audio generation if TTS fails
-        return await this.generateFallbackAudio(script, voiceConfig);
-      }
+      console.log(`✅ [TTS] Audio generated successfully: ${result.duration}s, uploaded to ${result.audioUrl}`);
+      
+      return {
+        audioUrl: result.audioUrl,
+        duration: result.duration || 0
+      };
       
     } catch (error) {
       console.error('❌ [SERVICE] Failed to generate TTS audio:', error);

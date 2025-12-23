@@ -18,7 +18,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { HiHome, HiCog, HiLogout } from "react-icons/hi";
-import { HiSparkles, HiChatBubbleLeftRight, HiFilm, HiCreditCard, HiVideoCamera } from "react-icons/hi2";
+import { HiSparkles, HiChatBubbleLeftRight, HiFilm, HiCreditCard, HiVideoCamera, HiShieldCheck } from "react-icons/hi2";
 import { motion } from "framer-motion";
 import { User } from "@/lib/api-client";
 
@@ -39,6 +39,19 @@ const navigation = [
 export function AppSidebar({ user }: AppSidebarProps) {
   const pathname = usePathname();
   const { signOut } = useAuth();
+
+  const initials =
+    user.name
+      ?.split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase() ||
+    user.email[0].toUpperCase();
+
+  // Add admin link if user is admin
+  const navItems = user.isAdmin 
+    ? [...navigation, { name: "Admin", href: "/admin", icon: HiShieldCheck }]
+    : navigation;
 
   const initials =
     user.name
@@ -94,7 +107,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navigation.map((item, index) => {
+              {navItems.map((item, index) => {
                 const isActive = pathname === item.href;
                 return (
                   <motion.div

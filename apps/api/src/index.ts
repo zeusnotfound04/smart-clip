@@ -23,6 +23,7 @@ import subscriptionRoutes from './routes/subscription.routes.js';
 import stripeRoutes from './routes/stripe.routes.js';
 import testRoutes from './routes/test.routes.js';
 import myClipsRoutes from './routes/my-clips.routes';
+import adminRoutes from './routes/admin.routes';
 import { 
   errorHandler, 
   notFoundHandler, 
@@ -125,6 +126,9 @@ app.use('/api/video-generation', videoGenerationRoutes);
 app.use('/api/credits', creditsRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/stripe', stripeRoutes);
+
+// Admin routes
+app.use('/api/admin', adminRoutes);
 
 // TEMPORARY: Test routes for local development (remove in production)
 if (process.env.NODE_ENV !== 'production') {

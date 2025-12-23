@@ -10,6 +10,9 @@ module.exports = {
       PORT: 5000,
       // Memory management for large files
       UV_THREADPOOL_SIZE: 16, // Increase thread pool for file operations
+      // Font configuration for subtitle generation
+      FONTCONFIG_FILE: '/home/ubuntu/asli/apps/api/fonts/fonts.conf',
+      FONTCONFIG_PATH: '/home/ubuntu/asli/apps/api/fonts',
     },
     env_development: {
       NODE_ENV: 'development',

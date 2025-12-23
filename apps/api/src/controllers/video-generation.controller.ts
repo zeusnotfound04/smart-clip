@@ -326,6 +326,7 @@ export class VideoGenerationController {
       script: z.string().min(1, 'Script is required'),
       voiceConfig: z.object({
         name: z.string(),
+        referenceId: z.string().optional(),
         languageCode: z.string(),
         ssmlGender: z.enum(['MALE', 'FEMALE', 'NEUTRAL']),
         audioEncoding: z.string(),
