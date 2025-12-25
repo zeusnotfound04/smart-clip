@@ -15,9 +15,7 @@ interface ProcessVideoWithCreditsParams {
 }
 
 export const creditProcessingHelper = {
-  /**
-   * Process video with credit deduction and conditional watermark
-   */
+
   async processVideoWithCredits(
     params: ProcessVideoWithCreditsParams,
     processingFn: () => Promise<string>
@@ -104,9 +102,7 @@ export const creditProcessingHelper = {
     };
   },
 
-  /**
-   * Get user's subscription tier and watermark status
-   */
+
   async getUserWatermarkStatus(userId: string): Promise<{
     subscriptionTier: string;
     needsWatermark: boolean;

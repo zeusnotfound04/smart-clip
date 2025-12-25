@@ -40,14 +40,27 @@ const execFFmpeg = (args: string[], estimatedDuration: number = 0): Promise<Buff
       errorChunks.push(chunk);
       const output = chunk.toString();
       
-      // Log progress information with percentage calculation
+      // Skip logging common AAC decoder warnings/errors that we're handling with err_detect
+      const skipPatterns = [
+        '[aac @', 
+        'Error submitting packet to decoder',
+        'Number of bands',
+        'channel element',
+        'Sample rate index',
+        'Reserved bit set',
+        'Prediction is not allowed',
+        'Too large remapped id',
+        'Invalid data found when processing input'
+      ];
+      
+      const shouldSkip = skipPatterns.some(pattern => output.includes(pattern));
+      
       if (output.includes('frame=') || output.includes('time=')) {
         const now = Date.now();
-        if (now - lastProgressTime > 10000) { // Log every 10 seconds to reduce spam
+        if (now - lastProgressTime > 10000) { 
           const lines = output.trim().split('\n');
           const progressLine = lines[lines.length - 1];
           
-          // Extract time information for percentage calculation
           const timeMatch = progressLine.match(/time=(\d{2}):(\d{2}):(\d{2}.\d{2})/);
           if (timeMatch && estimatedDuration > 0) {
             const hours = parseInt(timeMatch[1]);
@@ -63,8 +76,7 @@ const execFFmpeg = (args: string[], estimatedDuration: number = 0): Promise<Buff
         }
       }
       
-      // Log any errors immediately
-      if (output.toLowerCase().includes('error') || output.toLowerCase().includes('failed')) {
+      if (!shouldSkip && (output.toLowerCase().includes('error') || output.toLowerCase().includes('failed'))) {
         console.error('FFmpeg error:', output.trim());
       }
     });
@@ -86,7 +98,6 @@ const execFFmpeg = (args: string[], estimatedDuration: number = 0): Promise<Buff
       reject(new Error(`FFmpeg spawn error: ${error.message}`));
     });
     
-    // Add timeout to prevent hanging
     const timeout = setTimeout(() => {
       console.error('FFmpeg process timed out after 15 minutes');
       ffmpeg.kill('SIGKILL');
@@ -225,7 +236,6 @@ export const combineVideos = async (
     const outputWidth = 1080;
     const outputHeight = 1920;
     
-    // Calculate video dimensions based on ratios
     let topHeight: number, bottomHeight: number;
     
     if (config.orientation === 'vertical') {
@@ -237,7 +247,6 @@ export const combineVideos = async (
       bottomHeight = 1080;
     }
     
-    // Determine which video goes where
     const topVideo = config.swapVideos ? 'gameplay' : 'webcam';
     const bottomVideo = config.swapVideos ? 'webcam' : 'gameplay';
     const topZoom = config.swapVideos ? gameplayZoom : webcamZoom;
@@ -260,9 +269,7 @@ export const combineVideos = async (
     console.log(`Input durations: webcam=${Math.floor(webcamDuration / 60)}:${Math.floor(webcamDuration % 60).toString().padStart(2, '0')}, gameplay=${Math.floor(gameplayDuration / 60)}:${Math.floor(gameplayDuration % 60).toString().padStart(2, '0')}`);
     console.log(`Final duration: ${Math.floor(outputDuration / 60)}:${Math.floor(outputDuration % 60).toString().padStart(2, '0')}`);
     
-    // Now rebuild the filter complex with proper duration handling
     if (config.orientation === 'vertical') {
-      // Calculate scaled dimensions with zoom
       const topScaledWidth = Math.floor(outputWidth * topZoom);
       const topScaledHeight = Math.floor(topHeight * topZoom);
       const bottomScaledWidth = Math.floor(outputWidth * bottomZoom);
@@ -273,15 +280,14 @@ export const combineVideos = async (
         bottomScaled: `${bottomScaledWidth}x${bottomScaledHeight}`
       });
       
-      // Create a more robust filter that handles different durations properly
-      // Scale videos to their target sizes
+
       const webcamFilter = `[0:v]scale=${outputWidth}:${topHeight}[webcam_scaled]`;
       const gameplayFilter = `[1:v]scale=${outputWidth}:${bottomHeight}[gameplay_scaled]`;
       
       // Create background that lasts for the full output duration
       const backgroundFilter = `color=c=${config.backgroundColor}:s=${outputWidth}x${outputHeight}:d=${outputDuration.toFixed(2)}[bg]`;
       
-      // Determine which streams to use and create overlays
+
       const topStream = topVideo === 'webcam' ? 'webcam_scaled' : 'gameplay_scaled';
       const bottomStream = bottomVideo === 'webcam' ? 'webcam_scaled' : 'gameplay_scaled';
       
@@ -316,7 +322,13 @@ export const combineVideos = async (
     
     // Execute FFmpeg command - optimized for large files (500MB)
     const ffmpegArgs = [
+      // Error detection and recovery for corrupted audio
+      '-err_detect', 'ignore_err',
+      '-fflags', '+genpts+igndts',
+      // Input files
       '-i', webcamPath,
+      '-err_detect', 'ignore_err',
+      '-fflags', '+genpts+igndts',
       '-i', gameplayPath,
       '-filter_complex', filterComplex,
       '-map', '[final]',
@@ -329,13 +341,14 @@ export const combineVideos = async (
       '-movflags', '+faststart', // Web optimization
       '-threads', '0', // Use all CPU cores
       '-max_muxing_queue_size', '1024', // Handle large files
-      // Audio encoding
+      // Audio encoding - force re-encode to fix corrupted audio
       '-c:a', 'aac',
       '-b:a', '128k', // Consistent audio bitrate
       '-ar', '44100', // Standard sample rate
+      '-ac', '2', // Stereo audio
+      '-strict', 'experimental', // Allow experimental AAC encoder if needed
       // Timing and synchronization
       '-avoid_negative_ts', 'make_zero',
-      '-fflags', '+genpts',
       '-vsync', 'cfr', // Constant frame rate for stability
       // Memory management for large files
       '-max_alloc', '2147483647', // ~2GB max allocation

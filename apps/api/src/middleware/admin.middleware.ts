@@ -4,9 +4,7 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-/**
- * Middleware to check if the authenticated user is an admin
- */
+
 export const isAdmin = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     if (!req.userId) {
