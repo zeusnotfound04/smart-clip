@@ -159,7 +159,7 @@ export default function AutoSubtitlesPage() {
           setEstimatedTimeRemaining(Math.ceil(etaMs / 60000)); // Convert to minutes
           console.log(`Progress: ${progress}%, ETA: ${Math.ceil(etaMs / 60000)} minutes`);
         },
-        3000 // Poll every 3 seconds
+        20000 // Poll every 20 seconds to reduce server load
       );
 
       setProcessingProgress(100);
@@ -187,9 +187,9 @@ export default function AutoSubtitlesPage() {
     setSelectedFile(null);
     setVideoData(null);
     setUploadStage('idle');
-    setUstimatedTimeRemaining(0);
+    setEstimatedTimeRemaining(0);
     setCurrentJobId(null);
-    setEploadProgress(0);
+    setUploadProgress(0);
     setProcessingProgress(0);
     setError('');
     
