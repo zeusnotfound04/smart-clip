@@ -4,6 +4,8 @@ import path from "path";
 const nextConfig: NextConfig = {
   // Allow cross-origin requests from your domain
   allowedDevOrigins: [
+    'smartclips.gunman.social',
+    'https://smartclips.gunman.social',
     'smartclips.upalert.online',
     'https://smartclips.upalert.online'
   ],
