@@ -1,6 +1,6 @@
 import ffmpeg from 'fluent-ffmpeg';
 import { SpeechClient } from '@google-cloud/speech';
-import { downloadFile, uploadFile } from '../lib/s3';
+import { downloadFile, uploadFile, downloadFileToPath } from '../lib/s3';
 import { readFileSync, unlinkSync, writeFileSync, existsSync, mkdirSync, statSync } from 'fs';
 import { readFile, unlink, writeFile, stat } from 'fs/promises';
 import { join } from 'path';
@@ -43,6 +43,7 @@ export interface SubtitleOptions {
   detectAllLanguages?: boolean;
   language?: string;
   style?: SubtitleStyle;
+  onProgress?: (progress: number) => Promise<void>;
 }
 
 export interface VideoWithSubtitlesResult {
@@ -81,6 +82,8 @@ const tempDir = tmpdir();
 if (!existsSync(tempDir)) {
   mkdirSync(tempDir, { recursive: true });
 }
+
+console.log(`\ud83d\udccf [AUTO-SUBTITLES] Temp directory: ${tempDir}`);
 
 // Font file path mapping for FFmpeg
 const FONT_FILE_MAP: Record<string, { regular: string; bold?: string }> = {
@@ -151,9 +154,9 @@ const validateFFmpeg = (): Promise<boolean> => {
 };
 
 const downloadVideoFromS3 = async (s3Key: string, videoId: string): Promise<string> => {
-  const videoBuffer = await downloadFile(s3Key);
   const videoPath = join(tempDir, `${randomUUID()}_input.mp4`);
-  writeFileSync(videoPath, videoBuffer);
+  // 🔥 Use streaming download to file (much faster, avoids RAM usage)
+  await downloadFileToPath(s3Key, videoPath);
   return videoPath;
 };
 
@@ -171,28 +174,90 @@ const getVideoDuration = async (videoPath: string): Promise<number> => {
 };
 
 const extractAudioFromVideo = async (videoPath: string, videoId: string): Promise<{ audioPath: string; s3Key: string }> => {
-  return new Promise((resolve, reject) => {
-    const audioPath = join(tempDir, `${randomUUID()}_audio.wav`);
-    
-    ffmpeg(videoPath)
-      .toFormat('wav')
-      .audioChannels(1)
-      .audioFrequency(16000)
-      .on('end', async () => {
-        try {
-          const audioBuffer = readFileSync(audioPath);
-          const audioS3Key = `audio/${videoId}_extracted.wav`;
-          await uploadFile(audioS3Key, audioBuffer, 'audio/wav');
-          resolve({ audioPath, s3Key: audioS3Key });
-        } catch (uploadError: any) {
-          reject(new Error(`Audio upload failed: ${uploadError.message}`));
-        }
-      })
-      .on('error', (err) => {
-        reject(new Error(`Audio extraction failed: ${err.message}`));
-      })
-      .save(audioPath);
-  });
+  let localVideoPath: string | null = null;
+  let audioPath: string | null = null;
+
+  try {
+    // Check if videoPath is an S3 key or local path
+    if (videoPath.startsWith('videos/')) {
+      console.log(`📥 [AUDIO_EXTRACT] Streaming video from S3: ${videoPath}`);
+      
+      // 🔥 Use streaming download to file (much faster)
+      const videoExtension = videoPath.split('.').pop() || 'mp4';
+      localVideoPath = join(tempDir, `${randomUUID()}_input.${videoExtension}`);
+      await downloadFileToPath(videoPath, localVideoPath);
+      console.log(`✅ [AUDIO_EXTRACT] Video streamed to: ${localVideoPath}`);
+      
+      // Use local path for processing
+      videoPath = localVideoPath;
+    }
+
+    return new Promise((resolve, reject) => {
+      audioPath = join(tempDir, `${randomUUID()}_audio.wav`);
+      
+      console.log(`\ud83c\udfb5 [AUDIO_EXTRACT] Extracting audio to: ${audioPath}`);
+      console.log(`\ud83c\udfb5 [AUDIO_EXTRACT] From video: ${videoPath}`);
+      
+      ffmpeg(videoPath)
+        .toFormat('wav')
+        .audioChannels(1)
+        .audioFrequency(16000)
+        .on('end', async () => {
+          try {
+            // Verify audio file exists before proceeding
+            if (!existsSync(audioPath!)) {
+              throw new Error(`Audio file was not created: ${audioPath}`);
+            }
+            
+            const audioBuffer = readFileSync(audioPath!);
+            const audioS3Key = `audio/${videoId}_extracted.wav`;
+            await uploadFile(audioS3Key, audioBuffer, 'audio/wav');
+            
+            console.log(`\u2705 [AUDIO_EXTRACT] Audio uploaded to S3: ${audioS3Key}`);
+            console.log(`\ud83d\udcbe [AUDIO_EXTRACT] Local audio file retained for transcription: ${audioPath}`);
+            
+            // Clean up video temp file only (keep audio for transcription)
+            if (localVideoPath && existsSync(localVideoPath)) {
+              unlinkSync(localVideoPath);
+              console.log(`\ud83e\uddf9 [AUDIO_EXTRACT] Cleaned up video temp file: ${localVideoPath}`);
+            }
+            
+            // Return both local path and S3 key - local file will be cleaned up after transcription
+            resolve({ audioPath: audioPath!, s3Key: audioS3Key });
+          } catch (uploadError: any) {
+            // Clean up on error
+            if (audioPath && existsSync(audioPath)) {
+              unlinkSync(audioPath);
+            }
+            if (localVideoPath && existsSync(localVideoPath)) {
+              unlinkSync(localVideoPath);
+            }
+            reject(new Error(`Audio upload failed: ${uploadError.message}`));
+          }
+        })
+        .on('error', (err) => {
+          console.error(`\u274c [AUDIO_EXTRACT] FFmpeg error:`, err);
+          // Clean up on error
+          if (audioPath && existsSync(audioPath)) {
+            unlinkSync(audioPath);
+          }
+          if (localVideoPath && existsSync(localVideoPath)) {
+            unlinkSync(localVideoPath);
+          }
+          reject(new Error(`Audio extraction failed: ${err.message}`));
+        })
+        .save(audioPath);
+    });
+  } catch (error: any) {
+    // Clean up on error
+    if (audioPath && existsSync(audioPath)) {
+      unlinkSync(audioPath);
+    }
+    if (localVideoPath && existsSync(localVideoPath)) {
+      unlinkSync(localVideoPath);
+    }
+    throw new Error(`Audio extraction setup failed: ${error.message}`);
+  }
 };
 
 const splitAudioIntoChunks = (audioPath: string, chunkDurationSeconds: number = 30): Promise<string[]> => {
@@ -701,14 +766,19 @@ export const generateVideoWithSubtitles = async (videoId: string, s3Key: string,
     const audioResult = await extractAudioFromVideo(videoPath, videoId);
     audioPath = audioResult.audioPath;
     
+    console.log(`\ud83c\udfb5 [AUTO-SUBTITLES] Audio extracted successfully: ${audioPath}`);
+    console.log(`\ud83c\udfb5 [AUTO-SUBTITLES] Starting transcription...`);
+    
     const { results: transcriptionResults, detectedLanguages } = await transcribeAudio(audioPath, options, audioResult.s3Key);
     const segments = processTranscriptionToSegments(transcriptionResults, options);
     const srtContent = generateSRT(segments, options);
     
     await saveSubtitlesToDatabase(videoId, segments);
     
-    if (existsSync(audioPath)) {
+    // Clean up audio file after transcription is complete
+    if (audioPath && existsSync(audioPath)) {
       unlinkSync(audioPath);
+      console.log(`\ud83e\uddf9 [AUTO-SUBTITLES] Cleaned up audio temp file: ${audioPath}`);
     }
     
     const burnResult = await burnSubtitlesIntoVideo(videoPath, srtContent, videoId, userId, options);
@@ -1114,6 +1184,251 @@ const burnSubtitlesIntoVideo = async (
 
 export { extractAudioFromVideo };
 
+/**
+ * 🎙️ Extract transcript from video for podcast/interview analysis
+ * Returns segments with timestamps for Gemini analysis
+ */
+export interface TranscriptResult {
+  segments: Array<{
+    startTime: number;
+    endTime: number;
+    text: string;
+  }>;
+  fullText: string;
+  duration: number;
+}
+
+export const extractTranscriptFromVideo = async (
+  videoPath: string,
+  projectId: string
+): Promise<TranscriptResult> => {
+  console.log(`[${projectId}] 🎙️ Extracting transcript from video: ${videoPath}`);
+  
+  let localVideoPath: string | null = null;
+  let audioPath: string | null = null;
+  
+  try {
+    // Download video if it's an S3 key
+    if (videoPath.startsWith('videos/')) {
+      console.log(`[${projectId}] 📥 Downloading video from S3...`);
+      const videoExtension = videoPath.split('.').pop() || 'mp4';
+      localVideoPath = join(tempDir, `${randomUUID()}_transcript_input.${videoExtension}`);
+      await downloadFileToPath(videoPath, localVideoPath);
+      videoPath = localVideoPath;
+      console.log(`[${projectId}] ✅ Video downloaded to: ${localVideoPath}`);
+    }
+    
+    // Extract audio from video
+    console.log(`[${projectId}] 🎵 Extracting audio...`);
+    audioPath = join(tempDir, `${randomUUID()}_transcript_audio.wav`);
+    
+    await new Promise<void>((resolve, reject) => {
+      ffmpeg(videoPath)
+        .toFormat('wav')
+        .audioFrequency(16000)
+        .audioChannels(1)
+        .on('end', () => {
+          console.log(`[${projectId}] ✅ Audio extracted`);
+          resolve();
+        })
+        .on('error', (err) => {
+          console.error(`[${projectId}] ❌ Audio extraction failed:`, err);
+          reject(err);
+        })
+        .save(audioPath!);
+    });
+    
+    // Get audio duration
+    const duration = await getVideoDuration(videoPath);
+    console.log(`[${projectId}] ⏱️ Video duration: ${duration}s`);
+    
+    // Transcribe using Google Speech-to-Text
+    console.log(`[${projectId}] 🎤 Transcribing audio...`);
+    const segments = await transcribeAudioForPodcast(audioPath, projectId, duration);
+    
+    // Build full text
+    const fullText = segments.map(s => s.text).join(' ');
+    
+    console.log(`[${projectId}] ✅ Transcript extracted: ${segments.length} segments, ${fullText.split(' ').length} words`);
+    
+    return {
+      segments,
+      fullText,
+      duration
+    };
+    
+  } finally {
+    // Cleanup temp files
+    if (localVideoPath && existsSync(localVideoPath)) {
+      try { unlinkSync(localVideoPath); } catch (e) {}
+    }
+    if (audioPath && existsSync(audioPath)) {
+      try { unlinkSync(audioPath); } catch (e) {}
+    }
+  }
+};
+
+/**
+ * Transcribe audio file for podcast analysis
+ * Uses chunk-based approach for long audio to avoid 10MB limit
+ */
+const transcribeAudioForPodcast = async (
+  audioPath: string,
+  projectId: string,
+  duration: number
+): Promise<Array<{ startTime: number; endTime: number; text: string }>> => {
+  const CHUNK_DURATION = 55; // seconds per chunk (under 60s limit for sync API)
+  
+  // For short audio, use direct recognition
+  if (duration <= 60) {
+    console.log(`[${projectId}] 📤 Using sync recognition for ${duration}s audio...`);
+    const audioBuffer = readFileSync(audioPath);
+    
+    const [response] = await speechClient.recognize({
+      audio: {
+        content: audioBuffer.toString('base64'),
+      },
+      config: {
+        encoding: 'LINEAR16' as any,
+        sampleRateHertz: 16000,
+        languageCode: 'en-US',
+        enableWordTimeOffsets: true,
+        enableAutomaticPunctuation: true,
+        model: 'latest_short',
+      },
+    });
+    
+    return extractSegmentsFromSpeechResponse(response as any, projectId, 0);
+  }
+  
+  // For long audio, split into chunks
+  const numChunks = Math.ceil(duration / CHUNK_DURATION);
+  console.log(`[${projectId}] 🔪 Splitting ${duration.toFixed(0)}s audio into ${numChunks} chunks...`);
+  
+  const allSegments: Array<{ startTime: number; endTime: number; text: string }> = [];
+  
+  for (let i = 0; i < numChunks; i++) {
+    const startTime = i * CHUNK_DURATION;
+    const chunkPath = join(tempDir, `${randomUUID()}_chunk_${i}.wav`);
+    
+    console.log(`[${projectId}] ✂️ Processing chunk ${i + 1}/${numChunks} (${startTime}s - ${Math.min(startTime + CHUNK_DURATION, duration)}s)...`);
+    
+    // Extract chunk with ffmpeg
+    await new Promise<void>((resolve, reject) => {
+      ffmpeg(audioPath)
+        .setStartTime(startTime)
+        .setDuration(CHUNK_DURATION)
+        .toFormat('wav')
+        .audioChannels(1)
+        .audioFrequency(16000)
+        .on('end', () => resolve())
+        .on('error', (err) => reject(err))
+        .save(chunkPath);
+    });
+    
+    try {
+      // Transcribe chunk
+      const chunkBuffer = readFileSync(chunkPath);
+      
+      const [response] = await speechClient.recognize({
+        audio: {
+          content: chunkBuffer.toString('base64'),
+        },
+        config: {
+          encoding: 'LINEAR16' as any,
+          sampleRateHertz: 16000,
+          languageCode: 'en-US',
+          alternativeLanguageCodes: ['hi-IN', 'es-ES'],
+          enableWordTimeOffsets: true,
+          enableAutomaticPunctuation: true,
+          model: 'latest_short',
+        },
+      });
+      
+      // Extract segments with time offset
+      const chunkSegments = extractSegmentsFromSpeechResponse(response as any, projectId, startTime);
+      allSegments.push(...chunkSegments);
+      
+      console.log(`[${projectId}] ✅ Chunk ${i + 1} transcribed: ${chunkSegments.length} segments`);
+      
+    } finally {
+      // Cleanup chunk file
+      if (existsSync(chunkPath)) {
+        try { unlinkSync(chunkPath); } catch (e) {}
+      }
+    }
+  }
+  
+  console.log(`[${projectId}] ✅ Total segments extracted: ${allSegments.length}`);
+  return allSegments;
+};
+
+/**
+ * Extract segments from Google Speech response
+ */
+const extractSegmentsFromSpeechResponse = (
+  response: any,
+  projectId: string,
+  timeOffset: number = 0
+): Array<{ startTime: number; endTime: number; text: string }> => {
+  const segments: Array<{ startTime: number; endTime: number; text: string }> = [];
+  
+  if (!response.results) {
+    console.warn(`[${projectId}] No results in speech response`);
+    return segments;
+  }
+  
+  for (const result of response.results) {
+    if (!result.alternatives || result.alternatives.length === 0) continue;
+    
+    const alternative = result.alternatives[0];
+    const words = alternative.words || [];
+    
+    if (words.length === 0 && alternative.transcript) {
+      // No word timings, create a single segment
+      segments.push({
+        startTime: timeOffset,
+        endTime: timeOffset,
+        text: alternative.transcript
+      });
+      continue;
+    }
+    
+    // Group words into sentences (roughly 10-15 words per segment)
+    const WORDS_PER_SEGMENT = 12;
+    
+    for (let i = 0; i < words.length; i += WORDS_PER_SEGMENT) {
+      const segmentWords = words.slice(i, Math.min(i + WORDS_PER_SEGMENT, words.length));
+      
+      if (segmentWords.length === 0) continue;
+      
+      const firstWord = segmentWords[0];
+      const lastWord = segmentWords[segmentWords.length - 1];
+      
+      const startTime = parseGoogleDuration(firstWord.startTime) + timeOffset;
+      const endTime = parseGoogleDuration(lastWord.endTime) + timeOffset;
+      const text = segmentWords.map((w: any) => w.word).join(' ');
+      
+      segments.push({ startTime, endTime, text });
+    }
+  }
+  
+  console.log(`[${projectId}] ✅ Extracted ${segments.length} transcript segments`);
+  return segments;
+};
+
+/**
+ * Parse Google duration format to seconds
+ */
+const parseGoogleDuration = (duration: any): number => {
+  if (!duration) return 0;
+  
+  const seconds = Number(duration.seconds || 0);
+  const nanos = Number(duration.nanos || 0) / 1e9;
+  
+  return seconds + nanos;
+};
+
 export const generateSubtitles = async (videoS3Key: string, userId: string): Promise<SubtitleSegment[]> => {
   const videoId = uuidv4();
   const result = await generateVideoWithSubtitles(videoId, videoS3Key, userId);
@@ -1190,10 +1505,28 @@ export const convertSRTToASS = (srtContent: string, style?: SubtitleStyle, video
 
   const fontFilePath = style ? getFontFilePath(style.fontFamily, style.bold) : 'Arial';
   
+  // Scale font size based on video resolution
+  // The font size from frontend is designed for 1080p (1920x1080)
+  // We scale it proportionally based on actual video height
+  const scaleFontSize = (baseFontSize: number): number => {
+    const referenceHeight = 1080; // Reference resolution height (1080p)
+    const scaleFactor = videoHeight / referenceHeight;
+    const scaledSize = Math.round(baseFontSize * scaleFactor);
+    
+    // Apply additional multiplier to make subtitles more visible
+    // ASS renders fonts smaller than expected, so we boost them
+    const visibilityMultiplier = 2.5; // Increase font size by 2.5x for better visibility
+    const finalSize = Math.round(scaledSize * visibilityMultiplier);
+    
+    console.log(`📏 [FONT SCALE] Base: ${baseFontSize}px, Video: ${videoHeight}p, Scale: ${scaleFactor.toFixed(2)}x, Final: ${finalSize}px (${visibilityMultiplier}x boost)`);
+    
+    return finalSize;
+  };
+  
   const finalStyle = style ? {
     fontFamily: style.fontFamily,
     fontFile: fontFilePath,
-    fontSize: style.fontSize,
+    fontSize: scaleFontSize(style.fontSize),
     primaryColor: style.primaryColor.startsWith('&H') ? style.primaryColor : hexToAssBgr(style.primaryColor),
     outlineColor: style.outlineColor.startsWith('&H') ? style.outlineColor : hexToAssBgr(style.outlineColor),
     shadowColor: style.shadowColor.startsWith('&H') ? style.shadowColor : hexToAssBgr(style.shadowColor),
@@ -1202,7 +1535,7 @@ export const convertSRTToASS = (srtContent: string, style?: SubtitleStyle, video
     italic: style.italic ? 1 : 0,
     alignment: getAlignment(style.alignment),
     shadow: style.showShadow ? 3 : 0 // Shadow depth
-  } : {...defaultStyle, fontFile: 'Arial', alignment: 2, shadow: 0};
+  } : {...defaultStyle, fontFile: 'Arial', alignment: 2, shadow: scaleFontSize(20)};
   
   console.log(`📝 [ASS] Using font: ${finalStyle.fontFamily} (${finalStyle.fontSize}px, bold: ${!!finalStyle.bold})`);
   console.log(`📝 [ASS] Font file path: ${finalStyle.fontFile}`);

@@ -45,38 +45,38 @@ export { redisConfig };
 export const videoProcessingQueue = new Bull('video processing', {
   redis: redisConfig,
   settings: {
-    stalledInterval: 60 * 1000, // 60 seconds for large file processing
-    maxStalledCount: 2, // Allow more stalls for heavy processing
+    stalledInterval: 120 * 1000,
+    maxStalledCount: 3,
   },
   defaultJobOptions: {
-    removeOnComplete: 5, // Keep fewer completed jobs to save memory
-    removeOnFail: 10,
-    attempts: 2, // Reduce attempts for faster failure detection
+    removeOnComplete: 50,
+    removeOnFail: 100,
+    attempts: 3,
     backoff: {
       type: 'exponential',
-      delay: 10000 // 10 second delay for large file retries
+      delay: 5000
     },
-    // Extended timeout for large video processing (30 minutes)
-    timeout: 1800000
+    timeout: 5400000
   }
 });
 
 export const subtitleQueue = new Bull('subtitle generation', {
   redis: redisConfig,
   settings: {
-    stalledInterval: 45 * 1000, // 45 seconds for audio processing
-    maxStalledCount: 1,
+    stalledInterval: 300 * 1000, // 5 minutes - increased to prevent false stalled detection
+    maxStalledCount: 2, // Reduce retry attempts on stalled jobs
+    lockDuration: 600000, // 10 minutes lock duration
+    lockRenewTime: 150000 // Renew lock every 2.5 minutes
   },
   defaultJobOptions: {
-    removeOnComplete: 5,
-    removeOnFail: 10,
-    attempts: 2,
+    removeOnComplete: 50,
+    removeOnFail: 100,
+    attempts: 2, // Reduce attempts to avoid infinite loops
     backoff: {
       type: 'exponential',
-      delay: 5000
+      delay: 10000 // 10 second delay between retries
     },
-    // Extended timeout for large video subtitle generation (20 minutes)
-    timeout: 1200000
+    timeout: 7200000
   }
 });
 
@@ -100,19 +100,18 @@ export const aiQueue = new Bull('ai processing', {
 export const smartClipperQueue = new Bull('smart clipper', {
   redis: redisConfig,
   settings: {
-    stalledInterval: 60 * 1000, // 60 seconds for AI processing
-    maxStalledCount: 2,
+    stalledInterval: 120 * 1000,
+    maxStalledCount: 3,
   },
   defaultJobOptions: {
-    removeOnComplete: 3, // Keep fewer for memory efficiency
-    removeOnFail: 5,
-    attempts: 2,
+    removeOnComplete: 50,
+    removeOnFail: 100,
+    attempts: 3,
     backoff: {
       type: 'exponential',
-      delay: 10000
+      delay: 5000
     },
-    // Extended timeout for large video AI analysis (45 minutes)
-    timeout: 2700000
+    timeout: 10800000
   }
 });
 

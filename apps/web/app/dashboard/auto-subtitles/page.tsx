@@ -47,6 +47,8 @@ export default function AutoSubtitlesPage() {
   const [uploadStage, setUploadStage] = useState<UploadStage>('idle');
   const [uploadProgress, setUploadProgress] = useState(0);
   const [processingProgress, setProcessingProgress] = useState(0);
+  const [estimatedTimeRemaining, setEstimatedTimeRemaining] = useState<number>(0);
+  const [currentJobId, setCurrentJobId] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [videoData, setVideoData] = useState<VideoData | null>(null);
   const [error, setError] = useState<string>('');
@@ -142,34 +144,42 @@ export default function AutoSubtitlesPage() {
       setUploadStage('processing');
       setProcessingProgress(0);
 
-      // Simulate processing progress
-      const progressInterval = setInterval(() => {
-        setProcessingProgress((prev) => {
-          if (prev >= 90) {
-            clearInterval(progressInterval);
-            return prev;
-          }
-          return prev + Math.random() * 10;
-        });
-      }, 1000);
+      // Start subtitle generation (returns immediately with job ID)
+      const jobResponse = await apiClient.generateSubtitles(video.id, subtitleOptions, selectedLanguage || undefined);
+      setCurrentJobId(jobResponse.jobId);
+      
+      console.log('Subtitle job started:', jobResponse);
+      console.log(`Estimated time: ${jobResponse.estimatedTimeMinutes} minutes`);
 
-      const subtitleResult = await apiClient.generateSubtitles(video.id, subtitleOptions, selectedLanguage || undefined);
-      clearInterval(progressInterval);
+      // Poll for progress and completion
+      const result = await apiClient.pollSubtitleJob(
+        jobResponse.jobId,
+        (progress, etaMs) => {
+          setProcessingProgress(progress);
+          setEstimatedTimeRemaining(Math.ceil(etaMs / 60000)); // Convert to minutes
+          console.log(`Progress: ${progress}%, ETA: ${Math.ceil(etaMs / 60000)} minutes`);
+        },
+        3000 // Poll every 3 seconds
+      );
+
       setProcessingProgress(100);
+      setEstimatedTimeRemaining(0);
 
-      console.log('Subtitle generation result:', subtitleResult); // Debug log
+      console.log('Subtitle generation completed:', result); // Debug log
       
       setVideoData(prev => prev ? { 
         ...prev, 
         subtitles: 'Generated successfully',
-        detectedLanguages: subtitleResult.detectedLanguages || [],
-        videoUrl: subtitleResult.videoWithSubtitles
+        detectedLanguages: [],
+        videoUrl: result.subtitledVideoUrl
       } : null);
       setUploadStage('completed');
+      setCurrentJobId(null);
 
     } catch (error: any) {
       setError(error.message || 'Failed to process video');
       setUploadStage('error');
+      setCurrentJobId(null);
     }
   };
 
@@ -177,7 +187,9 @@ export default function AutoSubtitlesPage() {
     setSelectedFile(null);
     setVideoData(null);
     setUploadStage('idle');
-    setUploadProgress(0);
+    setUstimatedTimeRemaining(0);
+    setCurrentJobId(null);
+    setEploadProgress(0);
     setProcessingProgress(0);
     setError('');
     
@@ -333,6 +345,7 @@ export default function AutoSubtitlesPage() {
         uploadStage={uploadStage}
         uploadProgress={uploadProgress}
         processingProgress={processingProgress}
+        estimatedTimeRemaining={estimatedTimeRemaining}
         error={error}
         onRetry={resetUpload}
       />

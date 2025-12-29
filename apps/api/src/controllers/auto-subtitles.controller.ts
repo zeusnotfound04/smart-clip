@@ -55,68 +55,88 @@ export const generate = async (req: AuthRequest, res: Response) => {
     const { videoId, language, options } = generateSchema.parse(req.body);
     
     const video = await prisma.video.findFirst({
-      where: { id: videoId, userId: req.userId }
+      where: { id: videoId, userId: req.userId },
+      select: { id: true, filePath: true, userId: true, duration: true, status: true }
     });
 
     if (!video) {
       return res.status(404).json({ error: 'Video not found' });
     }
 
+    // Check if video is already processing
+    if (video.status === 'processing') {
+      // Check if there's an active job for this video
+      const { subtitleQueue } = await import('../lib/queues');
+      const jobs = await subtitleQueue.getJobs(['active', 'waiting', 'delayed']);
+      const existingJob = jobs.find(job => job.data.videoId === videoId);
+      
+      if (existingJob) {
+        console.log(`⚠️ Video ${videoId} is already being processed by job ${existingJob.id}`);
+        return res.json({
+          success: true,
+          videoId,
+          jobId: existingJob.id,
+          estimatedTimeMinutes: Math.ceil((video.duration || 0) / 10),
+          eta: Math.ceil((video.duration || 0) / 10) * 60 * 1000,
+          message: 'Subtitle generation already in progress. Use the jobId to check progress.',
+          pollUrl: `/api/subtitles/status/${existingJob.id}`
+        });
+      }
+    }
+
     if (language) {
       console.log(`🌍 Using specified language: ${language}`);
     }
+
+    // Calculate ETA based on video duration
+    const videoDuration = video.duration || 0;
+    const estimatedMinutes = Math.ceil(videoDuration / 10); // ~10 seconds per minute of video (optimized)
+    const eta = estimatedMinutes * 60 * 1000; // Convert to milliseconds
+
+    // Queue the job instead of processing synchronously
+    const { subtitleQueue } = await import('../lib/queues');
+    const jobId = `subtitle-${videoId}-${Date.now()}`;
+    
+    const job = await subtitleQueue.add('generate-subtitles', {
+      videoId,
+      s3Key: video.filePath,
+      userId: req.userId,
+      language,
+      options
+    }, {
+      jobId: jobId,
+      timeout: 7200000, // 2 hour timeout
+      attempts: 2,
+      removeOnComplete: 50,
+      removeOnFail: 100
+    });
 
     await prisma.video.update({
       where: { id: videoId },
       data: { status: 'processing' }
     });
 
-    const subtitleOptions = options ? {
-      ...options,
-      language: language || options?.language
-    } : language ? { language } : undefined;
+    console.log(`✅ Subtitle job created: ${jobId} for video ${videoId} (${videoDuration}s, ETA: ${estimatedMinutes} min)`);
 
-    const result = await generateVideoWithSubtitles(videoId, video.filePath, req.userId!, subtitleOptions);
-
-    // Update video with subtitled video URL and mark as completed
-    await prisma.video.update({
-      where: { id: videoId },
-      data: { 
-        status: 'completed',
-        subtitledVideoUrl: result.subtitledVideoUrl
-      }
-    });
-
-    // Save subtitle segments to database
-    for (const segment of result.segments) {
-      await prisma.subtitle.create({
-        data: {
-          videoId,
-          text: segment.text,
-          startTime: segment.startTime,
-          endTime: segment.endTime,
-          confidence: segment.confidence,
-          speaker: null
-        }
-      });
-    }
-
+    // Return immediately with job ID and ETA for polling
     res.json({
       success: true,
       videoId,
-      videoWithSubtitles: result.subtitledVideoUrl,
-      srtContent: result.srtContent,
-      segments: result.segments,
-      detectedLanguages: result.detectedLanguages,
-      srtS3Key: result.srtS3Key,
-      audioS3Key: result.audioS3Key,
-      message: 'Subtitles generated successfully and all files saved to S3'
+      jobId: job.id,
+      estimatedTimeMinutes: estimatedMinutes,
+      eta: eta,
+      message: 'Subtitle generation started. Use the jobId to check progress.',
+      pollUrl: `/api/subtitles/status/${job.id}`
     });
   } catch (error: any) {
-    await prisma.video.update({
-      where: { id: req.body.videoId },
-      data: { status: 'failed' }
-    });
+    console.error('❌ Subtitle generation error:', error);
+    
+    if (req.body.videoId) {
+      await prisma.video.update({
+        where: { id: req.body.videoId },
+        data: { status: 'failed' }
+      }).catch(err => console.error('Failed to update video status:', err));
+    }
 
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.issues[0].message });
@@ -137,7 +157,7 @@ export const generate = async (req: AuthRequest, res: Response) => {
       });
     }
     
-    res.status(500).json({ error: 'Failed to generate subtitles' });
+    res.status(500).json({ error: 'Failed to start subtitle generation' });
   }
 };
 
@@ -193,6 +213,55 @@ export const updateSubtitle = async (req: AuthRequest, res: Response) => {
     }
     console.error('Update subtitle error:', error);
     res.status(500).json({ error: 'Failed to update subtitle' });
+  }
+};
+
+export const getSubtitleJobStatus = async (req: AuthRequest, res: Response) => {
+  try {
+    const { jobId } = req.params;
+    
+    const { subtitleQueue } = await import('../lib/queues');
+    const job = await subtitleQueue.getJob(jobId);
+    
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    const state = await job.getState();
+    const progress = job.progress();
+    const jobData = job.data;
+
+    // Get video status
+    const video = await prisma.video.findUnique({
+      where: { id: jobData.videoId },
+      select: {
+        id: true,
+        status: true,
+        subtitledVideoUrl: true,
+        duration: true
+      }
+    });
+
+    // Calculate remaining time based on progress
+    const videoDuration = video?.duration || 0;
+    const estimatedTotalMinutes = Math.ceil(videoDuration / 10);
+    const progressPercent = typeof progress === 'number' ? progress : 0;
+    const remainingMinutes = Math.ceil(estimatedTotalMinutes * (1 - progressPercent / 100));
+
+    res.json({
+      jobId: job.id,
+      status: state,
+      progress: progressPercent,
+      videoId: jobData.videoId,
+      videoStatus: video?.status,
+      subtitledVideoUrl: video?.subtitledVideoUrl,
+      estimatedRemainingMinutes: remainingMinutes,
+      error: job.failedReason,
+      completedAt: job.finishedOn ? new Date(job.finishedOn).toISOString() : null
+    });
+  } catch (error) {
+    console.error('Get subtitle job status error:', error);
+    res.status(500).json({ error: 'Failed to get job status' });
   }
 };
 

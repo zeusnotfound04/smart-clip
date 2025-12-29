@@ -1,6 +1,6 @@
 import { videoProcessingQueue, subtitleQueue, aiQueue, smartClipperQueue } from '../lib/queues';
 import Bull from 'bull';
-import { extractAudioFromVideo, generateSubtitles, generateSRT } from '../services/auto-subtitles.service';
+import { generateSubtitles, generateSRT } from '../services/auto-subtitles.service';
 import { combineVideos } from '../services/split-streamer.service';
 import { detectHighlights } from '../services/smart-clipper.service';
 import { generateScript } from '../services/script-generator.service';
@@ -9,9 +9,10 @@ import { geminiVideoAnalysis } from '../services/gemini-video-analysis.service';
 import { multimodalEmbeddings } from '../services/multimodal-embeddings.service';
 import { ffmpegPreprocessing } from '../services/ffmpeg-preprocessing.service';
 import { segmentScoring } from '../services/segment-scoring.service';
+import { transcriptClipper } from '../services/transcript-clipper.service';
 import { prisma } from '../lib/prisma';
 
-videoProcessingQueue.process('combine-videos', 2, async (job) => {
+videoProcessingQueue.process('combine-videos', 8, async (job) => {
   const { projectId, webcamVideoPath, gameplayVideoPath, layoutConfig, userId, requestId } = job.data;
   
   try {
@@ -55,12 +56,20 @@ videoProcessingQueue.process('combine-videos', 2, async (job) => {
   }
 });
 
-subtitleQueue.process('generate-subtitles', 3, async (job) => {
-  const { videoId, s3Key, userId } = job.data;
+subtitleQueue.process('generate-subtitles', 7, async (job) => {
+  const { videoId, s3Key, userId, language, options } = job.data;
   
   try {
     if (!userId) {
       throw new Error('User ID is required for subtitle generation');
+    }
+
+    console.log(`🚀 Processing subtitle job: ${job.id} for video: ${videoId}`);
+    
+    // Log style configuration if provided
+    if (options?.style) {
+      console.log(`🎨 [STYLE CONFIG] Font: ${options.style.fontFamily || 'Arial'}, Size: ${options.style.fontSize || 20}px, Color: ${options.style.primaryColor || '#FFFFFF'}`);
+      console.log(`🎨 [STYLE CONFIG] Bold: ${options.style.bold || false}, Italic: ${options.style.italic || false}, Alignment: ${options.style.alignment || 'center'}`);
     }
 
     await prisma.video.update({
@@ -68,9 +77,37 @@ subtitleQueue.process('generate-subtitles', 3, async (job) => {
       data: { status: 'processing' }
     });
 
-    const audioResult = await extractAudioFromVideo(s3Key, videoId);
+    // Report progress: Starting subtitle generation (10%)
+    console.log(`📊 Job ${job.id}: Starting subtitle generation (10%)`);
+    await job.progress(10);
+    
     const { generateVideoWithSubtitles } = await import('../services/auto-subtitles.service');
-    const result = await generateVideoWithSubtitles(videoId, s3Key, userId);
+    
+    // Create progress callback with more frequent updates
+    let lastReportedProgress = 25;
+    const progressCallback = async (progress: number) => {
+      // Map 25-90% for subtitle generation
+      const mappedProgress = 25 + (progress * 0.65);
+      
+      // Report every 5% or if 30 seconds have passed
+      if (mappedProgress - lastReportedProgress >= 5) {
+        console.log(`📊 Job ${job.id}: Processing at ${mappedProgress.toFixed(1)}%`);
+        await job.progress(mappedProgress);
+        lastReportedProgress = mappedProgress;
+      }
+    };
+    
+    // Pass options including style configuration and language to generateVideoWithSubtitles
+    const result = await generateVideoWithSubtitles(videoId, s3Key, userId, {
+      onProgress: progressCallback,
+      language: language,
+      ...options // Spread options to include style, detectAllLanguages, etc.
+    });
+    
+    // Report progress: Saving subtitles to database (90%)
+    console.log(`📊 Job ${job.id}: Saving subtitles to database (90%)`);
+    await job.progress(90);
+    
     const subtitles = result.segments;
     
     for (const subtitle of subtitles) {
@@ -85,13 +122,31 @@ subtitleQueue.process('generate-subtitles', 3, async (job) => {
       });
     }
 
+    // Report progress: Completed (100%)
+    console.log(`✅ Job ${job.id}: Completed (100%)`);
+    await job.progress(100);
+    
+    // Update video record with the subtitled video URL
     await prisma.video.update({
       where: { id: videoId },
-      data: { status: 'completed' }
+      data: { 
+        status: 'completed',
+        subtitledVideoUrl: result.subtitledVideoUrl,
+        subtitleConfig: {
+          srtS3Key: result.srtS3Key,
+          audioS3Key: result.audioS3Key,
+          detectedLanguages: result.detectedLanguages,
+          segmentCount: result.segments.length
+        }
+      }
     });
 
+    console.log(`🎉 Subtitle job ${job.id} completed successfully`);
+    console.log(`📹 [SUBTITLE] Updated video with subtitled URL: ${result.subtitledVideoUrl}`);
+    console.log(`📄 [SUBTITLE] SRT S3 Key: ${result.srtS3Key}`);
     return subtitles;
-  } catch (error) {
+  } catch (error: any) {
+    console.error(`❌ Subtitle job ${job.id} failed:`, error.message);
     await prisma.video.update({
       where: { id: videoId },
       data: { status: 'failed' }
@@ -305,7 +360,7 @@ smartClipperQueue.on('stalled', (job) => {
 });
 
 // Force process jobs function with optimized concurrency for maximum throughput
-smartClipperQueue.process('analyze-video-complete', 3, async (job) => {
+smartClipperQueue.process('analyze-video-complete', 10, async (job) => {
   const { projectId, videoPath, videoDuration, contentType, config, requestId } = job.data;
   
   console.log(`🚀 Smart Clipper: Starting analysis for project ${projectId}`);
@@ -586,6 +641,228 @@ smartClipperQueue.process('analyze-video-complete', 3, async (job) => {
 
 console.log('✅ Smart Clipper analyze-video-complete processor registered');
 
+// 🎙️ SIMPLIFIED PODCAST/INTERVIEW PROCESSOR
+// Uses transcript-based analysis only - no audio/scene detection
+smartClipperQueue.process('analyze-podcast-transcript', 5, async (job) => {
+  const { projectId, videoPath, videoDuration, contentType, config, requestId } = job.data;
+  
+  console.log(`🎙️ [${requestId}] Starting TRANSCRIPT-BASED analysis for ${contentType} project ${projectId}`);
+  
+  try {
+    // Update project status
+    await prisma.smartClipperProject.update({
+      where: { id: projectId },
+      data: { 
+        status: 'analyzing',
+        processingStage: 'transcribing'
+      }
+    });
+
+    // Stage 1: Extract subtitles/transcription
+    console.log(`[${requestId}] Stage 1: Extracting transcript from video...`);
+    
+    const { extractTranscriptFromVideo } = await import('../services/auto-subtitles.service');
+    
+    // Get project to find user ID
+    const project = await prisma.smartClipperProject.findUnique({
+      where: { id: projectId },
+      include: { user: true }
+    });
+    
+    if (!project?.user?.id) {
+      throw new Error('User ID not found for project');
+    }
+    
+    const userId = project.user.id;
+    
+    // Extract transcript using existing subtitle service
+    const transcriptResult = await extractTranscriptFromVideo(videoPath, projectId);
+    
+    console.log(`[${requestId}] ✅ Transcript extracted: ${transcriptResult.segments.length} segments`);
+    
+    await prisma.smartClipperProject.update({
+      where: { id: projectId },
+      data: { processingStage: 'analyzing-transcript' }
+    });
+
+    // Stage 2: Send transcript to Gemini Pro for clip selection
+    console.log(`[${requestId}] Stage 2: Sending transcript to Gemini Pro...`);
+    
+    const clipConfig = {
+      numberOfClips: config.numberOfClips || 5,
+      minClipDuration: config.minClipDuration || 30,
+      maxClipDuration: config.maxClipDuration || 90,
+      contentType: contentType as 'podcast' | 'interview'
+    };
+    
+    const clipRecommendations = await transcriptClipper.analyzeTranscriptAndGetClips(
+      transcriptResult.segments,
+      clipConfig,
+      projectId
+    );
+    
+    console.log(`[${requestId}] ✅ Gemini selected ${clipRecommendations.length} clips`);
+    
+    if (clipRecommendations.length === 0) {
+      throw new Error('Gemini Pro did not return any clip recommendations');
+    }
+    
+    await prisma.smartClipperProject.update({
+      where: { id: projectId },
+      data: { 
+        processingStage: 'creating-segments',
+        geminiProResults: JSON.stringify({ recommendations: clipRecommendations }) as any
+      }
+    });
+
+    // Stage 3: Create highlight segments in database
+    console.log(`[${requestId}] Stage 3: Creating highlight segments...`);
+    
+    const createdSegments = [];
+    for (const clip of clipRecommendations) {
+      const segment = await prisma.highlightSegment.create({
+        data: {
+          projectId,
+          startTime: clip.startTime,
+          endTime: clip.endTime,
+          duration: clip.endTime - clip.startTime,
+          flashScore: null,
+          proScore: clip.score,
+          finalScore: clip.score,
+          confidenceLevel: clip.score / 100,
+          highlightType: clip.highlightType,
+          reasoning: `${clip.title}\n\n${clip.reasoning}`,
+          geminiClassification: clip.highlightType,
+          contentTags: [clip.highlightType, contentType],
+          audioEnergyAvg: null,
+          silenceRatio: null,
+          sceneChanges: null,
+          status: 'recommended'
+        }
+      });
+      createdSegments.push(segment);
+    }
+    
+    console.log(`[${requestId}] ✅ Created ${createdSegments.length} highlight segments`);
+    
+    await prisma.smartClipperProject.update({
+      where: { id: projectId },
+      data: { processingStage: 'generating-clips' }
+    });
+
+    // Stage 4: Generate video clips using FFmpeg
+    console.log(`[${requestId}] Stage 4: Generating video clips with FFmpeg...`);
+    
+    const { clipGeneration } = await import('../services/clip-generation.service');
+    const { uploadClip } = await import('../lib/s3');
+    const { unlink } = await import('fs/promises');
+    
+    const generatedClips = [];
+    
+    for (const segment of createdSegments) {
+      try {
+        // Generate clip file locally
+        const localClipPath = await clipGeneration.generateSingleClip(
+          segment.id,
+          videoPath,
+          segment.startTime,
+          segment.endTime,
+          userId,
+          {
+            format: 'mp4',
+            quality: 'medium',
+            resolution: 'original',
+            includeAudio: true,
+            fadeInOut: false
+          }
+        );
+        
+        // Upload to S3
+        const s3Url = await uploadClip(localClipPath, userId, segment.id, projectId);
+        
+        // Update segment with S3 URL
+        await prisma.highlightSegment.update({
+          where: { id: segment.id },
+          data: {
+            s3Url,
+            status: 'ready',
+            generatedAt: new Date()
+          }
+        });
+        
+        generatedClips.push({
+          segmentId: segment.id,
+          s3Url,
+          startTime: segment.startTime,
+          endTime: segment.endTime,
+          score: segment.finalScore
+        });
+        
+        // Clean up local file
+        try {
+          await unlink(localClipPath);
+        } catch (cleanupError) {
+          console.warn(`[${requestId}] Failed to cleanup local file:`, cleanupError);
+        }
+        
+        console.log(`[${requestId}] ✅ Clip ${segment.id} uploaded to S3`);
+        
+      } catch (clipError) {
+        console.error(`[${requestId}] ❌ Clip generation failed for segment ${segment.id}:`, clipError);
+        await prisma.highlightSegment.update({
+          where: { id: segment.id },
+          data: {
+            status: 'failed',
+            errorMessage: clipError instanceof Error ? clipError.message : String(clipError)
+          }
+        });
+      }
+    }
+    
+    console.log(`[${requestId}] ✅ Generated ${generatedClips.length} clips`);
+    
+    // Mark project as complete
+    await prisma.smartClipperProject.update({
+      where: { id: projectId },
+      data: { 
+        status: 'ready',
+        processingStage: null,
+        totalSegmentsFound: createdSegments.length,
+        actualCost: 0.01, // Minimal cost (just Gemini Pro call)
+        embeddingScores: {
+          method: 'transcript-based',
+          transcriptSegments: transcriptResult.segments.length,
+          generatedClips: generatedClips.length
+        }
+      }
+    });
+    
+    console.log(`[${requestId}] 🎉 Podcast/Interview analysis completed: ${generatedClips.length} clips ready`);
+    
+    return {
+      projectId,
+      method: 'transcript-based',
+      segmentsGenerated: createdSegments.length,
+      clipsGenerated: generatedClips.length
+    };
+    
+  } catch (error) {
+    console.error(`[${requestId}] ❌ Podcast analysis failed:`, error);
+    
+    await prisma.smartClipperProject.update({
+      where: { id: projectId },
+      data: { 
+        status: 'failed',
+        errorMessage: error instanceof Error ? error.message : String(error)
+      }
+    });
+    
+    throw error;
+  }
+});
+
+console.log('✅ Podcast/Interview transcript-based processor registered');
+
 // Force process waiting jobs after setup
 setTimeout(async () => {
   try {
@@ -612,7 +889,7 @@ setTimeout(async () => {
 }, 3000);
 
 // Smart Clipper clip generation processor with high concurrency
-smartClipperQueue.process('generate-clip', 3, async (job) => {
+smartClipperQueue.process('generate-clip', 8, async (job) => {
   const { segmentId, videoPath, startTime, endTime, exportSettings, projectId, userId } = job.data;
   
   try {
@@ -644,7 +921,7 @@ smartClipperQueue.process('generate-clip', 3, async (job) => {
 });
 
 // Smart Clipper segment scoring processor with increased concurrency
-smartClipperQueue.process('score-segments', 2, async (job) => {
+smartClipperQueue.process('score-segments', 6, async (job) => {
   const { projectId, requestId } = job.data;
   
   try {
@@ -692,7 +969,7 @@ smartClipperQueue.process('score-segments', 2, async (job) => {
 });
 
 // Smart Clipper user feedback processor for score rebalancing with concurrency
-smartClipperQueue.process('rebalance-scores', 2, async (job) => {
+smartClipperQueue.process('rebalance-scores', 6, async (job) => {
   const { projectId, userFeedback, requestId } = job.data;
   
   try {

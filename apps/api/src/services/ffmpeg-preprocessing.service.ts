@@ -4,9 +4,10 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import os from 'os';
 import { prisma } from '../lib/prisma';
-import { downloadFile } from '../lib/s3';
+import { downloadFile, downloadFileToPath } from '../lib/s3';
 
 const execAsync = promisify(exec);
+const execAsyncLargeBuffer = (command: string) => execAsync(command, { maxBuffer: 100 * 1024 * 1024 });
 
 interface AudioAnalysisResult {
   averageEnergy: number;
@@ -55,11 +56,13 @@ interface PreprocessingResult {
 
 export class FFmpegPreprocessingService {
   private tempDir: string;
+  private maxConcurrentTasks: number;
 
   constructor() {
-    // Get cross-platform temp directory
     const defaultTempDir = this.getDefaultTempDir();
     this.tempDir = process.env.TEMP_DIR || path.join(process.env.TEMP || process.env.TMPDIR || defaultTempDir, 'smart-clipper');
+    this.maxConcurrentTasks = os.cpus().length;
+    console.log(`FFmpeg Service initialized with ${this.maxConcurrentTasks} concurrent tasks on ${os.cpus().length}-core CPU (16GB RAM optimized)`);
   }
 
   private getDefaultTempDir(): string {
@@ -102,14 +105,15 @@ export class FFmpegPreprocessingService {
 
       // Check if videoPath is an S3 key or local path
       if (videoPath.startsWith('videos/')) {
-        console.log(`[${projectId}] Downloading video from S3: ${videoPath}`);
-        const videoBuffer = await downloadFile(videoPath);
+        console.log(`[${projectId}] 🚀 Streaming video from S3: ${videoPath}`);
         
-        // Create local temp file
+        // Create local temp file path
         const videoExtension = path.extname(videoPath) || '.mp4';
         localVideoPath = path.join(this.tempDir, `${projectId}-input${videoExtension}`);
-        await fs.writeFile(localVideoPath, videoBuffer);
-        console.log(`[${projectId}] Video downloaded to: ${localVideoPath}`);
+        
+        // 🔥 Use streaming download to file (much faster, avoids RAM usage)
+        await downloadFileToPath(videoPath, localVideoPath);
+        console.log(`[${projectId}] ✅ Video streamed to: ${localVideoPath}`);
         
         // Use local path for processing
         videoPath = localVideoPath;
@@ -159,7 +163,7 @@ export class FFmpegPreprocessingService {
     const command = `ffprobe -v quiet -print_format json -show_format -show_streams "${normalizedVideoPath}"`;
     
     try {
-      const { stdout } = await execAsync(command);
+      const { stdout } = await execAsyncLargeBuffer(command);
       const probe = JSON.parse(stdout);
       
       const videoStream = probe.streams.find((s: any) => s.codec_type === 'video');
@@ -206,20 +210,20 @@ export class FFmpegPreprocessingService {
       // Extract audio and analyze energy
       const normalizedVideoPath = this.normalizePathForFFmpeg(videoPath);
       const normalizedTempAudioFile = this.normalizePathForFFmpeg(tempAudioFile);
-      const audioCommand = `ffmpeg -i "${normalizedVideoPath}" -vn -acodec pcm_s16le -ar 44100 -ac 1 "${normalizedTempAudioFile}" -y`;
-      await execAsync(audioCommand);
+      const audioCommand = `ffmpeg -i "${normalizedVideoPath}" -vn -acodec pcm_s16le -ar 44100 -ac 1 -threads ${this.maxConcurrentTasks} "${normalizedTempAudioFile}" -y`;
+      await execAsyncLargeBuffer(audioCommand);
 
       // Analyze RMS energy levels using astats filter without problematic file output
       // Output metadata to stderr which we can capture directly
       const energyCommand = `ffmpeg -i "${normalizedTempAudioFile}" -af "astats=metadata=1:reset=1" -f null -`;
-      const { stderr } = await execAsync(energyCommand);
+      const { stderr } = await execAsyncLargeBuffer(energyCommand);
 
       // Detect silence segments - Windows compatible
       const silenceCommand = `ffmpeg -i "${normalizedTempAudioFile}" -af "silencedetect=noise=${silenceThreshold}dB:duration=0.5" -f null -`;
       
       let silenceOutput = '';
       try {
-        const { stderr } = await execAsync(silenceCommand);
+        const { stderr } = await execAsyncLargeBuffer(silenceCommand);
         silenceOutput = stderr; // silence detection output goes to stderr
       } catch (error: any) {
         // silencedetect might not find any silence, which is okay
@@ -270,7 +274,7 @@ export class FFmpegPreprocessingService {
       
       let sceneOutput = '';
       try {
-        const { stdout } = await execAsync(command);
+        const { stdout } = await execAsyncLargeBuffer(command);
         sceneOutput = stdout;
       } catch (error) {
         // Scene detection might not find significant changes
@@ -307,11 +311,11 @@ export class FFmpegPreprocessingService {
       const normalizedTempWaveFile = this.normalizePathForFFmpeg(tempWaveFile);
       const normalizedTempDataFile = this.normalizePathForFFmpeg(tempDataFile);
       const audioCommand = `ffmpeg -i "${normalizedVideoPath}" -vn -acodec pcm_s16le -ar 8000 -ac 1 "${normalizedTempWaveFile}" -y`;
-      await execAsync(audioCommand);
+      await execAsyncLargeBuffer(audioCommand);
 
       // Generate raw audio data for waveform
       const dataCommand = `ffmpeg -i "${normalizedTempWaveFile}" -f f64le "${normalizedTempDataFile}" -y`;
-      await execAsync(dataCommand);
+      await execAsyncLargeBuffer(dataCommand);
 
       // Read and process the raw data
       const rawData = await fs.readFile(tempDataFile);
@@ -351,7 +355,7 @@ export class FFmpegPreprocessingService {
       const normalizedVideoPath = this.normalizePathForFFmpeg(videoPath);
       const normalizedOutputPath = this.normalizePathForFFmpeg(outputPath);
       const command = `ffmpeg -ss ${startTime} -i "${normalizedVideoPath}" -t ${duration} -c copy "${normalizedOutputPath}" -y`;
-      await execAsync(command);
+      await execAsyncLargeBuffer(command);
       
       const chunkData = await fs.readFile(outputPath);
       await this.cleanupTempFiles([outputPath]);
@@ -400,7 +404,7 @@ export class FFmpegPreprocessingService {
       const command = `ffmpeg -ss ${startTime} -i "${normalizedVideoPath}" -t ${duration} -c copy "${normalizedOutputPath}" -y`;
       
       console.log(`[${userId}] Running FFmpeg command:`, command);
-      const { stderr } = await execAsync(command);
+      const { stderr } = await execAsyncLargeBuffer(command);
       
       // Check if file was created successfully
       try {

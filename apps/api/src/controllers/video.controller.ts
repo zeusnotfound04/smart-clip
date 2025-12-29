@@ -1,6 +1,14 @@
 import { Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
-import { getPresignedUploadUrl, deleteFile, getSignedDownloadUrl } from '../lib/s3';
+import { 
+  getPresignedUploadUrl, 
+  deleteFile, 
+  getSignedDownloadUrl,
+  initiateMultipartUpload as s3InitiateMultipart,
+  getUploadPartUrl,
+  completeMultipartUpload as s3CompleteMultipart,
+  abortMultipartUpload as s3AbortMultipart
+} from '../lib/s3';
 import { ffmpegPreprocessing } from '../services/ffmpeg-preprocessing.service';
 import path from 'path';
 import fs from 'fs';
@@ -269,3 +277,114 @@ export const streamVideo = async (req: AuthRequest, res: Response) => {
   }
 };
 
+// Multipart upload controllers for large file optimization
+export const initiateMultipartUpload = async (req: AuthRequest, res: Response) => {
+  console.log('🔵 [VIDEO_CONTROLLER] initiateMultipartUpload called');
+  
+  try {
+    const { filename, fileType, fileSize } = req.body;
+    
+    if (!filename || !fileType || !req.userId) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const s3Key = `videos/${req.userId}/${Date.now()}-${filename}`;
+    const fileSizeMB = Math.round(fileSize / 1024 / 1024);
+    
+    console.log(`🚀 Initiating multipart upload for ${fileSizeMB}MB file: ${filename}`);
+    
+    const { uploadId, key } = await s3InitiateMultipart(s3Key, fileType);
+    
+    // 🚀 AGGRESSIVE chunk sizes for maximum upload speed
+    let chunkSize: number;
+    if (fileSize > 2 * 1024 * 1024 * 1024) { // >2GB
+      chunkSize = 100 * 1024 * 1024; // 100MB chunks for huge files
+    } else if (fileSize > 1024 * 1024 * 1024) { // >1GB
+      chunkSize = 50 * 1024 * 1024; // 50MB chunks
+    } else if (fileSize > 500 * 1024 * 1024) { // >500MB
+      chunkSize = 32 * 1024 * 1024; // 32MB chunks
+    } else if (fileSize > 100 * 1024 * 1024) { // >100MB
+      chunkSize = 25 * 1024 * 1024; // 25MB chunks
+    } else {
+      chunkSize = 10 * 1024 * 1024; // 10MB for smaller files
+    }
+    
+    console.log(`✅ Upload initiated: ${uploadId}, chunk size: ${chunkSize / 1024 / 1024}MB`);
+    
+    res.json({ uploadId, s3Key: key, chunkSize });
+  } catch (error) {
+    console.error('❌ initiateMultipartUpload error:', error);
+    res.status(500).json({ error: 'Failed to initiate multipart upload' });
+  }
+};
+
+export const getMultipartUploadPartUrl = async (req: AuthRequest, res: Response) => {
+  try {
+    const { s3Key, uploadId, partNumber } = req.body;
+    
+    if (!s3Key || !uploadId || !partNumber) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const presignedUrl = await getUploadPartUrl(s3Key, uploadId, partNumber);
+    
+    res.json({ presignedUrl });
+  } catch (error) {
+    console.error('❌ getMultipartUploadPartUrl error:', error);
+    res.status(500).json({ error: 'Failed to get part upload URL' });
+  }
+};
+
+export const completeMultipartUpload = async (req: AuthRequest, res: Response) => {
+  console.log('🟢 [VIDEO_CONTROLLER] completeMultipartUpload called');
+  
+  try {
+    const { s3Key, uploadId, parts, originalName, size, mimeType } = req.body;
+    
+    if (!s3Key || !uploadId || !parts || !originalName || !req.userId) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    console.log(`✅ Completing multipart upload: ${parts.length} parts`);
+    
+    const fileUrl = await s3CompleteMultipart(s3Key, uploadId, parts);
+    
+    console.log('💾 Creating video record in database...');
+    const video = await prisma.video.create({
+      data: {
+        userId: req.userId,
+        originalName,
+        filePath: s3Key,
+        size: size || 0,
+        mimeType: mimeType || 'video/mp4',
+        status: 'uploaded'
+      }
+    });
+    
+    console.log(`✅ Multipart upload completed successfully: ${video.id}`);
+    res.status(201).json({ video, fileUrl });
+  } catch (error) {
+    console.error('❌ completeMultipartUpload error:', error);
+    res.status(500).json({ error: 'Failed to complete multipart upload' });
+  }
+};
+
+export const abortMultipartUpload = async (req: AuthRequest, res: Response) => {
+  console.log('🔴 [VIDEO_CONTROLLER] abortMultipartUpload called');
+  
+  try {
+    const { s3Key, uploadId } = req.body;
+    
+    if (!s3Key || !uploadId) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    await s3AbortMultipart(s3Key, uploadId);
+    
+    console.log('✅ Multipart upload aborted');
+    res.json({ success: true });
+  } catch (error) {
+    console.error('❌ abortMultipartUpload error:', error);
+    res.status(500).json({ error: 'Failed to abort multipart upload' });
+  }
+};

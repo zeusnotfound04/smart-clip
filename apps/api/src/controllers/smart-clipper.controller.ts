@@ -11,12 +11,13 @@ const smartClipperRouter: Router = Router();
 
 interface AnalyzeVideoRequest {
   videoId: string;
-  contentType: 'gaming' | 'podcast' | 'vlog' | 'tutorial';
+  contentType: 'gaming' | 'podcast' | 'interview' | 'vlog' | 'tutorial';
   config?: {
     sensitivity?: 'low' | 'medium' | 'high';
     minClipLength?: number;
     maxClipLength?: number;
     maxSegments?: number;
+    numberOfClips?: number; // For podcast/interview
     focusAreas?: {
       audioEnergy?: boolean;
       visualMotion?: boolean;
@@ -101,7 +102,14 @@ export const analyzeVideo = async (req: AuthRequest, res: Response) => {
     try {
       // Queue for background processing
       console.log(`[${requestId}] 🚀 Adding job to smartClipperQueue...`);
-      const job = await smartClipperQueue.add('analyze-video-complete', {
+      
+      // 🎙️ Use simplified transcript-based workflow for podcast/interview
+      const isPodcastOrInterview = ['podcast', 'interview'].includes(contentType);
+      const jobType = isPodcastOrInterview ? 'analyze-podcast-transcript' : 'analyze-video-complete';
+      
+      console.log(`[${requestId}] 📋 Job type: ${jobType} (${isPodcastOrInterview ? 'transcript-based' : 'full analysis'})`);
+      
+      const job = await smartClipperQueue.add(jobType, {
         projectId: project.id,
         videoPath: video.filePath,
         videoDuration: video.duration,
@@ -666,7 +674,7 @@ function mergeAnalysisConfig(contentConfig: any, userConfig: any) {
 
   return {
     contentType: contentConfig.type,
-    chunkDuration: 120, // 2 minutes
+    chunkDuration: 240,
     minClipLength: userConfig.minClipLength || contentConfig.minClipLength,
     maxClipLength: userConfig.maxClipLength || contentConfig.maxClipLength,
     maxSegments: Math.ceil((userConfig.maxSegments || contentConfig.maxSegments) * multiplier.maxSegments),

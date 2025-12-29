@@ -4,7 +4,7 @@ import path from 'path';
 import fs from 'fs/promises';
 import os from 'os';
 import { prisma } from '../lib/prisma';
-import { downloadFile } from '../lib/s3';
+import { downloadFile, downloadFileToPath } from '../lib/s3';
 
 const execAsync = promisify(exec);
 
@@ -255,18 +255,16 @@ export class ClipGenerationService {
     try {
       // Check if inputPath is an S3 key or local path
       if (inputPath.startsWith('videos/')) {
-        console.log(`Downloading video from S3: ${inputPath}`);
+        console.log(`🚀 Streaming video from S3: ${inputPath}`);
         await this.ensureTempDir();
         
-        const videoBuffer = await downloadFile(inputPath);
-        
-        // Create local temp file
+        // 🔥 Use streaming download to file (much faster)
         const videoExtension = path.extname(inputPath) || '.mp4';
         localVideoPath = path.join(this.tempDir, `clip_${segmentId}_input${videoExtension}`);
-        await fs.writeFile(localVideoPath, videoBuffer);
+        await downloadFileToPath(inputPath, localVideoPath);
         cleanupPath = localVideoPath;
         
-        console.log(`Video downloaded to: ${localVideoPath}`);
+        console.log(`✅ Video streamed to: ${localVideoPath}`);
       }
 
       // Build FFmpeg command

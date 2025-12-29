@@ -2,7 +2,7 @@ import { spawn } from 'child_process';
 import { promises as fs } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
-import { downloadFile } from '../lib/s3';
+import { downloadFile, downloadFileToPath } from '../lib/s3';
 
 interface LayoutConfig {
   orientation: 'vertical' | 'horizontal';
@@ -98,11 +98,12 @@ const execFFmpeg = (args: string[], estimatedDuration: number = 0): Promise<Buff
       reject(new Error(`FFmpeg spawn error: ${error.message}`));
     });
     
+    const timeoutDuration = Math.max((estimatedDuration * 1000) + (30 * 60 * 1000), 60 * 60 * 1000);
     const timeout = setTimeout(() => {
-      console.error('FFmpeg process timed out after 15 minutes');
+      console.error(`FFmpeg process timed out after ${Math.floor(timeoutDuration/60000)} minutes`);
       ffmpeg.kill('SIGKILL');
       reject(new Error('FFmpeg process timed out'));
-    }, 15 * 60 * 1000);
+    }, timeoutDuration);
     
     ffmpeg.on('close', () => {
       clearTimeout(timeout);
@@ -193,26 +194,30 @@ export const combineVideos = async (
   
   try {
     // Download video files
-    console.log('Downloading videos from S3...');
+    console.log('Starting parallel download and analysis...');
     const downloadStart = Date.now();
     
-    const [webcamBuffer, gameplayBuffer] = await Promise.all([
-      downloadFile(webcamS3Key),
-      downloadFile(gameplayS3Key)
-    ]);
-    
-    console.log('Download completed in', Date.now() - downloadStart, 'ms');
-
-    // Write videos to temp files
     const webcamPath = join(tempDir, 'webcam.mp4');
     const gameplayPath = join(tempDir, 'gameplay.mp4');
     const outputPath = join(tempDir, 'output.mp4');
     
-    console.log('Writing files to temp directory...');
-    await Promise.all([
-      fs.writeFile(webcamPath, webcamBuffer),
-      fs.writeFile(gameplayPath, gameplayBuffer)
+    // 🔥 Use parallel streaming downloads (much faster)
+    const [webcamDuration, gameplayDuration] = await Promise.all([
+      (async () => {
+        await downloadFileToPath(webcamS3Key, webcamPath);
+        return probeVideoDuration(webcamPath);
+      })(),
+      (async () => {
+        await downloadFileToPath(gameplayS3Key, gameplayPath);
+        return probeVideoDuration(gameplayPath);
+      })()
     ]);
+    
+    const outputDuration = Math.max(webcamDuration, gameplayDuration);
+    console.log('Parallel operations completed in', Date.now() - downloadStart, 'ms');
+    console.log(`Input durations: webcam=${Math.floor(webcamDuration / 60)}:${Math.floor(webcamDuration % 60).toString().padStart(2, '0')}, gameplay=${Math.floor(gameplayDuration / 60)}:${Math.floor(gameplayDuration % 60).toString().padStart(2, '0')}`);
+    console.log(`Final duration: ${Math.floor(outputDuration / 60)}:${Math.floor(outputDuration % 60).toString().padStart(2, '0')}`);
+
     
     // Default config if none provided
     const config: LayoutConfig = {
@@ -252,23 +257,9 @@ export const combineVideos = async (
     const topZoom = config.swapVideos ? gameplayZoom : webcamZoom;
     const bottomZoom = config.swapVideos ? webcamZoom : gameplayZoom;
     
-    // Build filter complex with duration handling
-    console.log('Building FFmpeg filter...');
+    console.log('Building optimized FFmpeg filter...');
     
     let filterComplex: string;
-    
-    // Probe video durations
-    console.log('Analyzing video durations...');
-    const [webcamDuration, gameplayDuration] = await Promise.all([
-      probeVideoDuration(webcamPath),
-      probeVideoDuration(gameplayPath)
-    ]);
-    
-    // Use the longer duration as the final output duration
-    const outputDuration = Math.max(webcamDuration, gameplayDuration);
-    console.log(`Input durations: webcam=${Math.floor(webcamDuration / 60)}:${Math.floor(webcamDuration % 60).toString().padStart(2, '0')}, gameplay=${Math.floor(gameplayDuration / 60)}:${Math.floor(gameplayDuration % 60).toString().padStart(2, '0')}`);
-    console.log(`Final duration: ${Math.floor(outputDuration / 60)}:${Math.floor(outputDuration % 60).toString().padStart(2, '0')}`);
-    
     if (config.orientation === 'vertical') {
       const topScaledWidth = Math.floor(outputWidth * topZoom);
       const topScaledHeight = Math.floor(topHeight * topZoom);
@@ -281,8 +272,8 @@ export const combineVideos = async (
       });
       
 
-      const webcamFilter = `[0:v]scale=${outputWidth}:${topHeight}[webcam_scaled]`;
-      const gameplayFilter = `[1:v]scale=${outputWidth}:${bottomHeight}[gameplay_scaled]`;
+      const webcamFilter = `[0:v]scale=${outputWidth}:${topHeight}:flags=lanczos[webcam_scaled]`;
+      const gameplayFilter = `[1:v]scale=${outputWidth}:${bottomHeight}:flags=lanczos[gameplay_scaled]`;
       
       // Create background that lasts for the full output duration
       const backgroundFilter = `color=c=${config.backgroundColor}:s=${outputWidth}x${outputHeight}:d=${outputDuration.toFixed(2)}[bg]`;
@@ -302,8 +293,8 @@ export const combineVideos = async (
       const rightWidth = Math.floor((outputWidth * config.bottomRatio) / 100) - Math.floor(config.gap / 2);
       
       // Create horizontal layout with proper timing controls
-      const webcamFilter = `[0:v]scale=${leftWidth}:${outputHeight}[webcam_scaled]`;
-      const gameplayFilter = `[1:v]scale=${rightWidth}:${outputHeight}[gameplay_scaled]`;
+      const webcamFilter = `[0:v]scale=${leftWidth}:${outputHeight}:flags=lanczos[webcam_scaled]`;
+      const gameplayFilter = `[1:v]scale=${rightWidth}:${outputHeight}:flags=lanczos[gameplay_scaled]`;
       const backgroundFilter = `color=c=${config.backgroundColor}:s=${outputWidth}x${outputHeight}:d=${outputDuration.toFixed(2)}[bg]`;
       
       const leftStream = topVideo === 'webcam' ? 'webcam_scaled' : 'gameplay_scaled';
@@ -316,16 +307,27 @@ export const combineVideos = async (
       filterComplex = `${webcamFilter};${gameplayFilter};${backgroundFilter};${leftOverlay};${rightOverlay}`;
     }
     
-    // Determine which video has audio
+    const getOptimalSettings = (duration: number) => {
+      if (duration > 7200) {
+        return { preset: 'faster', crf: 22, params: 'ref=2:bframes=2:me=hex:subme=6:trellis=1:rc-lookahead=30' };
+      } else if (duration > 3600) {
+        return { preset: 'medium', crf: 20, params: 'ref=3:bframes=3:me=umh:subme=7:trellis=1:rc-lookahead=40' };
+      } else if (duration > 1800) {
+        return { preset: 'slow', crf: 19, params: 'ref=4:bframes=4:me=umh:subme=8:trellis=2:rc-lookahead=50' };
+      } else {
+        return { preset: 'slower', crf: 18, params: 'ref=5:bframes=5:me=umh:subme=9:trellis=2:rc-lookahead=60' };
+      }
+    };
+    
+    const settings = getOptimalSettings(outputDuration);
+    console.log(`Using ${settings.preset} preset for ${Math.floor(outputDuration/60)}min video (CRF ${settings.crf})`);
+    
     const longerVideoIndex = webcamDuration >= gameplayDuration ? 0 : 1;
     console.log(`Using audio from ${longerVideoIndex === 0 ? 'webcam' : 'gameplay'} video`);
     
-    // Execute FFmpeg command - optimized for large files (500MB)
     const ffmpegArgs = [
-      // Error detection and recovery for corrupted audio
       '-err_detect', 'ignore_err',
       '-fflags', '+genpts+igndts',
-      // Input files
       '-i', webcamPath,
       '-err_detect', 'ignore_err',
       '-fflags', '+genpts+igndts',
@@ -333,27 +335,27 @@ export const combineVideos = async (
       '-filter_complex', filterComplex,
       '-map', '[final]',
       '-map', `${longerVideoIndex}:a?`,
-      // Video encoding optimized for large files
       '-c:v', 'libx264',
-      '-preset', 'fast', // Faster encoding for large files
-      '-crf', '23', // Good quality/size balance
-      '-pix_fmt', 'yuv420p', // Ensure compatibility
-      '-movflags', '+faststart', // Web optimization
-      '-threads', '0', // Use all CPU cores
-      '-max_muxing_queue_size', '1024', // Handle large files
-      // Audio encoding - force re-encode to fix corrupted audio
+      '-preset', settings.preset,
+      '-tune', 'film',
+      '-crf', settings.crf.toString(),
+      '-threads', '8',
+      '-x264-params', settings.params,
+      '-profile:v', 'high',
+      '-level', '4.1',
+      '-pix_fmt', 'yuv420p',
+      '-movflags', '+faststart',
+      '-max_muxing_queue_size', '4096',
       '-c:a', 'aac',
-      '-b:a', '128k', // Consistent audio bitrate
-      '-ar', '44100', // Standard sample rate
-      '-ac', '2', // Stereo audio
-      '-strict', 'experimental', // Allow experimental AAC encoder if needed
-      // Timing and synchronization
+      '-b:a', '192k',
+      '-ar', '48000',
+      '-ac', '2',
+      '-aac_coder', 'twoloop',
       '-avoid_negative_ts', 'make_zero',
-      '-vsync', 'cfr', // Constant frame rate for stability
-      // Memory management for large files
-      '-max_alloc', '2147483647', // ~2GB max allocation
-      '-probesize', '100M', // Increase probe size for large files
-      '-analyzeduration', '100M', // Longer analysis for better sync
+      '-vsync', 'cfr',
+      '-max_alloc', '4294967296',
+      '-probesize', '200M',
+      '-analyzeduration', '200M',
       '-y',
       outputPath
     ];
@@ -365,49 +367,36 @@ export const combineVideos = async (
     
     console.log('Processing completed in', Date.now() - ffmpegStart, 'ms');
     
-    // Read the output file
-    try {
-      const stats = await fs.stat(outputPath);
-      console.log('Output file size:', stats.size, 'bytes');
-    } catch (error) {
-      console.error('Output file not found:', error);
-      throw new Error('FFmpeg failed to create output file');
-    }
+    const [stats, finalBuffer] = await Promise.all([
+      fs.stat(outputPath),
+      (async () => {
+        try {
+          const watermarkedPath = outputPath.replace('.mp4', '_watermarked.mp4');
+          console.log('Applying watermark...');
+          
+          const { watermarkService } = await import('./watermark.service');
+          
+          await watermarkService.addWatermark(outputPath, watermarkedPath, {
+            position: 'center' as const,
+            opacity: parseFloat(process.env.WATERMARK_OPACITY || '0.95'),
+            watermarkScale: parseFloat(process.env.WATERMARK_SCALE || '0.95')
+          });
+          
+          console.log('Watermark applied successfully');
+          return await fs.readFile(watermarkedPath);
+        } catch (watermarkError) {
+          console.error('Watermark failed:', watermarkError);
+          console.warn('Using original video without watermark');
+          return await fs.readFile(outputPath);
+        }
+      })()
+    ]);
     
-    // Apply watermark to combined video
-    console.log('\n📍 [SPLIT-STREAMER] Applying watermark to combined video...');
-    console.log('   Output path:', outputPath);
+    console.log('Output file size:', stats.size, 'bytes');
+    console.log('Buffer size:', finalBuffer.length, 'bytes');
+    console.log('Video combination completed successfully');
     
-    let finalOutputPath = outputPath;
-    
-    try {
-      const watermarkedPath = outputPath.replace('.mp4', '_watermarked.mp4');
-      console.log('   Watermarked path:', watermarkedPath);
-      
-      const { watermarkService } = await import('./watermark.service');
-      console.log('   Watermark service imported');
-      
-      await watermarkService.addWatermark(outputPath, watermarkedPath, {
-        position: 'center' as const,
-        opacity: parseFloat(process.env.WATERMARK_OPACITY || '0.95'),
-        watermarkScale: parseFloat(process.env.WATERMARK_SCALE || '0.95')
-      });
-      
-      finalOutputPath = watermarkedPath;
-      console.log('✅ [SPLIT-STREAMER] Watermark applied successfully');
-    } catch (watermarkError) {
-      console.error('❌ [SPLIT-STREAMER] Watermark failed:', watermarkError);
-      console.error('   Error:', watermarkError instanceof Error ? watermarkError.message : String(watermarkError));
-      console.warn('⚠️ [SPLIT-STREAMER] Continuing without watermark...');
-      // Continue without watermark if it fails
-    }
-    
-    console.log('   Reading final output buffer from:', finalOutputPath);
-    const outputBuffer = await fs.readFile(finalOutputPath);
-    console.log('   Buffer size:', outputBuffer.length, 'bytes');
-    console.log('✅ [SPLIT-STREAMER] Video combination completed successfully');
-    
-    return outputBuffer;
+    return finalBuffer;
   } finally {
     // Cleanup temp directory
     try {
