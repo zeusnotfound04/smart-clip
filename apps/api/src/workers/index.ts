@@ -104,29 +104,14 @@ subtitleQueue.process('generate-subtitles', 7, async (job) => {
       ...options // Spread options to include style, detectAllLanguages, etc.
     });
     
-    // Report progress: Saving subtitles to database (90%)
-    console.log(`📊 Job ${job.id}: Saving subtitles to database (90%)`);
+    // Report progress: Finalizing (90%)
+    console.log(`📊 Job ${job.id}: Finalizing video record (90%)`);
     await job.progress(90);
     
-    const subtitles = result.segments;
+    // Subtitles are already saved as SRT file on S3 - no need to store individually in DB
+    // The SRT file can be parsed on-demand if needed for UI display or editing
     
-    for (const subtitle of subtitles) {
-      await prisma.subtitle.create({
-        data: {
-          videoId,
-          text: subtitle.text,
-          startTime: subtitle.startTime,
-          endTime: subtitle.endTime,
-          confidence: subtitle.confidence || 0
-        }
-      });
-    }
-
-    // Report progress: Completed (100%)
-    console.log(`✅ Job ${job.id}: Completed (100%)`);
-    await job.progress(100);
-    
-    // Update video record with the subtitled video URL
+    // Update video record with the subtitled video URL and metadata
     await prisma.video.update({
       where: { id: videoId },
       data: { 
@@ -141,10 +126,21 @@ subtitleQueue.process('generate-subtitles', 7, async (job) => {
       }
     });
 
+    // Report progress: Completed (100%)
+    console.log(`✅ Job ${job.id}: Completed (100%)`);
+    await job.progress(100);
+
     console.log(`🎉 Subtitle job ${job.id} completed successfully`);
     console.log(`📹 [SUBTITLE] Updated video with subtitled URL: ${result.subtitledVideoUrl}`);
     console.log(`📄 [SUBTITLE] SRT S3 Key: ${result.srtS3Key}`);
-    return subtitles;
+    console.log(`📊 [SUBTITLE] Total segments: ${result.segments.length}`);
+    
+    return { 
+      videoId,
+      subtitledVideoUrl: result.subtitledVideoUrl,
+      srtS3Key: result.srtS3Key,
+      segmentCount: result.segments.length
+    };
   } catch (error: any) {
     console.error(`❌ Subtitle job ${job.id} failed:`, error.message);
     await prisma.video.update({
