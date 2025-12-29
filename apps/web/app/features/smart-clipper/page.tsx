@@ -233,7 +233,7 @@ export default function SmartClipperPage() {
         console.error('Failed to poll status:', error);
         // Don't clear interval on network errors, keep trying
       }
-    }, 3000); // Poll every 3 seconds
+    }, 25000); // Poll every 25 seconds to reduce server load
 
     // Store the interval in our active polls map
     setActivePolls(prev => new Map(prev.set(projectId, pollInterval)));

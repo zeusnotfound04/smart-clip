@@ -369,6 +369,14 @@ class APIClient {
     console.log('🟢 [API_CLIENT] uploadVideo started', { language });
     console.log('📁 File details:', { name: file.name, size: file.size, type: file.type });
     
+    // Use multipart upload for files larger than 50MB
+    const USE_MULTIPART_THRESHOLD = 50 * 1024 * 1024; // 50MB
+    
+    if (file.size > USE_MULTIPART_THRESHOLD) {
+      console.log(`🚀 Large file detected (${Math.round(file.size / 1024 / 1024)}MB), using multipart upload`);
+      return this.uploadVideoMultipart(file, onProgress, language);
+    }
+    
     try {
       console.log('🔗 Step 1: Getting upload URL...');
       const uploadUrlResponse = await this.getUploadUrl(file.name, file.type);
@@ -430,9 +438,173 @@ class APIClient {
     }
   }
 
+  async uploadVideoMultipart(file: File, onProgress?: (progress: number) => void, language?: string): Promise<Video> {
+    console.log('🔵 [API_CLIENT] uploadVideoMultipart started');
+    const fileSizeMB = Math.round(file.size / 1024 / 1024);
+    const startTime = Date.now();
+    
+    try {
+      // Step 1: Initiate multipart upload
+      console.log('🚀 Initiating multipart upload...');
+      const initResponse = await axiosInstance.post('/api/videos/multipart/initiate', {
+        filename: file.name,
+        fileType: file.type,
+        fileSize: file.size,
+      });
+      
+      const { uploadId, s3Key, chunkSize } = initResponse.data;
+      const chunkSizeMB = Math.round(chunkSize / 1024 / 1024);
+      console.log(`✅ Upload initiated: ID=${uploadId}, chunk=${chunkSizeMB}MB`);
+      
+      // Step 2: Upload chunks in parallel
+      const totalChunks = Math.ceil(file.size / chunkSize);
+      console.log(`📦 Total chunks: ${totalChunks}`);
+      
+      const uploadedParts: Array<{ ETag: string; PartNumber: number }> = [];
+      let uploadedBytes = 0;
+      
+      // 🚀 OPTIMIZED: Dynamic concurrency based on file size for maximum speed
+      let MAX_CONCURRENT: number;
+      if (file.size > 2 * 1024 * 1024 * 1024) { // >2GB
+        MAX_CONCURRENT = 16; // 16 parallel uploads for huge files
+      } else if (file.size > 1024 * 1024 * 1024) { // >1GB
+        MAX_CONCURRENT = 12; // 12 parallel uploads
+      } else if (file.size > 500 * 1024 * 1024) { // >500MB
+        MAX_CONCURRENT = 10; // 10 parallel uploads
+      } else {
+        MAX_CONCURRENT = 8; // 8 parallel uploads (default)
+      }
+      console.log(`⚡ Concurrency: ${MAX_CONCURRENT} parallel uploads`);
+      
+      // 🔥 OPTIMIZED: Pre-fetch all presigned URLs for faster uploads
+      console.log('📥 Pre-fetching presigned URLs...');
+      const presignedUrlPromises = Array.from({ length: totalChunks }, (_, i) => 
+        axiosInstance.post('/api/videos/multipart/part-url', {
+          s3Key,
+          uploadId,
+          partNumber: i + 1,
+        }).then(res => res.data.presignedUrl)
+      );
+      
+      // Batch fetch URLs (8 at a time to avoid overwhelming the server)
+      const presignedUrls: string[] = [];
+      for (let i = 0; i < totalChunks; i += 8) {
+        const batch = presignedUrlPromises.slice(i, Math.min(i + 8, totalChunks));
+        const urls = await Promise.all(batch);
+        presignedUrls.push(...urls);
+      }
+      console.log(`✅ Got ${presignedUrls.length} presigned URLs`);
+      
+      const uploadChunk = async (chunkIndex: number, retryCount = 0): Promise<{ ETag: string; PartNumber: number }> => {
+        const start = chunkIndex * chunkSize;
+        const end = Math.min(start + chunkSize, file.size);
+        const chunk = file.slice(start, end);
+        const partNumber = chunkIndex + 1;
+        
+        try {
+          // Use pre-fetched presigned URL
+          const presignedUrl = presignedUrls[chunkIndex];
+          
+          // Upload the chunk
+          const response = await fetch(presignedUrl, {
+            method: 'PUT',
+            body: chunk,
+            headers: { 'Content-Type': file.type },
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Failed to upload part ${partNumber}: ${response.statusText}`);
+          }
+          
+          const etag = response.headers.get('ETag');
+          if (!etag) {
+            throw new Error(`No ETag received for part ${partNumber}`);
+          }
+          
+          uploadedBytes += chunk.size;
+          const progress = Math.round((uploadedBytes / file.size) * 100);
+          const elapsed = (Date.now() - startTime) / 1000;
+          const speedMBps = (uploadedBytes / 1024 / 1024) / elapsed;
+          const remaining = file.size - uploadedBytes;
+          const eta = remaining / (uploadedBytes / elapsed);
+          
+          // Log every 10% or at completion
+          if (progress % 10 === 0 || progress === 100) {
+            console.log(`✅ Part ${partNumber}/${totalChunks} (${progress}%) @ ${speedMBps.toFixed(1)}MB/s | ETA: ${Math.round(eta)}s`);
+          }
+          
+          if (onProgress) {
+            onProgress(progress);
+          }
+          
+          return { ETag: etag, PartNumber: partNumber };
+        } catch (error: any) {
+          // 🔄 Auto-retry on failure (up to 3 times)
+          if (retryCount < 3) {
+            console.warn(`⚠️ Part ${partNumber} failed, retrying... (${retryCount + 1}/3)`);
+            await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))); // Exponential backoff
+            return uploadChunk(chunkIndex, retryCount + 1);
+          }
+          throw error;
+        }
+      };
+      
+      // Upload chunks with concurrency control
+      for (let i = 0; i < totalChunks; i += MAX_CONCURRENT) {
+        const batch = [];
+        for (let j = i; j < Math.min(i + MAX_CONCURRENT, totalChunks); j++) {
+          batch.push(uploadChunk(j));
+        }
+        const results = await Promise.all(batch);
+        uploadedParts.push(...results);
+      }
+      
+      // Sort parts by part number
+      uploadedParts.sort((a, b) => a.PartNumber - b.PartNumber);
+      
+      // Step 3: Complete multipart upload
+      console.log('🏁 Completing multipart upload...');
+      const completeResponse = await axiosInstance.post('/api/videos/multipart/complete', {
+        s3Key,
+        uploadId,
+        parts: uploadedParts,
+        originalName: file.name,
+        size: file.size,
+        mimeType: file.type,
+      });
+      
+      const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
+      const avgSpeed = (fileSizeMB / parseFloat(totalTime)).toFixed(1);
+      console.log(`🎉 Multipart upload completed in ${totalTime}s (avg ${avgSpeed}MB/s)`);
+      
+      return completeResponse.data.video;
+    } catch (error: any) {
+      console.error('❌ Multipart upload failed:', error);
+      
+      // Attempt to abort the multipart upload on error
+      try {
+        if (error.uploadId && error.s3Key) {
+          await axiosInstance.post('/api/videos/multipart/abort', {
+            s3Key: error.s3Key,
+            uploadId: error.uploadId,
+          });
+          console.log('🔴 Multipart upload aborted');
+        }
+      } catch (abortError) {
+        console.error('❌ Failed to abort multipart upload:', abortError);
+      }
+      
+      throw new Error('Failed to upload video: ' + (error.response?.data?.message || error.message));
+    }
+  }
+
   async generateSubtitles(videoId: string, options?: any, language?: string): Promise<{ 
     message: string; 
-    videoId: string; 
+    videoId: string;
+    jobId: string;
+    estimatedTimeMinutes: number;
+    eta: number;
+    pollUrl: string;
     videoWithSubtitles?: string;
     srtContent?: string;
     detectedLanguages?: string[];
@@ -466,6 +638,82 @@ class APIClient {
     }
 
     return result;
+  }
+
+  async getSubtitleJobStatus(jobId: string): Promise<{
+    jobId: string;
+    status: string;
+    progress: number;
+    videoId: string;
+    videoStatus: string;
+    subtitledVideoUrl?: string;
+    estimatedRemainingMinutes: number;
+    error?: string;
+    completedAt?: string;
+  }> {
+    const authHeader = this.getAuthHeader();
+    const headers: Record<string, string> = {};
+    
+    if (authHeader.Authorization) {
+      headers.Authorization = authHeader.Authorization;
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/subtitles/status/${jobId}`, {
+      headers,
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to get job status');
+    }
+
+    return result;
+  }
+
+  async pollSubtitleJob(
+    jobId: string,
+    onProgress?: (progress: number, eta: number) => void,
+    pollInterval: number = 3000
+  ): Promise<{
+    videoId: string;
+    subtitledVideoUrl: string;
+  }> {
+    return new Promise((resolve, reject) => {
+      const poll = async () => {
+        try {
+          const status = await this.getSubtitleJobStatus(jobId);
+          
+          // Report progress
+          if (onProgress) {
+            const etaMs = status.estimatedRemainingMinutes * 60 * 1000;
+            onProgress(status.progress, etaMs);
+          }
+
+          // Check if completed
+          if (status.status === 'completed' && status.subtitledVideoUrl) {
+            resolve({
+              videoId: status.videoId,
+              subtitledVideoUrl: status.subtitledVideoUrl
+            });
+            return;
+          }
+
+          // Check if failed
+          if (status.status === 'failed') {
+            reject(new Error(status.error || 'Subtitle generation failed'));
+            return;
+          }
+
+          // Continue polling
+          setTimeout(poll, pollInterval);
+        } catch (error) {
+          reject(error);
+        }
+      };
+
+      poll();
+    });
   }
 
   async getSupportedLanguages(): Promise<{ languages: Array<{ code: string; name: string; priority: number }> }> {
@@ -633,8 +881,8 @@ class APIClient {
   async pollJobStatus(
     projectId: string, 
     onProgress?: (progress: { status: string; progress?: number; message?: string }) => void,
-    maxAttempts: number = 180, // 15 minutes with 5s intervals
-    interval: number = 5000 // 5 seconds
+    maxAttempts: number = 36, // 15 minutes with 25s intervals
+    interval: number = 25000 // 25 seconds to reduce server load
   ): Promise<{
     id: string;
     name: string;

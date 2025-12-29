@@ -228,12 +228,12 @@ export default function DashboardSmartClipperPage() {
           }
         }
         
-        // Continue polling every 3 seconds
-        setTimeout(poll, 3000);
+        // Continue polling every 25 seconds to reduce server load
+        setTimeout(poll, 25000);
       } catch (error) {
         console.error('❌ Failed to check analysis progress:', error);
         // Continue polling even on error (might be temporary network issue)
-        setTimeout(poll, 5000);
+        setTimeout(poll, 25000);
       }
     };
     
