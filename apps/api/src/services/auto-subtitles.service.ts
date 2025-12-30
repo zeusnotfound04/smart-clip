@@ -37,6 +37,7 @@ export interface SubtitleStyle {
   italic: boolean;
   alignment: 'left' | 'center' | 'right';
   showShadow: boolean;
+  maxWordsPerLine?: number; // Max words per subtitle line (default: 8, TikTok style: 3)
 }
 
 export interface SubtitleOptions {
@@ -651,6 +652,9 @@ const processTranscriptionToSegments = (results: any[], options?: SubtitleOption
         let startTime = 0;
         let wordCount = 0;
         
+        // Use maxWordsPerLine from style options (default: 8, TikTok/Shorts style: 3)
+        const maxWords = options?.style?.maxWordsPerLine || 8;
+        
         words.forEach((word: any, index: number) => {
           if (wordCount === 0) {
             startTime = parseFloat(String(word.startTime?.seconds || '0')) + 
@@ -671,7 +675,8 @@ const processTranscriptionToSegments = (results: any[], options?: SubtitleOption
           });
           wordCount++;
           
-          if (wordCount >= 8 || index === words.length - 1) {
+          // Use dynamic maxWords instead of hardcoded 8
+          if (wordCount >= maxWords || index === words.length - 1) {
             const endTime = parseFloat(String(word.endTime?.seconds || '0')) + 
                            parseFloat(String(word.endTime?.nanos || '0')) / 1000000000;
             

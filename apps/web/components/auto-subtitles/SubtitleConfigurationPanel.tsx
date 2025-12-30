@@ -19,6 +19,7 @@ interface SubtitleStyle {
   italic: boolean;
   alignment: 'left' | 'center' | 'right';
   showShadow: boolean;
+  maxWordsPerLine?: number; // Max words per subtitle line (default: 8, TikTok style: 3)
 }
 
 interface SubtitleOptions {
@@ -372,6 +373,28 @@ export function SubtitleConfigurationPanel({
                 onChange={(e) => updateStyle({ fontSize: parseInt(e.target.value) || 20 })}
                 className="h-8 text-xs"
               />
+            </div>
+
+            <div>
+              <Label className="text-xs font-medium">Words Per Line</Label>
+              <Select
+                value={String(subtitleOptions.style.maxWordsPerLine || 8)}
+                onValueChange={(value) => updateStyle({ maxWordsPerLine: parseInt(value) })}
+              >
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="Words per line" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="2">2 words (Ultra Short)</SelectItem>
+                  <SelectItem value="3">3 words (TikTok/Shorts)</SelectItem>
+                  <SelectItem value="4">4 words (Short)</SelectItem>
+                  <SelectItem value="5">5 words (Medium)</SelectItem>
+                  <SelectItem value="6">6 words (Standard)</SelectItem>
+                  <SelectItem value="8">8 words (Default)</SelectItem>
+                  <SelectItem value="10">10 words (Long)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-[10px] text-muted-foreground mt-1">Lower = faster captions (viral style)</p>
             </div>
 
             <div className="flex gap-3">
