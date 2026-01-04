@@ -7,7 +7,9 @@ const nextConfig: NextConfig = {
     'smartclips.gunman.social',
     'https://smartclips.gunman.social',
     'smartclips.upalert.online',
-    'https://smartclips.upalert.online'
+    'smartclips.nano-mail.me',
+    'https://smartclips.upalert.online',
+    'https://smartclips.nano-mail.me'
   ],
   
   // Turbopack configuration
