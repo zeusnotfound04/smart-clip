@@ -130,13 +130,25 @@ export class VideoDownloaderService {
    */
   async getVideoInfo(url: string): Promise<VideoInfo> {
     try {
-      const info = await youtubeDl(url, {
+      // Check platform to determine if we need cookies
+      const validation = this.validateUrl(url);
+      const isYouTube = validation.platform === 'YouTube';
+      
+      const options: any = {
         dumpSingleJson: true,
         noCheckCertificates: true,
         noWarnings: true,
         preferFreeFormats: true,
-        addHeader: ['referer:youtube.com', 'user-agent:Mozilla/5.0'],
-      }) as any;
+        addHeader: ['referer:youtube.com', 'user-agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'],
+      };
+      
+      // Add cookies for YouTube to bypass bot detection
+      if (isYouTube) {
+        options.cookiesFromBrowser = 'chrome';
+        console.log('🍪 Using Chrome cookies for YouTube authentication');
+      }
+      
+      const info = await youtubeDl(url, options) as any;
 
       console.log('🔍 yt-dlp info retrieved for:', url);
       console.log('📺 Title:', info.title);
@@ -226,6 +238,7 @@ export class VideoDownloaderService {
       
       // Set appropriate referer based on platform
       const referer = validation.platform === 'Twitter/X' ? 'twitter.com' : 'youtube.com';
+      const isYouTube = validation.platform === 'YouTube';
       
       const downloadOptions: any = {
         output: outputTemplate,
@@ -237,9 +250,15 @@ export class VideoDownloaderService {
         preferFreeFormats: true,
         addHeader: [
           `referer:${referer}`,
-          'user-agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+          'user-agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         ],
       };
+      
+      // Add cookies for YouTube to bypass bot detection
+      if (isYouTube) {
+        downloadOptions.cookiesFromBrowser = 'chrome';
+        console.log('🍪 Using Chrome cookies for YouTube authentication');
+      }
 
       // For Twitter/X, add specific handling for HLS streams
       if (validation.platform === 'Twitter/X') {

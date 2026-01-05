@@ -14,6 +14,7 @@ interface ProgressOverlayProps {
   estimatedTimeRemaining?: number;
   error: string;
   onRetry: () => void;
+  platform?: string;
 }
 
 export function ProgressOverlay({
@@ -22,7 +23,8 @@ export function ProgressOverlay({
   processingProgress,
   estimatedTimeRemaining = 0,
   error,
-  onRetry
+  onRetry,
+  platform = 'YouTube'
 }: ProgressOverlayProps) {
   if (uploadStage !== 'downloading' && uploadStage !== 'uploading' && uploadStage !== 'processing' && uploadStage !== 'error') {
     return null;
@@ -49,11 +51,11 @@ export function ProgressOverlay({
                   <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full animate-ping" />
                 </div>
               </div>
-              <h3 className="font-semibold text-lg">Downloading from YouTube</h3>
+              <h3 className="font-semibold text-lg">Downloading from {platform}</h3>
               <Progress value={uploadProgress} className="h-2" />
               <p className="text-sm text-muted-foreground">{Math.round(uploadProgress)}% complete</p>
               <p className="text-xs text-muted-foreground/70 italic">
-                Fetching video from YouTube... This may take a few moments.
+                Fetching video from {platform}... This may take a few moments.
               </p>
             </div>
           )}

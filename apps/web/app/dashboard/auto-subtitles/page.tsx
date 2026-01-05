@@ -496,6 +496,7 @@ export default function AutoSubtitlesPage() {
         estimatedTimeRemaining={estimatedTimeRemaining}
         error={error}
         onRetry={resetUpload}
+        platform={videoData?.urlData?.platform || 'YouTube'}
       />
 
       {/* Completion Action Bar */}
