@@ -142,10 +142,11 @@ export class VideoDownloaderService {
         addHeader: ['referer:youtube.com', 'user-agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'],
       };
       
-      // Add cookies for YouTube to bypass bot detection
-      if (isYouTube) {
-        options.cookiesFromBrowser = 'chrome';
-        console.log('🍪 Using Chrome cookies for YouTube authentication');
+      // Optional: Use cookies if available (via env var or cookies file)
+      // For most public YouTube videos, cookies are NOT needed
+      if (isYouTube && process.env.YT_COOKIES_PATH) {
+        options.cookies = process.env.YT_COOKIES_PATH;
+        console.log('🍪 Using cookies file for YouTube:', process.env.YT_COOKIES_PATH);
       }
       
       const info = await youtubeDl(url, options) as any;
@@ -254,10 +255,11 @@ export class VideoDownloaderService {
         ],
       };
       
-      // Add cookies for YouTube to bypass bot detection
-      if (isYouTube) {
-        downloadOptions.cookiesFromBrowser = 'chrome';
-        console.log('🍪 Using Chrome cookies for YouTube authentication');
+      // Optional: Use cookies if available (via env var or cookies file)
+      // For most public YouTube videos, cookies are NOT needed
+      if (isYouTube && process.env.YT_COOKIES_PATH) {
+        downloadOptions.cookies = process.env.YT_COOKIES_PATH;
+        console.log('🍪 Using cookies file for YouTube:', process.env.YT_COOKIES_PATH);
       }
 
       // For Twitter/X, add specific handling for HLS streams
