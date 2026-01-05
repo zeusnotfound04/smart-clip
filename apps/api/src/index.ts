@@ -24,6 +24,7 @@ import stripeRoutes from './routes/stripe.routes.js';
 import testRoutes from './routes/test.routes.js';
 import myClipsRoutes from './routes/my-clips.routes';
 import adminRoutes from './routes/admin.routes';
+import videoUrlUploadRoutes from './routes/video-url-upload.routes';
 import { 
   errorHandler, 
   notFoundHandler, 
@@ -121,6 +122,7 @@ app.use('/api/status', statusRoutes);
 app.use('/api/thumbnails', thumbnailRoutes);
 app.use('/api/video-processing', videoProcessingRoutes);
 app.use('/api/video-generation', videoGenerationRoutes);
+app.use('/api/video-url-upload', videoUrlUploadRoutes);
 
 // Credits and Subscription routes
 app.use('/api/credits', creditsRoutes);
@@ -168,6 +170,10 @@ async function initializeRedisConnections() {
   }
   
   console.log('🎉 All Redis connections established successfully!');
+  
+  // Clean up stalled jobs from previous server run
+  const { cleanupStalledJobs } = await import('./lib/queues');
+  await cleanupStalledJobs();
 }
 
 async function startServer() {

@@ -1,0 +1,286 @@
+[Script Info]
+Title: SmartClip Subtitles
+ScriptType: v4.00+
+PlayResX: 1920
+PlayResY: 1080
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Arial,20,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,false,false,0,0,100,100,0,0,1,3,50,2,10,10,30,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.00,0:00:03.10,Default,,0,0,0,,Oh my Instagram.
+Dialogue: 0,0:00:30.00,0:00:34.60,Default,,0,0,0,,Evening Instagram. Demographically up now here.
+Dialogue: 0,0:01:00.00,0:01:11.79,Default,,0,0,0,,Oh actually top three best.
+Dialogue: 0,0:01:30.00,0:01:30.70,Default,,0,0,0,,By the.
+Dialogue: 0,0:01:35.59,0:01:54.20,Default,,0,0,0,,Next video.
+Dialogue: 0,0:02:01.79,0:02:02.79,Default,,0,0,0,,That's good.
+Dialogue: 0,0:02:30.00,0:02:31.30,Default,,0,0,0,,Amazing videos.
+Dialogue: 0,0:02:42.19,0:02:52.90,Default,,0,0,0,,Mumbai Delhi Kolkata from local person.
+Dialogue: 0,0:03:00.00,0:03:17.59,Default,,0,0,0,,Got to look good, follow me please, I'm
+Dialogue: 0,0:03:17.59,0:03:21.90,Default,,0,0,0,,married. Daro must say in the next.
+Dialogue: 0,0:03:30.09,0:03:30.80,Default,,0,0,0,,Look at that.
+Dialogue: 0,0:03:31.40,0:03:32.30,Default,,0,0,0,,Will.
+Dialogue: 0,0:03:36.40,0:03:36.69,Default,,0,0,0,,You.
+Dialogue: 0,0:03:51.19,0:03:55.00,Default,,0,0,0,,One of the perks of being koshy.
+Dialogue: 0,0:04:00.00,0:04:01.09,Default,,0,0,0,,Are you?
+Dialogue: 0,0:04:17.69,0:04:18.39,Default,,0,0,0,,Guys expected.
+Dialogue: 0,0:04:23.00,0:04:23.80,Default,,0,0,0,,You.
+Dialogue: 0,0:04:24.60,0:04:26.80,Default,,0,0,0,,And you versus Adrien.
+Dialogue: 0,0:04:30.10,0:04:32.80,Default,,0,0,0,,He will.
+Dialogue: 0,0:04:40.50,0:04:46.60,Default,,0,0,0,,just,
+Dialogue: 0,0:04:52.10,0:04:54.30,Default,,0,0,0,,Snacks, sit by Cashmere.
+Dialogue: 0,0:05:00.50,0:05:01.60,Default,,0,0,0,,Income, but they celebrated.
+Dialogue: 0,0:05:30.00,0:05:32.60,Default,,0,0,0,,How do you like to invention is better,
+Dialogue: 0,0:05:32.60,0:05:36.19,Default,,0,0,0,,man? Ramdev, go, Santa Claus, subnautica
+Dialogue: 0,0:06:00.00,0:06:02.50,Default,,0,0,0,,here, you
+Dialogue: 0,0:06:30.00,0:06:40.60,Default,,0,0,0,,Keyword like three protein power. Okay, no more
+Dialogue: 0,0:06:40.60,0:06:44.69,Default,,0,0,0,,videos.
+Dialogue: 0,0:07:03.00,0:07:08.30,Default,,0,0,0,,Guys, I'm sorry.
+Dialogue: 0,0:07:17.00,0:07:18.60,Default,,0,0,0,,So good.
+Dialogue: 0,0:07:30.00,0:07:39.10,Default,,0,0,0,,That that's the best dish job. Cook Kar
+Dialogue: 0,0:07:39.10,0:07:39.50,Default,,0,0,0,,sakte, ho.
+Dialogue: 0,0:07:41.19,0:07:42.50,Default,,0,0,0,,Maggie.
+Dialogue: 0,0:07:45.19,0:07:47.39,Default,,0,0,0,,Oh you you can biryani.
+Dialogue: 0,0:07:48.60,0:07:52.39,Default,,0,0,0,,Chicken chili and biryani.
+Dialogue: 0,0:08:00.19,0:08:06.10,Default,,0,0,0,,Here and Bengali style chicken.
+Dialogue: 0,0:08:30.00,0:08:30.50,Default,,0,0,0,,America.
+Dialogue: 0,0:08:32.20,0:08:46.00,Default,,0,0,0,,Done guys. Please a little entertainment.
+Dialogue: 0,0:08:46.89,0:08:48.79,Default,,0,0,0,,And who sent it in mentally happy home
+Dialogue: 0,0:08:48.79,0:08:51.39,Default,,0,0,0,,mujhe.
+Dialogue: 0,0:09:00.00,0:09:02.79,Default,,0,0,0,,Processing.
+Dialogue: 0,0:09:05.39,0:09:09.70,Default,,0,0,0,,Oh, I will take you.
+Dialogue: 0,0:09:30.89,0:09:31.50,Default,,0,0,0,,He said.
+Dialogue: 0,0:10:00.20,0:10:02.79,Default,,0,0,0,,You know that?
+Dialogue: 0,0:10:11.89,0:10:19.79,Default,,0,0,0,,Guys.
+Dialogue: 0,0:10:31.00,0:10:31.70,Default,,0,0,0,,You wanna?
+Dialogue: 0,0:11:00.00,0:11:03.00,Default,,0,0,0,,The good news.
+Dialogue: 0,0:11:30.20,0:11:31.00,Default,,0,0,0,,I just
+Dialogue: 0,0:12:00.00,0:12:00.89,Default,,0,0,0,,Are you?
+Dialogue: 0,0:12:30.10,0:12:31.20,Default,,0,0,0,,Department of
+Dialogue: 0,0:13:00.50,0:13:06.50,Default,,0,0,0,,here, he
+Dialogue: 0,0:13:30.00,0:13:32.20,Default,,0,0,0,,That is not.
+Dialogue: 0,0:00:00.00,0:00:03.10,Default,,0,0,0,,पिंक इधर आओ आओ अब तुम्हारा आओ इंस्टाग्राम
+Dialogue: 0,0:00:03.10,0:00:05.79,Default,,0,0,0,,का डेमोग्राफिक देखना है। हमें एक्सप्लोरर पेज नहीं
+Dialogue: 0,0:00:05.79,0:00:08.40,Default,,0,0,0,,बोलना डरो मत घबरा।
+Dialogue: 0,0:00:11.40,0:00:13.80,Default,,0,0,0,,या तो लास्ट 30 देस में गैस बीइंग्स
+Dialogue: 0,0:00:13.80,0:00:16.80,Default,,0,0,0,,को मुंबई से सबसे ज्यादा लोकसभा कर रहे
+Dialogue: 0,0:00:16.80,0:00:18.60,Default,,0,0,0,,हैं। क्या बात है पता था तुझे यह
+Dialogue: 0,0:00:18.60,0:00:24.89,Default,,0,0,0,,ऑब्वियस पता था। बंगाली का देखेंगे। इसका होना
+Dialogue: 0,0:00:24.89,0:00:27.50,Default,,0,0,0,,चाहिए ना जरा इसके हिसाब से इसका कोलकाता
+Dialogue: 0,0:00:27.50,0:00:29.39,Default,,0,0,0,,होना चाहिए था इंस्टाग्राम!
+Dialogue: 0,0:00:30.00,0:00:31.60,Default,,0,0,0,,एज मिंस इंस्टाग्राम!
+Dialogue: 0,0:01:00.00,0:01:02.79,Default,,0,0,0,,ओ ओ एक्चुअल टॉप थ्री में मुंबई दिल्ली
+Dialogue: 0,0:01:02.79,0:01:04.70,Default,,0,0,0,,कोलकाता ही मिल रहा है। देखा यह नोटिस
+Dialogue: 0,0:01:04.70,0:01:08.50,Default,,0,0,0,,किया आदि तुम्हारा दिखाओ मुंबई दिल्ली कोलकाता भाई
+Dialogue: 0,0:01:08.50,0:01:19.40,Default,,0,0,0,,सब कुछ काफी है। सबका भाई इसको अभी
+Dialogue: 0,0:01:19.40,0:01:21.09,Default,,0,0,0,,पूछा, सेमीफाइनल में किसको सपोर्ट कर रहे हो।
+Dialogue: 0,0:01:21.09,0:01:23.70,Default,,0,0,0,,कौन एमबीसी बनेगा। इसने बोला बाद में रिंकू
+Dialogue: 0,0:01:23.70,0:01:28.79,Default,,0,0,0,,बोलना फेसबुक पर बोलना आपका इंस्टाग्राम खोलो डरो
+Dialogue: 0,0:01:28.79,0:01:28.90,Default,,0,0,0,,मत।
+Dialogue: 0,0:01:30.00,0:01:33.00,Default,,0,0,0,,जज भाई का मुंबई दिल्ली भोपाल दिए हुए
+Dialogue: 0,0:01:33.00,0:01:39.79,Default,,0,0,0,,ये इसका दिल्ली होना चाहिए था। ज्यादा कोलकाता
+Dialogue: 0,0:01:39.79,0:01:41.29,Default,,0,0,0,,में रहता है कि झूठ!
+Dialogue: 0,0:01:46.40,0:01:51.70,Default,,0,0,0,,करते हैं मिलेगा, चेक करते हैं। देखते हैं
+Dialogue: 0,0:01:51.70,0:01:53.40,Default,,0,0,0,,कि में मुंबई नहीं आता है। एक तो
+Dialogue: 0,0:01:53.40,0:01:55.20,Default,,0,0,0,,हम लोग गैस यूएफसी जिम में आया हूं
+Dialogue: 0,0:01:55.20,0:01:57.79,Default,,0,0,0,,और यह हम लोग को सब लोग ने
+Dialogue: 0,0:01:57.79,0:01:58.20,Default,,0,0,0,,यह पहना हुआ है।
+Dialogue: 0,0:02:01.70,0:02:09.80,Default,,0,0,0,,क्या है कि क्या है यह लास्ट बार
+Dialogue: 0,0:02:09.80,0:02:11.09,Default,,0,0,0,,पहन रहा हूं, किसको देगा?
+Dialogue: 0,0:02:12.50,0:02:15.19,Default,,0,0,0,,बीवी ने मना किया है मैंने।
+Dialogue: 0,0:02:19.80,0:02:23.40,Default,,0,0,0,,मोती उसके नाक में से निकल रहा है
+Dialogue: 0,0:02:23.40,0:02:26.59,Default,,0,0,0,,यार नाक में से भूखे।
+Dialogue: 0,0:02:39.40,0:02:50.50,Default,,0,0,0,,फोन लो इंस्टाग्राम खोलो डरो मत खोलो। मुंबई
+Dialogue: 0,0:02:50.50,0:02:56.50,Default,,0,0,0,,टॉप का मुंबई टॉप पे है।
+Dialogue: 0,0:03:00.00,0:03:05.40,Default,,0,0,0,,काजू लोग भी 45 टू 54 देखते हैं।
+Dialogue: 0,0:03:05.40,0:03:07.59,Default,,0,0,0,,सबका होता है, सबका होता है। बस यही
+Dialogue: 0,0:03:07.59,0:03:09.40,Default,,0,0,0,,देखना था, हम देख रहे हैं किसके इसमें
+Dialogue: 0,0:03:09.40,0:03:12.59,Default,,0,0,0,,मुंबई नहीं आता है। वूमेन 6.5 मेरा दिखाऊं।
+Dialogue: 0,0:03:12.59,0:03:16.00,Default,,0,0,0,,तेरा तो 15:20 होगा। हम शादी वूमेन फॉलो
+Dialogue: 0,0:03:16.00,0:03:20.19,Default,,0,0,0,,मी प्लीज आई। एम मैरिड डरो मुझे उनके
+Dialogue: 0,0:03:20.19,0:03:22.00,Default,,0,0,0,,बीवी से डरो पर सीट बाय और स्नेक्स
+Dialogue: 0,0:03:22.00,0:03:26.40,Default,,0,0,0,,दोनों अपना डेमोग्राफिक दिखाओ। 4% लड़की है। मुंबई
+Dialogue: 0,0:03:26.40,0:03:29.19,Default,,0,0,0,,यह भी मुंबई। यह भी मुंबई यार क्यों
+Dialogue: 0,0:03:29.19,0:03:29.80,Default,,0,0,0,,है हम लोग का?
+Dialogue: 0,0:03:30.09,0:03:32.59,Default,,0,0,0,,मतलब क्या बोल रहे हो?
+Dialogue: 0,0:03:36.40,0:03:41.90,Default,,0,0,0,,यूएफसी जिम में हम लोग ऑर्गेनाइज्ड बाय काशी
+Dialogue: 0,0:03:41.90,0:03:44.40,Default,,0,0,0,,क्या बात है। यहां पर हमारा वेटिंग रूम
+Dialogue: 0,0:03:44.40,0:03:45.59,Default,,0,0,0,,चल रहा है। सब वेट कर रहे हैं।
+Dialogue: 0,0:03:45.59,0:03:49.30,Default,,0,0,0,,इधर सही है यार!
+Dialogue: 0,0:04:09.09,0:04:10.50,Default,,0,0,0,,धीरे से मारो!
+Dialogue: 0,0:04:23.00,0:04:27.39,Default,,0,0,0,,और धीरज होना चाहिए।
+Dialogue: 0,0:04:30.00,0:04:34.50,Default,,0,0,0,,लाइट ही हो तुम!
+Dialogue: 0,0:04:40.50,0:04:42.69,Default,,0,0,0,,यूएफसी जिम में आकर हम लोग सब बैठे
+Dialogue: 0,0:04:42.69,0:04:44.69,Default,,0,0,0,,हुए हैं। अभी तक शूट शुरू नहीं हुआ
+Dialogue: 0,0:04:44.69,0:04:46.69,Default,,0,0,0,,है। देख लो कैसे चारों बैठे उदास जैसे?
+Dialogue: 0,0:04:48.60,0:04:49.39,Default,,0,0,0,,क्योंकि इसमें?
+Dialogue: 0,0:04:52.10,0:04:55.80,Default,,0,0,0,,जो ऊपर ये लोग कुछ ना कुछ नीचे
+Dialogue: 0,0:04:55.80,0:04:57.30,Default,,0,0,0,,खरीदने गए हैं। बस ये लोग आएंगे फिर
+Dialogue: 0,0:04:57.30,0:04:58.80,Default,,0,0,0,,सूट शुरू करेंगे और उसके बाद हम लोग!
+Dialogue: 0,0:05:00.39,0:05:03.39,Default,,0,0,0,,उनका बर्थडे सेलिब्रेट करेंगे। गैस अभी तक शूट
+Dialogue: 0,0:05:03.39,0:05:05.00,Default,,0,0,0,,चालू नहीं हुआ है और आधा घंटा निकल
+Dialogue: 0,0:05:05.00,0:05:06.80,Default,,0,0,0,,गया। जरा अभी थोड़ी देर में सिद्ध हो
+Dialogue: 0,0:05:06.80,0:05:06.89,Default,,0,0,0,,जाएगा।
+Dialogue: 0,0:05:08.30,0:05:11.10,Default,,0,0,0,,और ये जो और यह जो इसको पिलो
+Dialogue: 0,0:05:11.10,0:05:16.10,Default,,0,0,0,,इसको पिलो बना ले, इसमें लेते हैं। क्लासिक
+Dialogue: 0,0:05:16.10,0:05:20.19,Default,,0,0,0,,स्लीप आगे बोली थी। मैं सोई नहीं हूं।
+Dialogue: 0,0:05:20.19,0:05:21.69,Default,,0,0,0,,पूरी रात नाइट सूट ही दे दिया उसको
+Dialogue: 0,0:05:21.69,0:05:22.00,Default,,0,0,0,,सीधा।
+Dialogue: 0,0:05:24.10,0:05:24.80,Default,,0,0,0,,सोनी आई है।
+Dialogue: 0,0:05:30.00,0:05:32.50,Default,,0,0,0,,हाउ डू यू लाइक इन्वेंशन, न्यू फिल्म गैस,
+Dialogue: 0,0:05:32.50,0:05:36.10,Default,,0,0,0,,बैटमैन और हम देखो सांता क्लास सब लोग
+Dialogue: 0,0:05:36.10,0:05:37.89,Default,,0,0,0,,को अलग-अलग वह दिए गए हैं।
+Dialogue: 0,0:06:00.00,0:06:01.80,Default,,0,0,0,,ऐसा लग रहा है देखिए पर में लग
+Dialogue: 0,0:06:01.80,0:06:01.89,Default,,0,0,0,,गई।
+Dialogue: 0,0:06:03.00,0:06:03.69,Default,,0,0,0,,है?
+Dialogue: 0,0:06:06.00,0:06:11.39,Default,,0,0,0,,पीछे हो गया सुनो ऐसा लग रहा है
+Dialogue: 0,0:06:11.39,0:06:12.50,Default,,0,0,0,,स्लीपर करने आए इधर।
+Dialogue: 0,0:06:20.00,0:06:20.60,Default,,0,0,0,,वो करती है।
+Dialogue: 0,0:06:30.00,0:06:36.60,Default,,0,0,0,,थ्री प्रोटीन पावर और नाचोज एंड बर्गर बहुत
+Dialogue: 0,0:06:36.60,0:06:50.39,Default,,0,0,0,,है। आधा तो मेरा ऑर्डर साल फिर मेरा
+Dialogue: 0,0:06:50.39,0:06:54.80,Default,,0,0,0,,ऑर्डर बोल रहा है फिर।
+Dialogue: 0,0:07:00.00,0:07:06.69,Default,,0,0,0,,Avocado Thakur Lekar I Hai Kahin per aur
+Dialogue: 0,0:07:06.69,0:07:08.89,Default,,0,0,0,,bahut jyada exotic feel a raha hai matlab
+Dialogue: 0,0:07:08.89,0:07:10.39,Default,,0,0,0,,maine isko Maine isko bola tha bilkul.
+Dialogue: 0,0:07:11.50,0:07:13.50,Default,,0,0,0,,Main Vahi Vahi main Vahi Kah Raha Hun
+Dialogue: 0,0:07:13.50,0:07:15.30,Default,,0,0,0,,Ki mujhe bahut exotic feel a raha hai
+Dialogue: 0,0:07:15.30,0:07:18.39,Default,,0,0,0,,yahan pay Jo Ye sahi hai yaar. So
+Dialogue: 0,0:07:18.39,0:07:20.69,Default,,0,0,0,,good Kharghar mein rahte hain na, isko ho
+Dialogue: 0,0:07:20.69,0:07:23.00,Default,,0,0,0,,jana hai kya story Chal Rahi Hai Dekho
+Dialogue: 0,0:07:23.00,0:07:24.39,Default,,0,0,0,,Ye Lagi love story main Kah Raha Hun
+Dialogue: 0,0:07:24.39,0:07:26.89,Default,,0,0,0,,sunglass mat Ban usse green chauda ho jata
+Dialogue: 0,0:07:26.89,0:07:28.60,Default,,0,0,0,,FIR Mere pay Jhooth Nahin lagega abe chat
+Dialogue: 0,0:07:28.60,0:07:28.80,Default,,0,0,0,,mein.
+Dialogue: 0,0:07:30.00,0:07:32.50,Default,,0,0,0,,ऐसा लग रहा है, पीछे मछली है।
+Dialogue: 0,0:07:33.80,0:07:38.69,Default,,0,0,0,,यार बताओ व्हाट इस द बेस्ट जो आपको
+Dialogue: 0,0:07:38.69,0:07:39.19,Default,,0,0,0,,कर सकते हो?
+Dialogue: 0,0:08:00.19,0:08:03.80,Default,,0,0,0,,और?
+Dialogue: 0,0:08:05.00,0:08:06.19,Default,,0,0,0,,बंगाली स्टाइल चिकन।
+Dialogue: 0,0:08:08.69,0:08:09.30,Default,,0,0,0,,वेज बिरियानी।
+Dialogue: 0,0:08:11.00,0:08:13.30,Default,,0,0,0,,जोकर भाई आप क्या बनाई हो, बेस्ट सबसे
+Dialogue: 0,0:08:13.30,0:08:19.19,Default,,0,0,0,,बेस्ट हां बिल्कुल खाना पसंद है। पुलाव अपनी
+Dialogue: 0,0:08:19.19,0:08:20.50,Default,,0,0,0,,पुलाव बनाया था। एक बार खुद से ट्राई
+Dialogue: 0,0:08:20.50,0:08:22.00,Default,,0,0,0,,करिए मजा!
+Dialogue: 0,0:08:23.30,0:08:25.60,Default,,0,0,0,,बताओ!
+Dialogue: 0,0:08:26.69,0:08:29.10,Default,,0,0,0,,क्या बात है जिन जिन ने अपना सबसे
+Dialogue: 0,0:08:29.10,0:08:29.80,Default,,0,0,0,,बेस्ट बताया?
+Dialogue: 0,0:08:30.00,0:08:31.10,Default,,0,0,0,,सब लोग को मेरे को हिलाना पड़ेगा।
+Dialogue: 0,0:08:32.20,0:08:34.50,Default,,0,0,0,,दान गैस मैं सबसे बेस्ट मान सकता हूं।
+Dialogue: 0,0:08:34.50,0:08:40.00,Default,,0,0,0,,मैं पानी की तरफ से हमारे लिए एक
+Dialogue: 0,0:08:40.00,0:08:43.00,Default,,0,0,0,,मैसेज है। सबके लिए उसको एक गिफ्ट चाहिए।
+Dialogue: 0,0:08:43.00,0:08:47.60,Default,,0,0,0,,हमसे ही वांट्स एन लिटिल एंटरटेनमेंट और वो
+Dialogue: 0,0:08:47.60,0:08:49.29,Default,,0,0,0,,एंटरटेनमेंट के लिए यहां पे हम चार लोग
+Dialogue: 0,0:08:49.29,0:08:53.50,Default,,0,0,0,,अपना फोन मुझे दोगे। अरे भैया आगे जिसका
+Dialogue: 0,0:08:53.50,0:08:54.70,Default,,0,0,0,,फोन चूज करेंगे वो बिल भरेगा।
+Dialogue: 0,0:09:07.60,0:09:10.00,Default,,0,0,0,,चलो तो भाई बिल देख के पढ़ने वाली
+Dialogue: 0,0:09:10.00,0:09:12.00,Default,,0,0,0,,मुझे लग रहा है क्योंकि यह बहुत ज्यादा
+Dialogue: 0,0:09:12.00,0:09:15.29,Default,,0,0,0,,एग्जॉटिक जगह है भाई उनमें से आप जिसका
+Dialogue: 0,0:09:15.29,0:09:17.39,Default,,0,0,0,,फोन चूज करोगे वो यहां पे आज बिल
+Dialogue: 0,0:09:17.39,0:09:17.79,Default,,0,0,0,,भरने वाला है।
+Dialogue: 0,0:09:34.79,0:09:37.60,Default,,0,0,0,,तेरी किस्मत बहुत खराब है दिल कितना हुआ
+Dialogue: 0,0:09:37.60,0:09:37.79,Default,,0,0,0,,भाई जल्दी।
+Dialogue: 0,0:09:52.10,0:09:56.29,Default,,0,0,0,,बोलो ऐसा यार!
+Dialogue: 0,0:10:00.10,0:10:04.29,Default,,0,0,0,,अगर भाई इधर इधर उसको मत दिखाओ।
+Dialogue: 0,0:10:11.89,0:10:22.89,Default,,0,0,0,,प्रॉपर डायलॉग मारा तो इनको माफ किया जाएगा।
+Dialogue: 0,0:10:22.89,0:10:26.39,Default,,0,0,0,,मतलब विथ इमोशंस पूरा मतलब कि 11000 में
+Dialogue: 0,0:10:26.39,0:10:28.89,Default,,0,0,0,,दुनिया बदल जाएगा। आपका वैसा वाला इमोशंस के
+Dialogue: 0,0:10:28.89,0:10:29.39,Default,,0,0,0,,साथ डायलॉग मारो।
+Dialogue: 0,0:10:30.20,0:10:32.60,Default,,0,0,0,,अच्छा यार मजा नहीं आया, मजा नहीं आया।
+Dialogue: 0,0:10:32.60,0:10:33.79,Default,,0,0,0,,मजा नहीं आया ना ना ना?
+Dialogue: 0,0:10:36.89,0:10:38.29,Default,,0,0,0,,अब चांस नहीं, मेरा दिल तो भरना ही
+Dialogue: 0,0:10:38.29,0:10:38.39,Default,,0,0,0,,है।
+Dialogue: 0,0:10:42.29,0:10:48.10,Default,,0,0,0,,मेरे को।
+Dialogue: 0,0:10:48.89,0:10:51.20,Default,,0,0,0,,नहीं देखा।
+Dialogue: 0,0:11:00.00,0:11:01.00,Default,,0,0,0,,तो कोई टेंशन नहीं है?
+Dialogue: 0,0:11:04.00,0:11:05.70,Default,,0,0,0,,अरे वो तो मिला ना बुक मिला ना
+Dialogue: 0,0:11:05.70,0:11:08.20,Default,,0,0,0,,एक बुक दिया ना इसको एक पिलो कवर
+Dialogue: 0,0:11:08.20,0:11:10.89,Default,,0,0,0,,और बुक ले जाओ। ले जाओ। कोई बात
+Dialogue: 0,0:11:10.89,0:11:15.39,Default,,0,0,0,,नहीं जी का बर्थडे सेलिब्रेट किया जा रहा
+Dialogue: 0,0:11:15.39,0:11:18.39,Default,,0,0,0,,है। यहां पे तो हैप्पी बर्थडे आदि क्या
+Dialogue: 0,0:11:18.39,0:11:20.10,Default,,0,0,0,,है ये इसको खाना होता है क्या?
+Dialogue: 0,0:11:22.20,0:11:24.89,Default,,0,0,0,,इसके अंदर इसके अंदर ये गाने का नाम
+Dialogue: 0,0:11:24.89,0:11:29.60,Default,,0,0,0,,क्या है? भाई क्या बात है यार?
+Dialogue: 0,0:11:30.10,0:11:34.00,Default,,0,0,0,,जैसे भाई सबको मिले हैं वो खाना खा
+Dialogue: 0,0:11:34.00,0:11:34.20,Default,,0,0,0,,ले।
+Dialogue: 0,0:11:42.20,0:11:44.89,Default,,0,0,0,,अब तो सब कुछ पार्सल करो, चटनी भी
+Dialogue: 0,0:11:44.89,0:11:47.39,Default,,0,0,0,,चटनी भी पड़ता है, टाइट हो चुका है
+Dialogue: 0,0:11:47.39,0:11:47.70,Default,,0,0,0,,एकदम!
+Dialogue: 0,0:12:00.29,0:12:05.79,Default,,0,0,0,,इसके लाइफ में एकदम उसके लाइफ में मयंक
+Dialogue: 0,0:12:05.79,0:12:06.39,Default,,0,0,0,,मिलने लाया नहीं।
+Dialogue: 0,0:12:08.39,0:12:09.00,Default,,0,0,0,,चलो आदि।
+Dialogue: 0,0:12:10.60,0:12:16.20,Default,,0,0,0,,खा सकता है।
+Dialogue: 0,0:12:30.00,0:12:31.79,Default,,0,0,0,,ये जो पेट में जा रहा नहीं है,
+Dialogue: 0,0:12:31.79,0:12:33.10,Default,,0,0,0,,कैनाल सामने आके रखा हुआ है।
+Dialogue: 0,0:12:41.00,0:12:43.39,Default,,0,0,0,,इंस्टाग्राम क्या जुड़ रहा है?
+Dialogue: 0,0:12:47.79,0:12:55.20,Default,,0,0,0,,400 कर दो 1173011!
+Dialogue: 0,0:13:09.79,0:13:12.39,Default,,0,0,0,,करंट में रखा है।
+Dialogue: 0,0:13:30.00,0:13:39.70,Default,,0,0,0,,और अभी तक उन्होंने!
+Dialogue: 0,0:13:42.20,0:13:46.29,Default,,0,0,0,,कर दिया चलो थैंक यू सो मच आदि
+Dialogue: 0,0:13:46.29,0:13:48.60,Default,,0,0,0,,कैसा लग रहा है। आपके एंटरटेनमेंट हो गया।
+Dialogue: 0,0:00:00.00,0:00:29.50,Default,,0,0,0,,Instagram
+Dialogue: 0,0:00:30.00,0:00:32.50,Default,,0,0,0,,Es mi instagram demográfico.
+Dialogue: 0,0:02:00.00,0:02:14.59,Default,,0,0,0,,un tacto
+Dialogue: 0,0:02:30.00,0:02:48.40,Default,,0,0,0,,profesionales
+Dialogue: 0,0:07:48.60,0:07:49.39,Default,,0,0,0,,▁ 찔 끔 찔 끔
+Dialogue: 0,0:00:30.00,0:00:31.80,Default,,0,0,0,,Instagram
+Dialogue: 0,0:02:01.70,0:02:03.29,Default,,0,0,0,,А ты ко мне нравишься.
+Dialogue: 0,0:02:39.30,0:02:43.19,Default,,0,0,0,,Instagram
+Dialogue: 0,0:03:00.00,0:03:14.30,Default,,0,0,0,,Году понравились?
+Dialogue: 0,0:03:51.00,0:03:53.30,Default,,0,0,0,,если
+Dialogue: 0,0:04:00.00,0:04:00.90,Default,,0,0,0,,шалава
+Dialogue: 0,0:05:30.00,0:05:37.69,Default,,0,0,0,,Мавр вот
+Dialogue: 0,0:05:39.69,0:05:42.00,Default,,0,0,0,,е
+Dialogue: 0,0:07:00.00,0:07:08.69,Default,,0,0,0,,Экзотик
+Dialogue: 0,0:07:33.80,0:07:35.60,Default,,0,0,0,,сейчас сейчас
+Dialogue: 0,0:08:00.00,0:08:01.10,Default,,0,0,0,,а дыра
+Dialogue: 0,0:08:30.00,0:08:31.00,Default,,0,0,0,,заблокирован
+Dialogue: 0,0:10:00.00,0:10:01.20,Default,,0,0,0,,Всё, давай.
+Dialogue: 0,0:11:30.00,0:11:30.70,Default,,0,0,0,,оторвать
+Dialogue: 0,0:13:30.00,0:13:30.50,Default,,0,0,0,,подарками
+Dialogue: 0,0:00:00.40,0:00:03.10,Default,,0,0,0,,ding zit er al toch maar Instagram
+Dialogue: 0,0:00:30.39,0:00:32.29,Default,,0,0,0,,Ik weet niet Instagram dan moet ik even
+Dialogue: 0,0:00:32.29,0:00:37.39,Default,,0,0,0,,zien.
+Dialogue: 0,0:01:06.79,0:01:29.00,Default,,0,0,0,,Mumbai I've Got The Instagram geloof daarom. Wat
+Dialogue: 0,0:01:30.40,0:01:36.59,Default,,0,0,0,,Dat is bijna hè, schat.
+Dialogue: 0,0:02:03.79,0:02:04.29,Default,,0,0,0,,Ja hè
+Dialogue: 0,0:03:00.19,0:03:00.69,Default,,0,0,0,,Ja, toen ook doen.
+Dialogue: 0,0:03:34.40,0:03:34.40,Default,,0,0,0,,hahaha
+Dialogue: 0,0:04:00.50,0:04:00.50,Default,,0,0,0,,shalala
+Dialogue: 0,0:04:38.39,0:04:38.39,Default,,0,0,0,,hahaha
+Dialogue: 0,0:05:04.60,0:05:04.60,Default,,0,0,0,,radar
+Dialogue: 0,0:05:30.50,0:05:32.50,Default,,0,0,0,,Houd u leiding mensen. Nu kunnen we even
+Dialogue: 0,0:05:33.00,0:05:33.00,Default,,0,0,0,,Bertram
+Dialogue: 0,0:06:01.10,0:06:03.30,Default,,0,0,0,,Ik heb pijn, maar lekker. Oeh oeh oeh
+Dialogue: 0,0:06:03.60,0:06:06.80,Default,,0,0,0,,oeh oeh oh oh oh oh wat jammer.
+Dialogue: 0,0:06:34.00,0:06:46.60,Default,,0,0,0,,blah blah blah blah blah blah
+Dialogue: 0,0:07:00.60,0:07:00.89,Default,,0,0,0,,En wat ga je doen?
+Dialogue: 0,0:07:30.10,0:07:32.50,Default,,0,0,0,,Ja wordt het weer in Mathilde
+Dialogue: 0,0:08:04.00,0:08:06.30,Default,,0,0,0,,einde, ik ben Dolly Style Chicken
+Dialogue: 0,0:08:36.89,0:08:36.89,Default,,0,0,0,,hahaha
+Dialogue: 0,0:09:00.20,0:09:03.00,Default,,0,0,0,,Ha ha ha ha ha ha ha projecties,
+Dialogue: 0,0:09:05.79,0:09:09.70,Default,,0,0,0,,Maar ja, dat had ik het denken wat
+Dialogue: 0,0:09:10.00,0:09:10.29,Default,,0,0,0,,nou je moeder.
+Dialogue: 0,0:09:37.29,0:09:38.10,Default,,0,0,0,,Wil je het nou bij de Lidl
+Dialogue: 0,0:10:08.50,0:10:08.50,Default,,0,0,0,,garage
+Dialogue: 0,0:10:30.50,0:10:31.60,Default,,0,0,0,,Ja ja hey jongen
+Dialogue: 0,0:11:04.39,0:11:09.29,Default,,0,0,0,,Hallo boek, Lidl
+Dialogue: 0,0:11:34.79,0:11:34.89,Default,,0,0,0,,Ga je bellen?
+Dialogue: 0,0:12:00.10,0:12:01.10,Default,,0,0,0,,Ah, dat kan je niet goed.
+Dialogue: 0,0:12:30.39,0:12:30.70,Default,,0,0,0,,december
+Dialogue: 0,0:13:00.70,0:13:00.70,Default,,0,0,0,,hahaha
+Dialogue: 0,0:13:34.29,0:13:34.29,Default,,0,0,0,,overgang
+Dialogue: 0,0:00:42.29,0:00:50.39,Default,,0,0,0,,850
+Dialogue: 0,0:00:57.29,0:00:57.89,Default,,0,0,0,,TL
+Dialogue: 0,0:01:00.00,0:01:25.09,Default,,0,0,0,,eski abi burada senin kaynanan oyunlar
+Dialogue: 0,0:01:30.00,0:01:39.59,Default,,0,0,0,,Bülent Baykal mumbayı dilli hoparl diyor be zaten
+Dialogue: 0,0:01:39.59,0:01:40.29,Default,,0,0,0,,portakalın
+Dialogue: 0,0:01:46.29,0:01:56.40,Default,,0,0,0,,yeter
+Dialogue: 0,0:07:30.00,0:07:30.50,Default,,0,0,0,,Gel buraya.
+Dialogue: 0,0:07:33.80,0:07:35.89,Default,,0,0,0,,ketçap çita çita
+Dialogue: 0,0:10:07.70,0:10:09.29,Default,,0,0,0,,Cerrah acıyor.
+Dialogue: 0,0:10:11.89,0:10:12.60,Default,,0,0,0,,Fenerbahçe
+Dialogue: 0,0:10:48.89,0:10:49.39,Default,,0,0,0,,Hayır
+Dialogue: 0,0:10:50.20,0:10:50.60,Default,,0,0,0,,Hayır
+Dialogue: 0,0:05:30.00,0:05:34.19,Default,,0,0,0,,Haduh lighting mencet YouTube man. Alhamdulillah

@@ -63,20 +63,17 @@ export const videoProcessingQueue = new Bull('video processing', {
 export const subtitleQueue = new Bull('subtitle generation', {
   redis: redisConfig,
   settings: {
-    stalledInterval: 300 * 1000, // 5 minutes - increased to prevent false stalled detection
-    maxStalledCount: 2, // Reduce retry attempts on stalled jobs
-    lockDuration: 600000, // 10 minutes lock duration
-    lockRenewTime: 150000 // Renew lock every 2.5 minutes
+    stalledInterval: 300 * 1000,
+    maxStalledCount: 1, // Only retry once if stalled
+    lockDuration: 600000,
+    lockRenewTime: 150000
   },
   defaultJobOptions: {
     removeOnComplete: 50,
     removeOnFail: 100,
-    attempts: 2, // Reduce attempts to avoid infinite loops
-    backoff: {
-      type: 'exponential',
-      delay: 10000 // 10 second delay between retries
-    },
-    timeout: 7200000
+    attempts: 1, // Single attempt only - no retries
+    timeout: 7200000,
+    jobId: undefined // Will be set per-job for deduplication
   }
 });
 
@@ -143,6 +140,82 @@ addConnectionListeners(videoProcessingQueue, 'Video Processing');
 addConnectionListeners(subtitleQueue, 'Subtitle');
 addConnectionListeners(aiQueue, 'AI');
 addConnectionListeners(smartClipperQueue, 'Smart Clipper');
+
+// Cleanup function to remove stalled jobs on startup
+export async function cleanupStalledJobs() {
+  console.log('🧹 Cleaning up stalled jobs from previous server run...');
+  
+  try {
+    // Clean subtitle queue - remove ALL jobs (active, waiting, delayed, failed)
+    const activeSubtitleJobs = await subtitleQueue.getActive();
+    const waitingSubtitleJobs = await subtitleQueue.getWaiting();
+    const delayedSubtitleJobs = await subtitleQueue.getDelayed();
+    const failedSubtitleJobs = await subtitleQueue.getFailed(0, 100);
+    
+    console.log(`📋 Subtitle Queue: ${activeSubtitleJobs.length} active, ${waitingSubtitleJobs.length} waiting, ${delayedSubtitleJobs.length} delayed, ${failedSubtitleJobs.length} failed`);
+    
+    // Remove ALL jobs from subtitle queue
+    const allSubtitleJobs = [...activeSubtitleJobs, ...waitingSubtitleJobs, ...delayedSubtitleJobs];
+    for (const job of allSubtitleJobs) {
+      try {
+        console.log(`   ❌ Removing job ${job.id} for video ${job.data.videoId}`);
+        // Discard the job to prevent retry
+        await job.discard();
+        // Force remove from Redis
+        await job.remove();
+      } catch (err) {
+        console.log(`   ⚠️  Could not remove job ${job.id}:`, err.message);
+      }
+    }
+    
+    // Remove old failed jobs
+    const oneHourAgo = Date.now() - 3600000;
+    for (const job of failedSubtitleJobs) {
+      if (job.timestamp < oneHourAgo) {
+        try {
+          console.log(`   🗑️  Removing old failed job ${job.id}`);
+          await job.remove();
+        } catch (err) {
+          // Already removed
+        }
+      }
+    }
+    
+    // Clean smart clipper queue
+    const activeClipperJobs = await smartClipperQueue.getActive();
+    const waitingClipperJobs = await smartClipperQueue.getWaiting();
+    const delayedClipperJobs = await smartClipperQueue.getDelayed();
+    const failedClipperJobs = await smartClipperQueue.getFailed(0, 100);
+    
+    console.log(`📋 Smart Clipper Queue: ${activeClipperJobs.length} active, ${waitingClipperJobs.length} waiting, ${delayedClipperJobs.length} delayed, ${failedClipperJobs.length} failed`);
+    
+    const allClipperJobs = [...activeClipperJobs, ...waitingClipperJobs, ...delayedClipperJobs];
+    for (const job of allClipperJobs) {
+      try {
+        console.log(`   ❌ Removing job ${job.id}`);
+        await job.discard();
+        await job.remove();
+      } catch (err) {
+        console.log(`   ⚠️  Could not remove job ${job.id}:`, err.message);
+      }
+    }
+    
+    for (const job of failedClipperJobs) {
+      if (job.timestamp < oneHourAgo) {
+        try {
+          console.log(`   🗑️  Removing old failed job ${job.id}`);
+          await job.remove();
+        } catch (err) {
+          // Already removed
+        }
+      }
+    }
+    
+    console.log('✅ Stalled job cleanup completed');
+  } catch (error) {
+    console.error('❌ Error cleaning stalled jobs:', error);
+  }
+}
 
 // Log when queues are ready for processing
 console.log('🔄 Queue processors initialized:');

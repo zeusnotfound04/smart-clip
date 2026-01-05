@@ -958,6 +958,75 @@ class APIClient {
     return response;
   }
 
+  // Video URL Upload methods
+  async validateVideoUrl(url: string): Promise<{ success: boolean; platform?: string; error?: string }> {
+    const response = await axiosInstance.post('/api/video-url-upload/validate', { url });
+    return response.data;
+  }
+
+  async getVideoInfoFromUrl(url: string): Promise<{
+    success: boolean;
+    platform?: string;
+    videoInfo?: {
+      title: string;
+      duration: number;
+      durationFormatted: string;
+      thumbnail: string;
+      platform: string;
+      url: string; // Direct video URL from yt-dlp (e.g., video.twimg.com for Twitter)
+      originalUrl: string; // Original input URL (e.g., tweet URL)
+    };
+    error?: string;
+  }> {
+    const response = await axiosInstance.post('/api/video-url-upload/info', { url });
+    console.log('📡 API Response from getVideoInfoFromUrl:', response.data);
+    return response.data;
+  }
+
+  async uploadFromUrl(params: {
+    url: string;
+    projectName?: string;
+    processType?: 'none' | 'subtitles' | 'smart-clipper';
+    options?: {
+      language?: string;
+      detectAllLanguages?: boolean;
+      style?: any;
+      contentType?: string;
+      numberOfClips?: number;
+      minClipDuration?: number;
+      maxClipDuration?: number;
+    };
+  }): Promise<{
+    success: boolean;
+    video: {
+      id: string;
+      title: string;
+      duration: number;
+      s3Url: string;
+      status: string;
+    };
+    platform: string;
+    processType: string;
+    jobId?: string;
+    projectId?: string;
+    message: string;
+  }> {
+    const response = await axiosInstance.post('/api/video-url-upload/upload', params);
+    return response.data;
+  }
+
+  async getSupportedPlatforms(): Promise<{
+    success: boolean;
+    platforms: Array<{
+      name: string;
+      domains: string[];
+      supported: boolean;
+    }>;
+  }> {
+    const response = await axiosInstance.get('/api/video-url-upload/platforms');
+    return response.data;
+  }
+
   private getAuthHeader(): { Authorization?: string } {
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('smartclips_token');

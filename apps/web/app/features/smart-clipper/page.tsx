@@ -24,6 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { VideoUpload } from '@/components/video-upload';
 import { ProtectedRoute } from '@/components/protected-route';
 import { VideoPlayerModal } from '@/components/ui/video-player-modal';
+import { VideoUrlUpload } from '@/components/video-url-upload';
 import { staggerContainer, staggerItem } from '@/lib/utils';
 
 interface ClipSettings {
@@ -402,7 +403,36 @@ export default function SmartClipperPage() {
                         Upload your long-form content to extract highlight clips automatically
                       </CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="space-y-4">
+                      {/* URL Upload */}
+                      <VideoUrlUpload
+                        processType="smart-clipper"
+                        options={{
+                          contentType: 'gaming',
+                          numberOfClips: 5,
+                          minClipDuration: settings.minClipLength,
+                          maxClipDuration: settings.maxClipLength,
+                        }}
+                        onUploadSuccess={(video) => {
+                          // Note: The backend will create a project and start processing
+                          // We should poll for the project status
+                          console.log('Video uploaded from URL:', video);
+                        }}
+                        showPreview={true}
+                      />
+
+                      {/* File Upload */}
+                      <div className="relative">
+                        <div className="absolute inset-0 flex items-center">
+                          <span className="w-full border-t" />
+                        </div>
+                        <div className="relative flex justify-center text-xs uppercase">
+                          <span className="bg-background px-2 text-muted-foreground">
+                            Or upload from device
+                          </span>
+                        </div>
+                      </div>
+
                       <VideoUpload
                         maxFiles={3}
                         maxSize={2048 * 1024 * 1024}

@@ -8,7 +8,7 @@ import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
 import { useRef, useState, useEffect } from 'react';
 
-type UploadStage = 'idle' | 'configuring' | 'uploading' | 'processing' | 'completed' | 'error';
+type UploadStage = 'idle' | 'configuring' | 'downloading' | 'uploading' | 'processing' | 'completed' | 'error';
 
 interface SubtitleStyle {
   textCase: 'normal' | 'uppercase' | 'lowercase' | 'capitalize';
@@ -46,6 +46,58 @@ export function VideoPreviewArea({
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
+  
+  // Check if URL is a YouTube URL
+  const isYouTubeUrl = (url: string | null) => {
+    if (!url) return false;
+    return url.includes('youtube.com') || url.includes('youtu.be');
+  };
+  
+  // Check if URL is a Twitter/X tweet URL (not direct video)
+  const isTwitterUrl = (url: string | null) => {
+    if (!url) return false;
+    // Only return true if it's a tweet URL (has /status/), not a direct video URL
+    const isTweetUrl = (url.includes('twitter.com') || url.includes('x.com')) && url.includes('/status/');
+    // Exclude if it's a direct video URL (contains video.twimg.com or similar)
+    const isDirectVideo = url.includes('video.twimg.com') || url.includes('.mp4') || url.includes('.m3u8');
+    return isTweetUrl && !isDirectVideo;
+  };
+  
+  // Convert YouTube URL to embed URL
+  const getYouTubeEmbedUrl = (url: string) => {
+    try {
+      const urlObj = new URL(url);
+      let videoId = '';
+      
+      if (urlObj.hostname.includes('youtu.be')) {
+        videoId = urlObj.pathname.slice(1);
+      } else if (urlObj.hostname.includes('youtube.com')) {
+        videoId = urlObj.searchParams.get('v') || '';
+      }
+      
+      return videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=0&controls=1` : url;
+    } catch {
+      return url;
+    }
+  };
+  
+  // Convert Twitter/X URL to embed URL
+  const getTwitterEmbedUrl = (url: string) => {
+    try {
+      const urlObj = new URL(url);
+      const pathParts = urlObj.pathname.split('/');
+      const statusIndex = pathParts.indexOf('status');
+      
+      if (statusIndex !== -1 && pathParts[statusIndex + 1]) {
+        const tweetId = pathParts[statusIndex + 1].split('?')[0];
+        return `https://platform.twitter.com/embed/Tweet.html?id=${tweetId}&theme=dark`;
+      }
+      
+      return url;
+    } catch {
+      return url;
+    }
+  };
 
   useEffect(() => {
     const video = videoRef.current;
@@ -141,13 +193,54 @@ export function VideoPreviewArea({
             <div className="w-full h-full flex flex-col">
               {/* Video Container */}
               <div className="relative flex-1 bg-black rounded-t-lg overflow-hidden flex items-center justify-center">
-                <video
-                  ref={videoRef}
-                  src={subtitledVideoUrl || videoPreviewUrl || undefined}
-                  className="max-w-full max-h-full object-contain"
-                  muted={isMuted}
-                  style={{ maxWidth: '100%', maxHeight: '100%' }}
-                />
+                {(() => {
+                  const isYouTube = isYouTubeUrl(videoPreviewUrl);
+                  const isTwitter = isTwitterUrl(videoPreviewUrl);
+                  const shouldUseIframe = (isYouTube || isTwitter) && !subtitledVideoUrl;
+                  
+                  console.log('🎥 VideoPreviewArea rendering decision:');
+                  console.log('   - videoPreviewUrl:', videoPreviewUrl);
+                  console.log('   - subtitledVideoUrl:', subtitledVideoUrl);
+                  console.log('   - isYouTube:', isYouTube);
+                  console.log('   - isTwitter (tweet URL check):', isTwitter);
+                  console.log('   - shouldUseIframe:', shouldUseIframe);
+                  console.log('   - Contains .mp4:', videoPreviewUrl?.includes('.mp4'));
+                  console.log('   - Contains video.twimg.com:', videoPreviewUrl?.includes('video.twimg.com'));
+                  
+                  if (shouldUseIframe) {
+                    const embedUrl = isYouTube 
+                      ? getYouTubeEmbedUrl(videoPreviewUrl!)
+                      : getTwitterEmbedUrl(videoPreviewUrl!);
+                    console.log('📺 Using iframe with URL:', embedUrl);
+                    return (
+                      <div className="w-full h-full relative">
+                        {isTwitter && (
+                          <div className="absolute top-2 right-2 z-10 bg-blue-500/90 text-white px-2 py-1 rounded text-xs font-medium">
+                            Tweet Preview - Video will be extracted
+                          </div>
+                        )}
+                        <iframe
+                          src={embedUrl}
+                          className="w-full h-full"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                          style={{ border: 'none' }}
+                        />
+                      </div>
+                    );
+                  } else {
+                    console.log('📹 Using video element');
+                    return (
+                      <video
+                        ref={videoRef}
+                        src={subtitledVideoUrl || videoPreviewUrl || undefined}
+                        className="w-full h-full object-cover"
+                        muted={isMuted}
+                        style={{ objectFit: 'contain' }}
+                      />
+                    );
+                  }
+                })()}
                 
                 {/* Subtitle Overlay - Only show demo text if using original video */}
                 {!subtitledVideoUrl && (

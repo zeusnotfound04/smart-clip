@@ -151,6 +151,143 @@ subtitleQueue.process('generate-subtitles', 7, async (job) => {
   }
 });
 
+// New worker: Download from URL + Generate Subtitles
+// This worker handles Twitter/X and other platform videos
+subtitleQueue.process('download-and-generate-subtitles', 5, async (job) => {
+  const { videoId, url, userId, language, options, platform } = job.data;
+  
+  let downloadedFilePath: string | null = null;
+  
+  try {
+    if (!userId) {
+      throw new Error('User ID is required for subtitle generation');
+    }
+
+    console.log(`🚀 Processing download+subtitle job: ${job.id} for video: ${videoId}`);
+    console.log(`🌐 Platform: ${platform}, URL: ${url}`);
+    
+    // Phase 1: Download video (0-30%)
+    await prisma.video.update({
+      where: { id: videoId },
+      data: { status: 'downloading' }
+    });
+
+    console.log(`📥 [${job.id}] Starting video download using yt-dlp...`);
+    await job.progress(5);
+    
+    const { videoDownloader } = await import('../services/video-downloader.service');
+    
+    // Download video with yt-dlp (handles Twitter HLS automatically)
+    const downloadResult = await videoDownloader.downloadAndGetDuration(url, userId);
+    downloadedFilePath = downloadResult.localPath;
+    
+    console.log(`✅ [${job.id}] Video downloaded: ${downloadResult.videoInfo.title}`);
+    console.log(`📁 [${job.id}] Local path: ${downloadedFilePath}`);
+    console.log(`⏱️  [${job.id}] Duration: ${downloadResult.duration}s`);
+    await job.progress(20);
+    
+    // Phase 2: Upload to S3 (30-40%)
+    console.log(`☁️  [${job.id}] Uploading to S3...`);
+    const { promises: fs } = await import('fs');
+    const fileBuffer = await fs.readFile(downloadedFilePath);
+    
+    const { uploadFile, generateKey } = await import('../lib/s3');
+    const s3Key = generateKey(userId, downloadResult.fileName, 'video');
+    const s3Url = await uploadFile(s3Key, fileBuffer, 'video/mp4');
+    
+    console.log(`✅ [${job.id}] Uploaded to S3: ${s3Url}`);
+    await job.progress(30);
+    
+    // Update video record with S3 URL and duration
+    await prisma.video.update({
+      where: { id: videoId },
+      data: {
+        filePath: s3Url,
+        duration: downloadResult.duration,
+        size: fileBuffer.length,
+        status: 'processing'
+      }
+    });
+    
+    // Clean up downloaded file
+    await videoDownloader.cleanupFile(downloadedFilePath);
+    downloadedFilePath = null;
+    
+    // Phase 3: Generate subtitles (40-100%)
+    console.log(`🎬 [${job.id}] Starting subtitle generation...`);
+    await job.progress(40);
+    
+    const { generateVideoWithSubtitles } = await import('../services/auto-subtitles.service');
+    
+    // Create progress callback
+    let lastReportedProgress = 40;
+    const progressCallback = async (progress: number) => {
+      // Map 40-95% for subtitle generation
+      const mappedProgress = 40 + (progress * 0.55);
+      
+      if (mappedProgress - lastReportedProgress >= 5) {
+        console.log(`📊 Job ${job.id}: Processing at ${mappedProgress.toFixed(1)}%`);
+        await job.progress(mappedProgress);
+        lastReportedProgress = mappedProgress;
+      }
+    };
+    
+    // Generate subtitles
+    const result = await generateVideoWithSubtitles(videoId, s3Key, userId, {
+      onProgress: progressCallback,
+      language: language,
+      ...options
+    });
+    
+    await job.progress(95);
+    
+    // Update video record with final results
+    await prisma.video.update({
+      where: { id: videoId },
+      data: { 
+        status: 'completed',
+        subtitledVideoUrl: result.subtitledVideoUrl,
+        subtitleConfig: {
+          srtS3Key: result.srtS3Key,
+          audioS3Key: result.audioS3Key,
+          detectedLanguages: result.detectedLanguages,
+          segmentCount: result.segments.length
+        }
+      }
+    });
+
+    await job.progress(100);
+
+    console.log(`✅ Job ${job.id} completed successfully`);
+    console.log(`📹 Subtitled URL: ${result.subtitledVideoUrl}`);
+    
+    return { 
+      videoId,
+      subtitledVideoUrl: result.subtitledVideoUrl,
+      srtS3Key: result.srtS3Key,
+      segmentCount: result.segments.length
+    };
+  } catch (error: any) {
+    console.error(`❌ Download+subtitle job ${job.id} failed:`, error.message);
+    
+    // Clean up downloaded file if it exists
+    if (downloadedFilePath) {
+      try {
+        const { videoDownloader } = await import('../services/video-downloader.service');
+        await videoDownloader.cleanupFile(downloadedFilePath);
+      } catch (cleanupError) {
+        console.error('Failed to cleanup file:', cleanupError);
+      }
+    }
+    
+    await prisma.video.update({
+      where: { id: videoId },
+      data: { status: 'failed' }
+    });
+    throw error;
+  }
+});
+
 aiQueue.process('detect-highlights', 2, async (job) => {
   const { videoS3Key, projectId } = job.data;
   

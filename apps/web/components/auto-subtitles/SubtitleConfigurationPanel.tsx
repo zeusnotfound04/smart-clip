@@ -34,12 +34,19 @@ interface SubtitleConfigurationPanelProps {
   onBack: () => void;
   onGenerate: () => void;
   onConfigurationChange?: (config: SubtitleOptions) => Promise<void>;
+  hasVideo?: boolean;
+  hasLanguageSelected?: boolean;
 }
 
 const FONT_FAMILIES = [
   { value: 'Bangers', label: 'Bangers - VIRAL CHAMPION' },
   { value: 'Anton', label: 'Anton - BOLD IMPACT' },
   { value: 'Montserrat', label: 'Montserrat - Best Overall' },
+  { value: 'Montserrat Black', label: 'Montserrat Black - HEAVY EMPHASIS' },
+  { value: 'Montserrat ExtraBold', label: 'Montserrat ExtraBold - BOLD IMPACT' },
+  { value: 'Montserrat SemiBold', label: 'Montserrat SemiBold - Smooth Captions' },
+  { value: 'Montserrat Medium', label: 'Montserrat Medium - Clean Look' },
+  { value: 'Montserrat Bold', label: 'Montserrat Bold - Strong Text' },
   { value: 'Rubik', label: 'Rubik - Punchy Messages' },
   { value: 'Gabarito', label: 'Gabarito - Fitness & TikTok' },
   { value: 'Poppins', label: 'Poppins - Educational Videos' },
@@ -250,7 +257,22 @@ const STYLE_THEMES = [
       alignment: 'center' as const,
       showShadow: true
     }
-  }
+  },
+  {
+    name: 'Subtitle',
+    style: {
+      primaryColor: '#FFFFFF',
+      outlineColor: '#000000',
+      shadowColor: '#1a1a1a',
+      fontFamily: 'Anton',
+      fontSize: 36,
+      bold: true,
+      italic: false,
+      alignment: 'center' as const,
+      showShadow: true
+    }
+  },
+
 ];
 
 export function SubtitleConfigurationPanel({
@@ -259,8 +281,15 @@ export function SubtitleConfigurationPanel({
   onApplyTheme,
   onBack,
   onGenerate,
-  onConfigurationChange
+  onConfigurationChange,
+  hasVideo = true,
+  hasLanguageSelected = true,
 }: SubtitleConfigurationPanelProps) {
+  console.log('🎨 SubtitleConfigurationPanel render:');
+  console.log('   - hasVideo:', hasVideo);
+  console.log('   - hasLanguageSelected:', hasLanguageSelected);
+  console.log('   - Generate button will be disabled:', !hasVideo || !hasLanguageSelected);
+  
   const updateStyle = async (updates: Partial<SubtitleStyle>) => {
     const newOptions = {
       ...subtitleOptions,
@@ -619,9 +648,16 @@ export function SubtitleConfigurationPanel({
               Back
             </Button>
             <Button 
-              onClick={onGenerate}
+              onClick={() => {
+                console.log('🔴 Generate button clicked');
+                console.log('   - hasVideo:', hasVideo);
+                console.log('   - hasLanguageSelected:', hasLanguageSelected);
+                console.log('   - disabled:', !hasVideo || !hasLanguageSelected);
+                onGenerate();
+              }}
               size="sm"
               className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+              disabled={!hasVideo || !hasLanguageSelected}
             >
               <Subtitles className="w-3 h-3 mr-1" />
               Generate

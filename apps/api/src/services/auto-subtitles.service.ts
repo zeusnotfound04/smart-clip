@@ -98,6 +98,26 @@ const FONT_FILE_MAP: Record<string, { regular: string; bold?: string }> = {
     regular: join(process.cwd(), '..', '..', 'apps', 'web', 'public', 'fonts', 'Montserrat', 'Montserrat-Regular.ttf'),
     bold: join(process.cwd(), '..', '..', 'apps', 'web', 'public', 'fonts', 'Montserrat', 'Montserrat-Black.ttf')
   },
+  'Montserrat Black': {
+    regular: join(process.cwd(), '..', '..', 'apps', 'web', 'public', 'fonts', 'Montserrat', 'Montserrat-Black.ttf'),
+    bold: join(process.cwd(), '..', '..', 'apps', 'web', 'public', 'fonts', 'Montserrat', 'Montserrat-Black.ttf')
+  },
+  'Montserrat ExtraBold': {
+    regular: join(process.cwd(), '..', '..', 'apps', 'web', 'public', 'fonts', 'Montserrat', 'Montserrat-ExtraBold.ttf'),
+    bold: join(process.cwd(), '..', '..', 'apps', 'web', 'public', 'fonts', 'Montserrat', 'Montserrat-ExtraBold.ttf')
+  },
+  'Montserrat Bold': {
+    regular: join(process.cwd(), '..', '..', 'apps', 'web', 'public', 'fonts', 'Montserrat', 'Montserrat-Bold.ttf'),
+    bold: join(process.cwd(), '..', '..', 'apps', 'web', 'public', 'fonts', 'Montserrat', 'Montserrat-Bold.ttf')
+  },
+  'Montserrat SemiBold': {
+    regular: join(process.cwd(), '..', '..', 'apps', 'web', 'public', 'fonts', 'Montserrat', 'Montserrat-SemiBold.ttf'),
+    bold: join(process.cwd(), '..', '..', 'apps', 'web', 'public', 'fonts', 'Montserrat', 'Montserrat-SemiBold.ttf')
+  },
+  'Montserrat Medium': {
+    regular: join(process.cwd(), '..', '..', 'apps', 'web', 'public', 'fonts', 'Montserrat', 'Montserrat-Medium.ttf'),
+    bold: join(process.cwd(), '..', '..', 'apps', 'web', 'public', 'fonts', 'Montserrat', 'Montserrat-Medium.ttf')
+  },
   'Rubik': {
     regular: join(process.cwd(), '..', '..', 'apps', 'web', 'public', 'fonts', 'Rubik', 'Rubik-Regular.ttf'),
     bold: join(process.cwd(), '..', '..', 'apps', 'web', 'public', 'fonts', 'Rubik', 'Rubik-Black.ttf')

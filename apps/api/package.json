@@ -59,6 +59,7 @@
     "say": "^0.16.0",
     "stripe": "^20.0.0",
     "uuid": "^13.0.0",
+    "youtube-dl-exec": "^3.0.10",
     "zod": "^4.1.12"
   },
   "devDependencies": {

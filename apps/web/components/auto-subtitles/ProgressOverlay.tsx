@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 
-type UploadStage = 'idle' | 'configuring' | 'uploading' | 'processing' | 'completed' | 'error';
+type UploadStage = 'idle' | 'configuring' | 'downloading' | 'uploading' | 'processing' | 'completed' | 'error';
 
 interface ProgressOverlayProps {
   uploadStage: UploadStage;
@@ -24,7 +24,7 @@ export function ProgressOverlay({
   error,
   onRetry
 }: ProgressOverlayProps) {
-  if (uploadStage !== 'uploading' && uploadStage !== 'processing' && uploadStage !== 'error') {
+  if (uploadStage !== 'downloading' && uploadStage !== 'uploading' && uploadStage !== 'processing' && uploadStage !== 'error') {
     return null;
   }
 
@@ -41,6 +41,23 @@ export function ProgressOverlay({
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <Card className="w-96">
         <CardContent className="p-6">
+          {uploadStage === 'downloading' && (
+            <div className="space-y-4 text-center">
+              <div className="flex items-center justify-center">
+                <div className="relative">
+                  <Upload className="w-8 h-8 text-blue-400 animate-bounce" />
+                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full animate-ping" />
+                </div>
+              </div>
+              <h3 className="font-semibold text-lg">Downloading from YouTube</h3>
+              <Progress value={uploadProgress} className="h-2" />
+              <p className="text-sm text-muted-foreground">{Math.round(uploadProgress)}% complete</p>
+              <p className="text-xs text-muted-foreground/70 italic">
+                Fetching video from YouTube... This may take a few moments.
+              </p>
+            </div>
+          )}
+          
           {uploadStage === 'uploading' && (
             <div className="space-y-4 text-center">
               <div className="flex items-center justify-center">

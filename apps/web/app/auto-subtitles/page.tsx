@@ -12,6 +12,7 @@ import { SubtitleConfigurationPanel } from "@/components/auto-subtitles/Subtitle
 import { Button } from "@/components/ui/button";
 import { Settings, Upload } from "lucide-react";
 import { VideoSelectorModal } from "@/components/video-selector-modal";
+import { VideoUrlUpload } from "@/components/video-url-upload";
 
 export default function AutoSubtitlesPage() {
   const { user, loading } = useAuth();
@@ -197,6 +198,21 @@ export default function AutoSubtitlesPage() {
             </p>
           </div>
 
+          {/* URL Upload Section */}
+          <VideoUrlUpload
+            processType="subtitles"
+            options={subtitleOptions}
+            onUploadSuccess={(video) => {
+              setVideos(prev => [video, ...prev]);
+            }}
+            onUploadStart={() => {
+              setUploading(true);
+            }}
+            showPreview={true}
+            className="mb-4"
+          />
+
+          {/* File Upload Section */}
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
             <div className="flex flex-col items-center gap-4">
               <Button

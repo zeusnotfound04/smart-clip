@@ -12,7 +12,7 @@ import { SubtitleConfigurationPanel } from '@/components/auto-subtitles/Subtitle
 import { ProgressOverlay } from '@/components/auto-subtitles/ProgressOverlay';
 import { CompletionActionBar } from '@/components/auto-subtitles/CompletionActionBar';
 
-type UploadStage = 'idle' | 'configuring' | 'uploading' | 'processing' | 'completed' | 'error';
+type UploadStage = 'idle' | 'configuring' | 'downloading' | 'uploading' | 'processing' | 'completed' | 'error';
 
 interface VideoData {
   id: string;
@@ -22,6 +22,16 @@ interface VideoData {
   videoUrl?: string;
   subtitles?: string;
   detectedLanguages?: string[];
+  subtitledVideoUrl?: string;
+  isUrlPreview?: boolean;
+  urlData?: {
+    url: string;
+    originalUrl?: string;
+    directUrl?: string;
+    platform?: string;
+    thumbnail?: string;
+    duration?: number;
+  };
 }
 
 interface SubtitleStyle {
@@ -78,6 +88,12 @@ export default function AutoSubtitlesPage() {
       try {
         const data = await apiClient.getSupportedLanguages();
         setAvailableLanguages(data.languages);
+        // Set the first language as default if none selected
+        if (data.languages.length > 0 && !selectedLanguage) {
+          const defaultLang = data.languages[0].code;
+          setSelectedLanguage(defaultLang);
+          console.log('🌐 Default language set to:', defaultLang);
+        }
       } catch (error) {
         console.error('Failed to fetch languages:', error);
       }
@@ -99,6 +115,40 @@ export default function AutoSubtitlesPage() {
 
   const handleVideoSelect = async (video: any) => {
     try {
+      console.log('📹 handleVideoSelect called with:', video);
+      console.log('📹 video.videoUrl:', video.videoUrl);
+      console.log('📹 video.s3Url:', video.s3Url);
+      console.log('📹 video.urlData:', video.urlData);
+      console.log('📹 video.isUrlPreview:', video.isUrlPreview);
+      
+      // Handle URL preview (from YouTube, etc.) - don't download yet
+      if (video.isUrlPreview) {
+        // Use the videoUrl which is already set correctly by VideoUploadPanel
+        // For Twitter videos, this will be the proxy URL
+        // For other platforms, this will be the direct URL
+        const previewUrl = video.videoUrl || video.s3Url;
+        
+        console.log('🎬 Video Preview URL Selection:');
+        console.log('   - Platform:', video.urlData?.platform);
+        console.log('   - Original URL:', video.urlData?.url);
+        console.log('   - Direct URL (yt-dlp):', video.urlData?.directUrl);
+        console.log('   - Proxy URL (if Twitter):', video.urlData?.proxyUrl);
+        console.log('   - Selected Preview URL:', previewUrl);
+        console.log('   - Is Direct MP4:', previewUrl?.includes('.mp4'));
+        
+        setVideoData(video);
+        setVideoPreviewUrl(previewUrl);
+        setUploadStage('configuring');
+        setError('');
+        console.log('✅ URL Preview video added to state');
+        console.log('   - videoData set:', !!video);
+        console.log('   - selectedFile:', !!selectedFile);
+        console.log('   - selectedLanguage:', selectedLanguage);
+        console.log('   - hasVideo should be:', !!(selectedFile || video));
+        console.log('   - hasLanguageSelected should be:', !!selectedLanguage);
+        return;
+      }
+      
       // Create a File-like object from the selected video
       const response = await fetch(video.s3Url || video.videoUrl);
       const blob = await response.blob();
@@ -124,6 +174,86 @@ export default function AutoSubtitlesPage() {
   };
 
   const handleUpload = async () => {
+    // If this is a URL preview, download and upload from URL first
+    if (videoData?.isUrlPreview && videoData?.urlData) {
+      setUploadStage('downloading');
+      setUploadProgress(0);
+      setError('');
+      
+      try {
+        // Simulate download progress (since backend doesn't emit progress yet)
+        const downloadInterval = setInterval(() => {
+          setUploadProgress(prev => {
+            if (prev >= 50) {
+              clearInterval(downloadInterval);
+              return 50;
+            }
+            return prev + 10;
+          });
+        }, 500);
+        
+        const result = await apiClient.uploadFromUrl({
+          url: videoData.urlData.url,
+          projectName: videoData.name,
+          processType: 'subtitles',
+          options: {
+            language: selectedLanguage || undefined,
+            detectAllLanguages: !selectedLanguage,
+            style: subtitleOptions.style,
+          },
+        });
+        
+        clearInterval(downloadInterval);
+        setUploadProgress(100);
+        
+        if (result.success && result.video) {
+          setVideoData({
+            id: result.video.id,
+            name: result.video.title || videoData.name,
+            size: videoData.size || 0,
+            filePath: result.video.s3Url,
+            videoUrl: result.video.s3Url,
+            subtitledVideoUrl: (result.video as any).subtitledVideoUrl
+          });
+          setUploadStage('processing');
+          setCurrentJobId(result.jobId || null);
+          setProcessingProgress(0);
+          
+          // Poll for progress and completion
+          if (!result.jobId) throw new Error('No job ID returned');
+          const jobResult = await apiClient.pollSubtitleJob(
+            result.jobId,
+            (progress, etaMs) => {
+              setProcessingProgress(progress);
+              setEstimatedTimeRemaining(Math.ceil(etaMs / 60000));
+              console.log(`Progress: ${progress}%, ETA: ${Math.ceil(etaMs / 60000)} minutes`);
+            },
+            20000
+          );
+
+          setProcessingProgress(100);
+          setEstimatedTimeRemaining(0);
+
+          setVideoData(prev => prev ? { 
+            ...prev, 
+            subtitles: 'Generated successfully',
+            detectedLanguages: [],
+            videoUrl: jobResult.subtitledVideoUrl
+          } : null);
+          setUploadStage('completed');
+          setCurrentJobId(null);
+        } else {
+          throw new Error('Upload failed');
+        }
+      } catch (err: any) {
+        console.error('URL upload error:', err);
+        setError(err.response?.data?.error || err.message || 'Failed to upload from URL');
+        setUploadStage('error');
+      }
+      return;
+    }
+    
+    // Original file upload logic
     if (!selectedFile) return;
 
     try {
@@ -214,8 +344,12 @@ export default function AutoSubtitlesPage() {
 
   const handleConfigurationChange = useCallback(async (config: SubtitleOptions) => {
     if (!videoData?.id) return;
-    
-    // Clear previous timeout
+        // Skip configuration updates for URL previews (video doesn't exist in DB yet)
+    if (videoData.isUrlPreview) {
+      console.log('⏭️ Skipping config update for URL preview - will apply on upload');
+      return;
+    }
+        // Clear previous timeout
     if (debounceTimeoutRef.current) {
       clearTimeout(debounceTimeoutRef.current);
     }
@@ -315,7 +449,7 @@ export default function AutoSubtitlesPage() {
               subtitleStyle={subtitleOptions.style}
               demoText={demoText}
               onDemoTextChange={setDemoText}
-              subtitledVideoUrl={videoData?.videoUrl}
+              subtitledVideoUrl={videoData?.isUrlPreview ? null : videoData?.subtitledVideoUrl || videoData?.videoUrl}
             />
           </motion.section>
 
@@ -326,14 +460,28 @@ export default function AutoSubtitlesPage() {
             transition={{ duration: 0.6, delay: 0.4 }}
             className="w-80 border-l bg-background/50 overflow-y-auto"
           >
-            <SubtitleConfigurationPanel
-              subtitleOptions={subtitleOptions}
-              onOptionsChange={setSubtitleOptions}
-              onApplyTheme={applyStyleTheme}
-              onBack={() => setUploadStage('idle')}
-              onGenerate={handleUpload}
-              onConfigurationChange={handleConfigurationChange}
-            />
+            {(() => {
+              const hasVideoValue = !!selectedFile || !!videoData;
+              const hasLanguageValue = !!selectedLanguage;
+              console.log('📊 Passing props to SubtitleConfigurationPanel:');
+              console.log('   - selectedFile:', selectedFile ? selectedFile.name : 'null');
+              console.log('   - videoData:', videoData ? videoData.id : 'null');
+              console.log('   - selectedLanguage:', selectedLanguage);
+              console.log('   - hasVideo (computed):', hasVideoValue);
+              console.log('   - hasLanguageSelected (computed):', hasLanguageValue);
+              return (
+                <SubtitleConfigurationPanel
+                  subtitleOptions={subtitleOptions}
+                  onOptionsChange={setSubtitleOptions}
+                  onApplyTheme={applyStyleTheme}
+                  onBack={() => setUploadStage('idle')}
+                  onGenerate={handleUpload}
+                  onConfigurationChange={handleConfigurationChange}
+                  hasVideo={hasVideoValue}
+                  hasLanguageSelected={hasLanguageValue}
+                />
+              );
+            })()}
           </motion.section>
         </div>
       </main>
