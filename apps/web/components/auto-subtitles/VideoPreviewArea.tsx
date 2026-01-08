@@ -30,6 +30,8 @@ interface VideoPreviewAreaProps {
   demoText: string;
   onDemoTextChange: (text: string) => void;
   subtitledVideoUrl?: string | null;
+  onPositionChange?: (position: { x: number; y: number }) => void;
+  onScaleChange?: (scale: number) => void;
 }
 
 export function VideoPreviewArea({
@@ -38,7 +40,9 @@ export function VideoPreviewArea({
   subtitleStyle,
   demoText,
   onDemoTextChange,
-  subtitledVideoUrl
+  subtitledVideoUrl,
+  onPositionChange,
+  onScaleChange
 }: VideoPreviewAreaProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -46,6 +50,10 @@ export function VideoPreviewArea({
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
+  
+  // Subtitle position and size controls
+  const [subtitlePosition, setSubtitlePosition] = useState({ x: 0, y: 0 });
+  const [subtitleScale, setSubtitleScale] = useState(1);
   
   // Check if URL is a YouTube URL
   const isYouTubeUrl = (url: string | null) => {
@@ -185,6 +193,24 @@ export function VideoPreviewArea({
     }
   };
 
+  // Calculate actual font size
+  const actualFontSize = Math.max(16, Math.min(24, subtitleStyle.fontSize * 0.8)) * subtitleScale;
+  
+  // Debug logs
+  useEffect(() => {
+    console.log('🎨 Subtitle Debug Info:');
+    console.log('   - Position X:', subtitlePosition.x);
+    console.log('   - Position Y:', subtitlePosition.y);
+    console.log('   - Scale:', subtitleScale);
+    console.log('   - Base Font Size:', subtitleStyle.fontSize);
+    console.log('   - Calculated Font Size:', Math.max(16, Math.min(24, subtitleStyle.fontSize * 0.8)));
+    console.log('   - Actual Font Size (with scale):', actualFontSize);
+    console.log('   - Primary Color:', subtitleStyle.primaryColor);
+    console.log('   - Outline Color:', subtitleStyle.outlineColor);
+    console.log('   - Font Family:', subtitleStyle.fontFamily);
+    console.log('   - Alignment:', subtitleStyle.alignment);
+  }, [subtitlePosition, subtitleScale, subtitleStyle, actualFontSize]);
+
   return (
     <div className="h-full p-4 overflow-hidden flex flex-col">
       <Card className="flex-1 overflow-hidden">
@@ -244,28 +270,39 @@ export function VideoPreviewArea({
                 
                 {/* Subtitle Overlay - Only show demo text if using original video */}
                 {!subtitledVideoUrl && (
-                  <div 
-                    className="absolute bottom-8 left-0 right-0 px-4 pointer-events-none"
+                  <motion.div 
+                    drag
+                    dragMomentum={false}
+                    dragElastic={0}
+                    onDrag={(_, info) => {
+                      const newPos = { x: info.offset.x, y: info.offset.y };
+                      setSubtitlePosition(newPos);
+                      onPositionChange?.(newPos);
+                      console.log('🎯 Dragging subtitle to:', newPos);
+                    }}
+                    className="absolute bottom-8 left-1/2 -translate-x-1/2 cursor-move"
                     style={{
-                      display: 'flex',
-                      justifyContent: subtitleStyle.alignment === 'left' 
-                        ? 'flex-start' 
-                        : subtitleStyle.alignment === 'right' 
-                          ? 'flex-end' 
-                          : 'center'
+                      x: subtitlePosition.x,
+                      y: subtitlePosition.y,
+                      scale: subtitleScale
                     }}
                   >
+                    {/* Debug Info Display */}
+                    <div className="absolute -top-16 left-1/2 -translate-x-1/2 bg-black/90 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap font-mono pointer-events-none">
+                      X: {Math.round(subtitlePosition.x)}px | Y: {Math.round(subtitlePosition.y)}px | Scale: {subtitleScale.toFixed(1)}x | Size: {Math.round(actualFontSize)}px
+                    </div>
+                    
                     <motion.div
                       key={`${subtitleStyle.fontFamily}-${subtitleStyle.fontSize}-${subtitleStyle.primaryColor}-${subtitleStyle.alignment}-${subtitleStyle.showShadow}`}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
                       transition={{ duration: 0.3 }}
-                      className="relative max-w-[80%]"
+                      className="relative max-w-[80vw] bg-black/10 hover:bg-black/20 rounded-lg px-3 py-2 border border-white/10 hover:border-white/30 transition-all"
                     >
                       <span 
                         style={{
                           fontFamily: subtitleStyle.fontFamily,
-                          fontSize: `${Math.max(16, Math.min(24, subtitleStyle.fontSize * 0.8))}px`,
+                          fontSize: `${actualFontSize}px`,
                           color: subtitleStyle.primaryColor,
                           fontWeight: subtitleStyle.bold ? 'bold' : 'normal',
                           fontStyle: subtitleStyle.italic ? 'italic' : 'normal',
@@ -276,13 +313,57 @@ export function VideoPreviewArea({
                           display: 'block',
                           lineHeight: '1.3',
                           wordWrap: 'break-word',
-                          WebkitTextStroke: `1px ${subtitleStyle.outlineColor}`
+                          WebkitTextStroke: `1px ${subtitleStyle.outlineColor}`,
+                          userSelect: 'none'
                         }}
                       >
                         {formatDemoText(demoText)}
                       </span>
+                      
+                      {/* Scale Control */}
+                      <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/80 rounded-full px-3 py-1 text-xs whitespace-nowrap">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const newScale = Math.max(0.5, subtitleScale - 0.1);
+                            setSubtitleScale(newScale);
+                            onScaleChange?.(newScale);
+                            console.log('📉 Decreased scale to:', newScale);
+                          }}
+                          className="text-white hover:text-blue-400 transition-colors"
+                        >
+                          A-
+                        </button>
+                        <span className="text-white/60">|</span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSubtitleScale(1);
+                            setSubtitlePosition({ x: 0, y: 0 });
+                            onScaleChange?.(1);
+                            onPositionChange?.({ x: 0, y: 0 });
+                            console.log('🔄 Reset position and scale');
+                          }}
+                          className="text-white hover:text-blue-400 transition-colors"
+                        >
+                          Reset
+                        </button>
+                        <span className="text-white/60">|</span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const newScale = Math.min(2, subtitleScale + 0.1);
+                            setSubtitleScale(newScale);
+                            onScaleChange?.(newScale);
+                            console.log('📈 Increased scale to:', newScale);
+                          }}
+                          className="text-white hover:text-blue-400 transition-colors"
+                        >
+                          A+
+                        </button>
+                      </div>
                     </motion.div>
-                  </div>
+                  </motion.div>
                 )}
                 
                 {/* Configuration Notice for Subtitled Video */}

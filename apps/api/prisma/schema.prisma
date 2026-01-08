@@ -81,6 +81,18 @@ model VerificationToken {
   @@map("verification_tokens")
 }
 
+model EmailVerification {
+  id        String   @id @default(cuid())
+  email     String
+  otp       String
+  expiresAt DateTime @map("expires_at")
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([email])
+  @@map("email_verifications")
+}
+
 model Video {
   id                   String                @id @default(cuid())
   userId               String                @map("user_id")

@@ -110,8 +110,8 @@ export interface Video {
 // API Class
 class APIClient {
   // Auth methods
-  async signUp(name: string, email: string, password: string): Promise<AuthResponse> {
-    const response = await axiosInstance.post('/api/auth/signup', { name, email, password });
+  async signUp(name: string, email: string, password: string, otp: string): Promise<AuthResponse> {
+    const response = await axiosInstance.post('/api/auth/signup', { name, email, password, otp });
     
     if (response.data.token && typeof window !== 'undefined') {
       localStorage.setItem('smartclips_token', response.data.token);

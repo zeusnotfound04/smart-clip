@@ -66,6 +66,8 @@ export default function AutoSubtitlesPage() {
   const [demoText, setDemoText] = useState('Hello! This is a sample subtitle text.');
   const [selectedLanguage, setSelectedLanguage] = useState<string>('');
   const [availableLanguages, setAvailableLanguages] = useState<Array<{ code: string; name: string; priority: number }>>([]);
+  const [subtitlePosition, setSubtitlePosition] = useState({ x: 0, y: 0 });
+  const [subtitleScale, setSubtitleScale] = useState(1);
   
   const [subtitleOptions, setSubtitleOptions] = useState<SubtitleOptions>({
     detectAllLanguages: false,
@@ -274,8 +276,30 @@ export default function AutoSubtitlesPage() {
       setUploadStage('processing');
       setProcessingProgress(0);
 
+      // Calculate final font size with scale
+      const finalFontSize = Math.round(Math.max(16, Math.min(24, subtitleOptions.style.fontSize * 0.8)) * subtitleScale);
+
+      // Log the exact values being sent
+      console.log('🎨 Sending subtitle configuration to backend:');
+      console.log('   - Position X:', subtitlePosition.x);
+      console.log('   - Position Y:', subtitlePosition.y);
+      console.log('   - Scale:', subtitleScale);
+      console.log('   - Base Font Size:', subtitleOptions.style.fontSize);
+      console.log('   - Final Font Size:', finalFontSize);
+
+      // Merge position and scale into subtitle options
+      const subtitleOptionsWithPosition = {
+        ...subtitleOptions,
+        style: {
+          ...subtitleOptions.style,
+          fontSize: finalFontSize, // Send the final scaled font size
+          position: subtitlePosition,
+          scale: subtitleScale
+        }
+      };
+
       // Start subtitle generation (returns immediately with job ID)
-      const jobResponse = await apiClient.generateSubtitles(video.id, subtitleOptions, selectedLanguage || undefined);
+      const jobResponse = await apiClient.generateSubtitles(video.id, subtitleOptionsWithPosition, selectedLanguage || undefined);
       setCurrentJobId(jobResponse.jobId);
       
       console.log('Subtitle job started:', jobResponse);
@@ -450,6 +474,8 @@ export default function AutoSubtitlesPage() {
               demoText={demoText}
               onDemoTextChange={setDemoText}
               subtitledVideoUrl={videoData?.isUrlPreview ? null : videoData?.subtitledVideoUrl || videoData?.videoUrl}
+              onPositionChange={setSubtitlePosition}
+              onScaleChange={setSubtitleScale}
             />
           </motion.section>
 

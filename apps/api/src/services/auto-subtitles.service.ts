@@ -38,6 +38,8 @@ export interface SubtitleStyle {
   alignment: 'left' | 'center' | 'right';
   showShadow: boolean;
   maxWordsPerLine?: number; // Max words per subtitle line (default: 8, TikTok style: 3)
+  position?: { x: number; y: number }; // Custom position offset from center
+  scale?: number; // Scale multiplier for font size
 }
 
 export interface SubtitleOptions {
@@ -1530,22 +1532,28 @@ export const convertSRTToASS = (srtContent: string, style?: SubtitleStyle, video
 
   const fontFilePath = style ? getFontFilePath(style.fontFamily, style.bold) : 'Arial';
   
-  // Scale font size based on video resolution
-  // The font size from frontend is designed for 1080p (1920x1080)
-  // We scale it proportionally based on actual video height
+  // Font size scaling
+  // If fontSize > 30, assume it's already properly scaled from frontend (includes user's drag adjustments)
+  // Otherwise, apply automatic scaling for legacy/default values
   const scaleFontSize = (baseFontSize: number): number => {
     const referenceHeight = 1080; // Reference resolution height (1080p)
     const scaleFactor = videoHeight / referenceHeight;
-    const scaledSize = Math.round(baseFontSize * scaleFactor);
     
-    // Apply additional multiplier to make subtitles more visible
-    // ASS renders fonts smaller than expected, so we boost them
-    const visibilityMultiplier = 2.5; // Increase font size by 2.5x for better visibility
-    const finalSize = Math.round(scaledSize * visibilityMultiplier);
+    // Check if this is a user-adjusted size from frontend
+    const isUserAdjusted = baseFontSize > 30;
     
-    console.log(`📏 [FONT SCALE] Base: ${baseFontSize}px, Video: ${videoHeight}p, Scale: ${scaleFactor.toFixed(2)}x, Final: ${finalSize}px (${visibilityMultiplier}x boost)`);
-    
-    return finalSize;
+    if (isUserAdjusted) {
+      // Use exact size from frontend (already includes scale and ASS multiplier)
+      const finalSize = Math.round(baseFontSize * 2.5); // ASS needs 2.5x for proper rendering
+      console.log(`📏 [FONT SCALE] Using exact frontend size: ${baseFontSize}px → ${finalSize}px (2.5x ASS multiplier)`);
+      return finalSize;
+    } else {
+      // Legacy path: apply full scaling for default sizes
+      const scaledSize = Math.round(baseFontSize * scaleFactor);
+      const finalSize = Math.round(scaledSize * 2.5);
+      console.log(`📏 [FONT SCALE] Base: ${baseFontSize}px, Video: ${videoHeight}p, Scale: ${scaleFactor.toFixed(2)}x, Final: ${finalSize}px (2.5x boost)`);
+      return finalSize;
+    }
   };
   
   const finalStyle = style ? {
@@ -1562,12 +1570,20 @@ export const convertSRTToASS = (srtContent: string, style?: SubtitleStyle, video
     shadow: style.showShadow ? 3 : 0 // Shadow depth
   } : {...defaultStyle, fontFile: 'Arial', alignment: 2, shadow: scaleFontSize(20)};
   
+  // Calculate margins from position offset (x, y from center)
+  // ASS MarginV is vertical margin from bottom (for alignment 2 - bottom center)
+  const baseMarginV = 30; // Default bottom margin
+  const customMarginV = style?.position ? Math.round(baseMarginV - style.position.y) : baseMarginV;
+  const marginL = style?.position ? Math.max(10, Math.round(10 + style.position.x)) : 10;
+  const marginR = style?.position ? Math.max(10, Math.round(10 - style.position.x)) : 10;
+  
   console.log(`📝 [ASS] Using font: ${finalStyle.fontFamily} (${finalStyle.fontSize}px, bold: ${!!finalStyle.bold})`);
   console.log(`📝 [ASS] Font file path: ${finalStyle.fontFile}`);
   console.log(`📐 [ASS] Video resolution: ${videoWidth}x${videoHeight}`);
+  console.log(`📍 [ASS] Position: X=${style?.position?.x || 0}, Y=${style?.position?.y || 0} → Margins: L=${marginL}, R=${marginR}, V=${customMarginV}`);
   
   // Build ASS header with actual video dimensions for proper font scaling
-  let assContent = `[Script Info]\nTitle: SmartClip Subtitles\nScriptType: v4.00+\nPlayResX: ${videoWidth}\nPlayResY: ${videoHeight}\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Default,${finalStyle.fontFamily},${finalStyle.fontSize},${finalStyle.primaryColor},&H000000FF,${finalStyle.outlineColor},${finalStyle.backgroundColor},${finalStyle.bold},${finalStyle.italic},0,0,100,100,0,0,1,3,${finalStyle.shadow},${finalStyle.alignment},10,10,30,1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`;
+  let assContent = `[Script Info]\nTitle: SmartClip Subtitles\nScriptType: v4.00+\nPlayResX: ${videoWidth}\nPlayResY: ${videoHeight}\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Default,${finalStyle.fontFamily},${finalStyle.fontSize},${finalStyle.primaryColor},&H000000FF,${finalStyle.outlineColor},${finalStyle.backgroundColor},${finalStyle.bold},${finalStyle.italic},0,0,100,100,0,0,1,3,${finalStyle.shadow},${finalStyle.alignment},${marginL},${marginR},${customMarginV},1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`;
   
   let i = 0;
   while (i < lines.length) {

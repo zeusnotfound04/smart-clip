@@ -33,11 +33,13 @@ export async function generateTTSAudio(options: TTSOptions): Promise<AudioResult
   
   console.log(`🎵 [TTS] Text length: ${options.text.length} characters`);
   console.log(`🎵 [TTS] Using Fish Audio for TTS generation`);
+  console.log(`🎵 [TTS] Voice: ${options.voice?.name || 'default'}`);
 
   try {
     // Generate audio using Fish Audio
     const result = await fishAudioService.generateTTS({
       text: options.text,
+      referenceId: options.voice?.name, // Pass the voice ID as referenceId
       format: 'mp3',
       mp3Bitrate: 192,
       latency: 'normal',

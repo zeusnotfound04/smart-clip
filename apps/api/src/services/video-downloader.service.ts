@@ -139,14 +139,23 @@ export class VideoDownloaderService {
         noCheckCertificates: true,
         noWarnings: true,
         preferFreeFormats: true,
-        addHeader: ['referer:youtube.com', 'user-agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'],
+        addHeader: [
+          'referer:youtube.com',
+          'user-agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        ],
       };
       
-      // Optional: Use cookies if available (via env var or cookies file)
-      // For most public YouTube videos, cookies are NOT needed
-      if (isYouTube && process.env.YT_COOKIES_PATH) {
-        options.cookies = process.env.YT_COOKIES_PATH;
-        console.log('🍪 Using cookies file for YouTube:', process.env.YT_COOKIES_PATH);
+      // YouTube bot detection bypass strategies
+      if (isYouTube) {
+        // Strategy 1: Use cookies file if available
+        if (process.env.YT_COOKIES_PATH) {
+          options.cookies = process.env.YT_COOKIES_PATH;
+          console.log(' Using cookies file for YouTube:', process.env.YT_COOKIES_PATH);
+        } else {
+          // Strategy 2: Use mobile client to bypass bot detection
+          console.log(' Using mobile client for YouTube (bot detection bypass)');
+          options.extractorArgs = 'youtube:player_client=android';
+        }
       }
       
       const info = await youtubeDl(url, options) as any;
@@ -255,11 +264,17 @@ export class VideoDownloaderService {
         ],
       };
       
-      // Optional: Use cookies if available (via env var or cookies file)
-      // For most public YouTube videos, cookies are NOT needed
-      if (isYouTube && process.env.YT_COOKIES_PATH) {
-        downloadOptions.cookies = process.env.YT_COOKIES_PATH;
-        console.log('🍪 Using cookies file for YouTube:', process.env.YT_COOKIES_PATH);
+      // YouTube bot detection bypass strategies
+      if (isYouTube) {
+        // Strategy 1: Use cookies file if available
+        if (process.env.YT_COOKIES_PATH) {
+          downloadOptions.cookies = process.env.YT_COOKIES_PATH;
+          console.log('🍪 Using cookies file for YouTube:', process.env.YT_COOKIES_PATH);
+        } else {
+          // Strategy 2: Use mobile client to bypass bot detection
+          console.log('📱 Using mobile client for YouTube (bot detection bypass)');
+          downloadOptions.extractorArgs = 'youtube:player_client=android';
+        }
       }
 
       // For Twitter/X, add specific handling for HLS streams

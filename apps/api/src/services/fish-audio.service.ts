@@ -213,7 +213,7 @@ export class FishAudioService {
         Key: s3Key,
         Body: fileContent,
         ContentType: contentType,
-        ACL: 'public-read',
+        // ACL removed - bucket uses bucket policy for public access
       });
 
       await this.s3Client.send(command);
