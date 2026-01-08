@@ -162,7 +162,7 @@ Edit the HTML templates in `apps/api/src/services/email.service.ts`:
 - `generateWelcomeEmailHTML()` - Welcome email
 
 ### Change Logo
-1. Update your logo at `apps/web/public/logo.jpg`
+1. Update your logo at `apps/web/public/logo.png`
 2. The emails will automatically use the new logo
 
 ## Troubleshooting

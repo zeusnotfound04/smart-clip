@@ -98,7 +98,7 @@ export class EmailService {
           <!-- Header with gradient -->
           <tr>
             <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 60px; text-align: center;">
-              <img src="${this.APP_URL}/logo.jpg" alt="${this.APP_NAME}" style="height: 60px; margin-bottom: 20px; border-radius: 8px;" />
+              <img src="${this.APP_URL}/logo.png" alt="${this.APP_NAME}" style="height: 60px; margin-bottom: 20px; border-radius: 8px;" />
               <h1 style="color: #ffffff; font-size: 28px; font-weight: 700; margin: 0; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">Email Verification</h1>
             </td>
           </tr>
@@ -168,7 +168,7 @@ export class EmailService {
           <!-- Header with gradient -->
           <tr>
             <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 60px; text-align: center;">
-              <img src="${this.APP_URL}/logo.jpg" alt="${this.APP_NAME}" style="height: 60px; margin-bottom: 20px; border-radius: 8px;" />
+              <img src="${this.APP_URL}/logo.png" alt="${this.APP_NAME}" style="height: 60px; margin-bottom: 20px; border-radius: 8px;" />
               <h1 style="color: #ffffff; font-size: 32px; font-weight: 700; margin: 0; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">Welcome to ${this.APP_NAME}! 🎉</h1>
             </td>
           </tr>

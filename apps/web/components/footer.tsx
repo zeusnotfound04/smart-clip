@@ -34,7 +34,7 @@ export default function Footer() {
               viewport={{ once: true }}
             >
               <div className="mb-6">
-                 <img src="/logo.jpg" alt="SmartClip Logo" className="h-20 w-auto rounded-lg object-contain" />
+                 <img src="/logo.png" alt="SmartClip Logo" className="h-20 w-auto rounded-lg object-contain" />
               </div>
               <p className="text-sm text-gray-400 leading-relaxed">
                 Turn videos into viral clips automatically. Built for clippers.

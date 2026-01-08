@@ -25,7 +25,7 @@ export default function Navigation() {
             whileHover={{ scale: 1.1 }}
             transition={{ type: "spring", stiffness: 400 }}
           >
-            <img src="/logo.jpg" alt="SmartClip Logo" className="h-20 w-auto rounded-lg object-contain" />
+            <img src="/logo.png" alt="SmartClip Logo" className="h-20 w-auto rounded-lg object-contain" />
           </motion.div>
         </Link>
 

@@ -131,7 +131,7 @@ export function DashboardSidebar() {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            <Image src="/logo.jpg" alt="SmartClip Logo" width={192} height={40} className="object-contain" />
+            <Image src="/logo.png" alt="SmartClip Logo" width={192} height={40} className="object-contain" />
           </motion.div>
         </div>
       </SidebarHeader>
