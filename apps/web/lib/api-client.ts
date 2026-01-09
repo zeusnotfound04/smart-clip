@@ -247,10 +247,9 @@ class APIClient {
     };
   }
 
-  async createCheckoutSession(tier: string, billingPeriod: string): Promise<ApiResponse<{ sessionId: string; url: string }>> {
+  async createCheckoutSession(tier: string): Promise<ApiResponse<{ sessionId: string; url: string }>> {
     console.log('💳 [API CLIENT] Creating checkout session');
     console.log('💳 [API CLIENT] Tier:', tier);
-    console.log('💳 [API CLIENT] Billing Period:', billingPeriod);
     
     const token = typeof window !== 'undefined' ? localStorage.getItem('smartclips_token') : null;
     console.log('💳 [API CLIENT] Token present:', !!token);
@@ -261,8 +260,7 @@ class APIClient {
     console.log('💳 [API CLIENT] Sending request to:', `${API_BASE_URL}/api/subscriptions/create-checkout-session`);
     
     const response = await axiosInstance.post('/api/subscriptions/create-checkout-session', {
-      tier,
-      billingPeriod
+      tier
     });
     
     console.log('✅ [API CLIENT] Checkout session response:', response.data);

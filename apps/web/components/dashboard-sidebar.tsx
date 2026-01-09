@@ -231,7 +231,45 @@ export function DashboardSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-border p-4 bg-sidebar">
+      <SidebarFooter className="border-t border-border p-3 bg-sidebar space-y-2.5">
+        {/* Compact Promotional Banner */}
+        <motion.div
+          whileHover={{ scale: 1.02 }}
+          className="group-data-[collapsible=icon]:hidden"
+        >
+          <Link href="/credits">
+            <div className="rounded-lg bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 p-3 cursor-pointer hover:shadow-lg transition-shadow">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-base">🚀</span>
+                <h3 className="text-white font-bold text-xs">Go Premium</h3>
+              </div>
+              <p className="text-white/90 text-[10px] leading-tight">
+                Unlock unlimited clips and advanced AI features
+              </p>
+            </div>
+          </Link>
+        </motion.div>
+
+        {/* Billing Button */}
+        <Button
+          asChild
+          variant="outline"
+          className="w-full justify-start text-left border-gray-700 text-gray-300 hover:bg-gray-900 hover:text-white group-data-[collapsible=icon]:justify-center"
+        >
+          <Link href="/credits" className="flex items-center gap-3">
+            <motion.div
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+              </svg>
+            </motion.div>
+            <span className="group-data-[collapsible=icon]:hidden">Billing & Credits</span>
+          </Link>
+        </Button>
+
+        {/* User Profile */}
         {user && (
           <div className="flex items-center gap-3">
             <Avatar className="size-10 bg-white">

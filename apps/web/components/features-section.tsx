@@ -263,16 +263,18 @@ export default function FeaturesSection() {
             }, 4000)
             return () => clearInterval(interval)
           }}
+          id="how-it-works"
           className="mt-24 relative group"
         >
           <motion.div
+
             whileHover={{ scale: 1.01 }}
             transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
             className="relative"
           >
             <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 rounded-3xl blur-2xl opacity-40 group-hover:opacity-60 transition-opacity duration-500" />
 
-            <div className="relative p-12 lg:p-16 rounded-3xl bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-700 text-white overflow-hidden shadow-2xl">
+            <div  className="relative p-12 lg:p-16 rounded-3xl bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-700 text-white overflow-hidden shadow-2xl">
               {/* Simplified static gradient background */}
               <div className="absolute inset-0 opacity-20">
                 <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_30%_20%,rgba(96,165,250,0.3),transparent_50%)]" />

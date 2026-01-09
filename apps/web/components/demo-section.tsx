@@ -44,7 +44,7 @@ export default function DemoSection() {
   }, [isInView])
 
   return (
-    <section id="how-it-works" ref={sectionRef} className="relative py-32 px-6 overflow-hidden">
+    <section  ref={sectionRef} className="relative py-32 px-6 overflow-hidden">
       {/* Subtle background */}
       <div className="absolute inset-0 -z-10">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-accent/3 rounded-full blur-3xl" />

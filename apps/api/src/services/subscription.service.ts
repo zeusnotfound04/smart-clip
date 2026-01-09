@@ -7,22 +7,22 @@ const prisma = new PrismaClient();
 interface CreateSubscriptionParams {
   userId: string;
   tier: 'basic' | 'premium' | 'enterprise';
-  billingPeriod: 'monthly' | 'yearly';
+  billingPeriod: 'monthly';
   paymentMethodId: string;
 }
 
 export const subscriptionService = {
   /**
-   * Create Stripe Checkout session
+   * Create Stripe Checkout session (monthly billing only)
    */
   async createCheckoutSession(params: {
     userId: string;
     email: string;
     tier: 'basic' | 'premium' | 'enterprise';
-    billingPeriod: 'monthly' | 'yearly';
+    billingPeriod?: 'monthly'; // Optional, defaults to monthly
   }) {
     console.log('💳 [SERVICE] createCheckoutSession called with params:', JSON.stringify(params, null, 2));
-    const { userId, email, tier, billingPeriod } = params;
+    const { userId, email, tier } = params;
 
     const plan = SUBSCRIPTION_PLANS[tier];
     if (!plan) {
@@ -32,10 +32,10 @@ export const subscriptionService = {
 
     console.log('💳 [SERVICE] Plan found:', plan.name);
 
-    const price = billingPeriod === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice;
-    if (!price) {
-      console.error('❌ [SERVICE] Price not available for billing period:', billingPeriod);
-      throw new Error('Price not available for this billing period');
+    const price = plan.monthlyPrice;
+    if (!price || price === 0) {
+      console.error('❌ [SERVICE] Price not available or invalid');
+      throw new Error('This plan is not available for purchase');
     }
 
     console.log('💳 [SERVICE] Price:', price, 'USD');
@@ -52,23 +52,23 @@ export const subscriptionService = {
             currency: 'usd',
             product_data: {
               name: `${plan.name} Plan`,
-              description: `${plan.credits > 0 ? plan.credits + ' credits' : 'Unlimited credits'} per ${billingPeriod === 'monthly' ? 'month' : 'year'}`,
+              description: `${plan.credits > 0 ? plan.credits + ' credits' : 'Custom credits'} per month (1 credit = 1 minute of footage)`,
             },
             unit_amount: Math.round(price * 100), // Convert to cents
             recurring: {
-              interval: billingPeriod === 'monthly' ? 'month' : 'year',
+              interval: 'month',
             },
           },
           quantity: 1,
         },
       ],
       mode: 'subscription',
-      success_url: `${process.env.FRONTEND_URL}/credits?success=true&tier=${tier}&billing=${billingPeriod}&session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${process.env.FRONTEND_URL}/credits?success=true&tier=${tier}&billing=monthly&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.FRONTEND_URL}/credits?canceled=true`,
       metadata: {
         userId,
         tier,
-        billingPeriod,
+        billingPeriod: 'monthly',
         credits: plan.credits.toString(),
       },
     });
@@ -81,10 +81,10 @@ export const subscriptionService = {
   },
 
   /**
-   * Create a new subscription for a user
+   * Create a new subscription for a user (monthly billing only)
    */
   async createSubscription(params: CreateSubscriptionParams) {
-    const { userId, tier, billingPeriod, paymentMethodId } = params;
+    const { userId, tier, paymentMethodId } = params;
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -133,9 +133,9 @@ export const subscriptionService = {
       throw new Error('Invalid subscription tier');
     }
 
-    const price = billingPeriod === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice;
-    if (!price) {
-      throw new Error('Price not available for this billing period');
+    const price = plan.monthlyPrice;
+    if (!price || price === 0) {
+      throw new Error('This plan is not available for purchase');
     }
 
     // Create price in Stripe if not exists (in production, create these beforehand)
@@ -143,10 +143,10 @@ export const subscriptionService = {
       unit_amount: Math.round(price * 100), // Convert to cents
       currency: 'usd',
       recurring: {
-        interval: billingPeriod === 'monthly' ? 'month' : 'year',
+        interval: 'month',
       },
       product_data: {
-        name: `${plan.name} - ${billingPeriod}`,
+        name: `${plan.name} - Monthly`,
         metadata: {
           tier,
           credits: plan.credits.toString(),
@@ -189,7 +189,7 @@ export const subscriptionService = {
         creditsPerMonth: plan.credits,
         price,
         currency: 'usd',
-        billingPeriod,
+        billingPeriod: 'monthly',
         startDate: now,
         currentPeriodStart: new Date((subscription as any).current_period_start * 1000),
         currentPeriodEnd: periodEnd,

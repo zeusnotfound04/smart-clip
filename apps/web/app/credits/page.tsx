@@ -41,7 +41,6 @@ interface SubscriptionPlan {
   name: string;
   description: string;
   monthlyPrice: number;
-  yearlyPrice?: number;
   credits: number;
   features: string[];
 }
@@ -55,38 +54,43 @@ export default function CreditsPage() {
   const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [currentSubscription, setCurrentSubscription] = useState<any>(null);
-  const [selectedBilling, setSelectedBilling] = useState<'monthly' | 'yearly'>('monthly');
   const [processingPlan, setProcessingPlan] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Fallback plans if API fails
+  // Each credit = 1 minute of video usage
   const fallbackPlans: SubscriptionPlan[] = [
+    {
+      tier: 'free',
+      name: 'Free',
+      description: 'Try SmartClip for free',
+      monthlyPrice: 0,
+      credits: 10,
+      features: ['10 credits per month', '10 minutes of footage', 'With watermark', 'Basic features', 'Community support']
+    },
     {
       tier: 'basic',
       name: 'Basic',
       description: 'Perfect for getting started',
-      monthlyPrice: 20,
-      yearlyPrice: 200,
-      credits: 200,
-      features: ['200 credits per month', '200 minutes of footage', 'No watermark', 'All features included', 'Email support']
+      monthlyPrice: 30,
+      credits: 300,
+      features: ['300 credits per month', '300 minutes of footage', 'No watermark', 'All features included', 'Email support']
     },
     {
       tier: 'premium',
-      name: 'Premium',
+      name: 'Executive Premium',
       description: 'For serious content creators',
-      monthlyPrice: 34,
-      yearlyPrice: 340,
+      monthlyPrice: 40,
       credits: 500,
       features: ['500 credits per month', '500 minutes of footage', 'No watermark', 'All features included', 'Priority support', 'Advanced analytics']
     },
     {
       tier: 'enterprise',
       name: 'Enterprise',
-      description: 'Unlimited power for professionals',
-      monthlyPrice: 50,
-      yearlyPrice: 500,
+      description: 'Custom solution for teams',
+      monthlyPrice: 0,
       credits: -1,
-      features: ['Unlimited credits', 'Unlimited footage processing', 'No watermark', 'All features included', '24/7 priority support', 'Advanced analytics', 'API access', 'Dedicated account manager']
+      features: ['Contact us for pricing', 'Custom credit allocation', 'No watermark', 'All features included', '24/7 priority support', 'Advanced analytics', 'API access', 'Dedicated account manager']
     }
   ];
 
@@ -178,7 +182,7 @@ export default function CreditsPage() {
       setProcessingPlan(planTier);
       
       // Create Stripe Checkout session
-      const response = await apiClient.createCheckoutSession(planTier, selectedBilling);
+      const response = await apiClient.createCheckoutSession(planTier);
       
       if (response.success && response.data?.url) {
         // Redirect to Stripe Checkout
@@ -342,103 +346,147 @@ export default function CreditsPage() {
         </div>
 
         {/* Subscription Plans */}
-        <Card className="mb-8">
+        <Card className="mb-8 overflow-visible">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle>Subscription Plans</CardTitle>
-                <CardDescription>Choose the perfect plan for your needs</CardDescription>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant={selectedBilling === 'monthly' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setSelectedBilling('monthly')}
-                >
-                  Monthly
-                </Button>
-                <Button
-                  variant={selectedBilling === 'yearly' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setSelectedBilling('yearly')}
-                >
-                  Yearly
-                  <Badge className="ml-2 bg-green-500">Save 20%</Badge>
-                </Button>
+                <CardDescription>Choose the perfect plan for your needs. Each credit = 1 minute of video processing.</CardDescription>
               </div>
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <CardContent className="pt-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
               {plans.map((plan, index) => {
-                const price = selectedBilling === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice;
+                const price = plan.monthlyPrice;
                 const isCurrentPlan = plan.tier === currentTier;
                 const isUnlimitedPlan = plan.credits === -1 || plan.credits > 1000000;
+                const isFreePlan = plan.tier === 'free';
+                const isEnterprisePlan = plan.tier === 'enterprise';
+                const isPremium = plan.tier === 'premium';
 
                 return (
                   <motion.div
                     key={plan.tier}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 * (index + 1) }}
+                    transition={{ delay: 0.1 * index }}
+                    className="relative"
                   >
-                    <Card className={`relative ${isCurrentPlan ? 'border-2 border-primary' : ''}`}>
+                    <div className={`relative rounded-xl p-6 h-full flex flex-col transition-all duration-200 ${
+                      isPremium 
+                        ? 'bg-gradient-to-br from-blue-600 to-cyan-600 text-white shadow-lg hover:shadow-xl' 
+                        : 'bg-card border-2 border-border hover:border-primary/50 hover:shadow-md'
+                    } ${isCurrentPlan && !isPremium ? 'ring-2 ring-primary' : ''}`}>
+                      
+                      {/* Current Plan Badge */}
                       {isCurrentPlan && (
-                        <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                          <Badge className="bg-primary">Current Plan</Badge>
+                        <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-20">
+                          <div className="bg-green-600 text-white px-3 py-1 rounded-full text-xs font-semibold shadow-md flex items-center gap-1">
+                            <Check className="w-3 h-3" />
+                            Active Plan
+                          </div>
                         </div>
                       )}
-                      <CardHeader>
-                        <CardTitle className="flex items-center justify-between">
-                          {plan.name}
-                          {getTierBadge(plan.tier)}
-                        </CardTitle>
-                        <CardDescription>{plan.description}</CardDescription>
-                        <div className="mt-4">
-                          <div className="text-4xl font-bold">
-                            ${price}
-                            <span className="text-lg font-normal text-gray-600">
-                              /{selectedBilling === 'monthly' ? 'mo' : 'yr'}
+
+                      {/* Popular Badge for Premium */}
+                      {isPremium && !isCurrentPlan && (
+                        <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-20">
+                          <div className="bg-orange-500 text-white px-3 py-1 rounded-full text-xs font-semibold shadow-md flex items-center gap-1">
+                            <Star className="w-3 h-3 fill-current" />
+                            Most Popular
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Plan Icon Badge */}
+                      <div className={`inline-flex items-center justify-center w-12 h-12 rounded-lg mb-4 ${
+                        isPremium ? 'bg-white/20' : 'bg-primary/10'
+                      }`}>
+                        {getTierBadge(plan.tier)}
+                      </div>
+
+                      {/* Plan Name */}
+                      <h3 className={`text-xl font-bold mb-2 ${isPremium ? 'text-white' : ''}`}>
+                        {plan.name}
+                      </h3>
+
+                      {/* Plan Description */}
+                      <p className={`text-sm mb-6 ${isPremium ? 'text-blue-100' : 'text-muted-foreground'}`}>
+                        {plan.description}
+                      </p>
+
+                      {/* Price */}
+                      <div className="mb-6">
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-4xl font-bold">
+                            {isEnterprisePlan ? 'Custom' : isFreePlan ? '$0' : `$${price}`}
+                          </span>
+                          {!isEnterprisePlan && (
+                            <span className={`text-base ${isPremium ? 'text-blue-200' : 'text-muted-foreground'}`}>
+                              /month
                             </span>
-                          </div>
+                          )}
                         </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="mb-4">
-                          <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                            {isUnlimitedPlan ? 'Unlimited Credits' : `${plan.credits} Credits/month`}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {isUnlimitedPlan ? 'No limits on usage' : `${plan.credits} minutes of footage`}
-                          </div>
-                        </div>
-                        <ul className="space-y-2 mb-6">
-                          {plan.features?.map((feature: string, idx: number) => (
-                            <li key={idx} className="flex items-start gap-2 text-sm">
-                              <Check className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
-                              <span>{feature}</span>
-                            </li>
-                          ))}
-                        </ul>
-                        <Button
-                          className="w-full"
-                          variant={isCurrentPlan ? 'outline' : 'default'}
-                          disabled={isCurrentPlan || processingPlan === plan.tier}
-                          onClick={() => handleUpgrade(plan.tier)}
-                        >
+                        <p className={`text-sm mt-2 ${isPremium ? 'text-blue-100' : 'text-muted-foreground'}`}>
+                          {isUnlimitedPlan 
+                            ? 'Custom credit allocation' 
+                            : `${plan.credits} credits included`}
+                        </p>
+                      </div>
+
+                      {/* Divider */}
+                      <div className={`h-px w-full mb-6 ${isPremium ? 'bg-white/20' : 'bg-border'}`} />
+
+                      {/* Features */}
+                      <ul className="space-y-3 mb-8 flex-grow">
+                        {plan.features?.map((feature: string, idx: number) => (
+                          <li key={idx} className="flex items-start gap-3 text-sm">
+                            <div className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mt-0.5 ${
+                              isPremium ? 'bg-white/20' : 'bg-primary/10'
+                            }`}>
+                              <Check className={`w-3 h-3 ${isPremium ? 'text-white' : 'text-primary'}`} />
+                            </div>
+                            <span className={isPremium ? 'text-white' : ''}>{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+
+                      {/* CTA Button */}
+                      <Button
+                        className={`w-full h-11 font-semibold ${
+                          isPremium && !isCurrentPlan
+                            ? 'bg-white text-blue-600 hover:bg-blue-50' 
+                            : ''
+                        }`}
+                        variant={isCurrentPlan ? 'outline' : isPremium ? 'secondary' : 'default'}
+                        disabled={isCurrentPlan || processingPlan === plan.tier || isFreePlan || isEnterprisePlan}
+                        onClick={() => isEnterprisePlan ? window.location.href = 'mailto:support@smartclip.com?subject=Enterprise Plan Inquiry' : handleUpgrade(plan.tier)}
+                      >
+                        <span className="flex items-center justify-center gap-2">
                           {processingPlan === plan.tier ? (
                             <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              <Loader2 className="w-4 h-4 animate-spin" />
                               Processing...
                             </>
                           ) : isCurrentPlan ? (
+                            <>
+                              <Check className="w-4 h-4" />
+                              Current Plan
+                            </>
+                          ) : isFreePlan ? (
                             'Current Plan'
+                          ) : isEnterprisePlan ? (
+                            'Contact Sales'
                           ) : (
-                            'Upgrade'
+                            <>
+                              Get Started
+                              <ArrowUpRight className="w-4 h-4" />
+                            </>
                           )}
-                        </Button>
-                      </CardContent>
-                    </Card>
+                        </span>
+                      </Button>
+                    </div>
                   </motion.div>
                 );
               })}

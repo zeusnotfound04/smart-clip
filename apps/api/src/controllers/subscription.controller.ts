@@ -31,7 +31,7 @@ export const subscriptionController = {
   },
 
   /**
-   * Create Stripe Checkout session
+   * Create Stripe Checkout session (monthly billing only)
    */
   async createCheckoutSession(req: AuthRequest, res: Response) {
     console.log('💳 [CHECKOUT] Starting checkout session creation');
@@ -52,12 +52,12 @@ export const subscriptionController = {
         });
       }
 
-      const { tier, billingPeriod } = req.body;
+      const { tier } = req.body;
 
-      if (!tier || !billingPeriod) {
+      if (!tier) {
         return res.status(400).json({
           success: false,
-          message: 'Missing required fields: tier, billingPeriod',
+          message: 'Missing required field: tier',
         });
       }
 
@@ -66,14 +66,6 @@ export const subscriptionController = {
         return res.status(400).json({
           success: false,
           message: 'Invalid tier. Must be: basic, premium, or enterprise',
-        });
-      }
-
-      if (!['monthly', 'yearly'].includes(billingPeriod)) {
-        console.error('❌ [CHECKOUT] Invalid billing period:', billingPeriod);
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid billing period. Must be: monthly or yearly',
         });
       }
 
@@ -99,7 +91,7 @@ export const subscriptionController = {
         userId: user.id,
         email: user.email,
         tier: tier as 'basic' | 'premium' | 'enterprise',
-        billingPeriod,
+        billingPeriod: 'monthly',
       });
 
       console.log('✅ [CHECKOUT] Checkout session created:', session.id);

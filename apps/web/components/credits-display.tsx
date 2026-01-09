@@ -10,34 +10,54 @@ import { motion } from 'framer-motion';
 
 export function CreditsDisplay() {
   const [mounted, setMounted] = useState(false);
-  const [balance, setBalance] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [tier, setTier] = useState('free');
+  const [planName, setPlanName] = useState('Free');
 
   useEffect(() => {
     setMounted(true);
-    loadBalance();
+    loadSubscriptionDetails();
   }, []);
 
-  const loadBalance = async () => {
+  const loadSubscriptionDetails = async () => {
     try {
-      const response = await apiClient.getCreditsBalance();
-      if (response.success && response.data) {
-        setBalance(response.data.balance);
-        // Get tier from subscription details
-        const subRes = await apiClient.getSubscriptionDetails();
-        if (subRes.success && subRes.data) {
-          setTier(subRes.data.subscriptionTier || 'free');
-        }
+      const subRes = await apiClient.getSubscriptionDetails();
+      if (subRes.success && subRes.data) {
+        const subscriptionTier = subRes.data.subscriptionTier || 'free';
+        setTier(subscriptionTier);
+        
+        // Map tier to display name
+        const tierMap: Record<string, string> = {
+          'free': 'Free',
+          'basic': 'Basic',
+          'premium': 'Executive Premium',
+          'enterprise': 'Enterprise'
+        };
+        setPlanName(tierMap[subscriptionTier] || 'Free');
       }
     } catch (error) {
-      console.error('Failed to load credits:', error);
+      console.error('Failed to load subscription:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const isUnlimited = tier === 'premium';
+  const getPlanColor = () => {
+    switch (tier) {
+      case 'enterprise': return 'text-purple-600 bg-purple-50 dark:bg-purple-950 border-purple-300 dark:border-purple-700';
+      case 'premium': return 'text-amber-600 bg-amber-50 dark:bg-amber-950 border-amber-300 dark:border-amber-700';
+      case 'basic': return 'text-blue-600 bg-blue-50 dark:bg-blue-950 border-blue-300 dark:border-blue-700';
+      default: return 'text-gray-600 bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-700';
+    }
+  };
+
+  const getPlanIcon = () => {
+    switch (tier) {
+      case 'enterprise': 
+      case 'premium': return <Crown className="w-4 h-4" />;
+      default: return <CreditCard className="w-4 h-4" />;
+    }
+  };
 
   // Prevent hydration mismatch
   if (!mounted) {
@@ -54,21 +74,21 @@ export function CreditsDisplay() {
       className="flex items-center gap-3"
     >
       <Link href="/credits">
-        <Button variant="outline" size="sm" className="gap-2">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className={`gap-2 ${getPlanColor()} border-2 hover:shadow-md transition-all`}
+        >
           {loading ? (
             <Loader2 className="w-4 h-4 animate-spin" />
           ) : (
             <>
-              {isUnlimited ? (
-                <Crown className="w-4 h-4 text-amber-500" />
-              ) : (
-                <CreditCard className="w-4 h-4 text-blue-500" />
-              )}
-              <span className="font-semibold">
-                {isUnlimited ? '∞' : balance || 0}
+              {getPlanIcon()}
+              <span className="text-sm font-semibold">
+                {planName}
               </span>
-              <span className="text-xs text-muted-foreground">
-                {isUnlimited ? 'Unlimited' : 'Credits'}
+              <span className="text-sm opacity-70">
+                Plan
               </span>
             </>
           )}

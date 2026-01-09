@@ -14,40 +14,31 @@ export const STRIPE_CONFIG = {
   webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
 };
 
-// Subscription plan configuration (3-tier pricing)
+// Subscription plan configuration (new 3-tier pricing)
+// Each credit = 1 minute of video usage
 export const SUBSCRIPTION_PLANS = {
   free: {
-    name: 'Free Trial',
+    name: 'Free',
     credits: 10,
     price: 0,
     hasWatermark: true,
   },
   basic: {
     name: 'Basic',
-    credits: 200,
-    monthlyPrice: 20,
-    yearlyPrice: 200,
-    hasWatermark: false,
-  },
-  pro: {
-    name: 'Pro',
-    credits: 350,
-    monthlyPrice: 27,
-    yearlyPrice: 270,
+    credits: 300,
+    monthlyPrice: 30,
     hasWatermark: false,
   },
   premium: {
-    name: 'Premium',
+    name: 'Executive Premium',
     credits: 500,
-    monthlyPrice: 34,
-    yearlyPrice: 340,
+    monthlyPrice: 40,
     hasWatermark: false,
   },
   enterprise: {
     name: 'Enterprise',
-    credits: -1, // unlimited
-    monthlyPrice: 50,
-    yearlyPrice: 500,
+    credits: -1, // contact us for custom pricing
+    monthlyPrice: 0, // contact sales
     hasWatermark: false,
   },
 };
