@@ -127,11 +127,11 @@ export function DashboardSidebar() {
       <SidebarHeader className="border-b border-gray-800 p-4">
         <div className="flex items-center justify-center">
           <motion.div
-            className="flex h-10 w-48 items-center justify-center rounded-lg bg-white overflow-hidden"
+            className="flex h-10 w-48 items-center justify-center rounded-lg  overflow-hidden"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            <Image src="/logo.png" alt="SmartClip Logo" width={192} height={40} className="object-contain" />
+            <Image src="/logo.png" alt="SmartClip Logo" width={200} height={50} className="object-contain" />
           </motion.div>
         </div>
       </SidebarHeader>
