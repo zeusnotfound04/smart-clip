@@ -130,6 +130,79 @@ export const uploadFromUrl = async (req: AuthRequest, res: Response) => {
 
     console.log(`📥 Starting URL upload for user ${userId}: ${url}`);
 
+    // Check if this is an S3 URL (from AI-generated videos)
+    const isS3Url = url.includes('s3.') && url.includes('.amazonaws.com');
+    
+    if (isS3Url) {
+      console.log(`📦 Detected S3 URL - creating video record directly without download`);
+      
+      // Extract filename from S3 URL
+      const urlParts = url.split('/');
+      const filename = urlParts[urlParts.length - 1];
+      const title = projectName || filename.replace(/\.[^/.]+$/, ''); // Remove extension
+      
+      // Create video record pointing directly to the S3 URL
+      const video = await prisma.video.create({
+        data: {
+          userId,
+          title,
+          filePath: url, // Store the S3 URL directly
+          originalName: filename,
+          duration: 0, // Will be updated when processing
+          status: 'uploaded', // Mark as uploaded since it's already on S3
+          size: 0,
+          mimeType: 'video/mp4',
+        },
+      });
+
+      console.log(`✅ Video record created for S3 URL: ${video.id}`);
+
+      // If processType is subtitles, queue subtitle generation
+      if (processType === 'subtitles') {
+        const { subtitleQueue } = await import('../lib/queues');
+        
+        const job = await subtitleQueue.add('generate-subtitles', {
+          videoId: video.id,
+          userId,
+          language: options?.language,
+          options: options,
+        });
+
+        console.log(`🎬 Subtitle generation job queued: ${job.id}`);
+
+        return res.status(200).json({
+          success: true,
+          message: 'Video loaded from S3, subtitle generation queued',
+          video: {
+            id: video.id,
+            title: video.title,
+            duration: video.duration,
+            s3Url: video.filePath,
+            status: video.status,
+          },
+          platform: 'S3',
+          processType,
+          jobId: job.id as string,
+        });
+      }
+
+      // No processing needed - just return the video
+      return res.status(200).json({
+        success: true,
+        message: 'Video loaded from S3 successfully',
+        video: {
+          id: video.id,
+          title: video.title,
+          duration: video.duration,
+          s3Url: video.filePath,
+          status: video.status,
+        },
+        platform: 'S3',
+        processType: 'none',
+      });
+    }
+
+    // Original logic for social media URLs
     // Validate URL
     const validation = videoDownloader.validateUrl(url);
     if (!validation.isValid) {

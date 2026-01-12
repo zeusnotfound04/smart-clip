@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
+import { toast } from 'sonner';
 import { 
   ArrowLeft,
   User,
@@ -21,7 +22,8 @@ import {
   Save,
   Key,
   Database,
-  Zap
+  Zap,
+  Check
 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -38,20 +40,142 @@ import { Progress } from '@/components/ui/progress';
 import { ProtectedRoute } from '@/components/protected-route';
 import { useAuth } from '@/lib/auth-context';
 import { staggerContainer, staggerItem } from '@/lib/utils';
+import { useUserProfile, useUserStats, useUpdateProfile, useUploadProfilePicture } from '@/hooks/use-user-queries';
 
 export default function SettingsPage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
   const [showPassword, setShowPassword] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Email change state
+  const [isChangingEmail, setIsChangingEmail] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+  
+  // 🔥 Tanstack Query hooks with automatic caching
+  const { data: profileData, isLoading: profileLoading } = useUserProfile();
+  const { data: stats, isLoading: statsLoading } = useUserStats();
+  const updateProfileMutation = useUpdateProfile();
+  const uploadPictureMutation = useUploadProfilePicture();
   
   const [profile, setProfile] = useState({
-    name: user?.name || 'John Doe',
-    email: user?.email || 'john@example.com',
-    phone: '+1 (555) 123-4567',
-    bio: 'Content creator and video enthusiast. Love using AI to create amazing videos.',
-    website: 'https://johndoe.com',
-    location: 'San Francisco, CA'
+    name: '',
+    email: '',
   });
+
+  // Update local state when profile data loads
+  React.useEffect(() => {
+    if (profileData) {
+      setProfile({
+        name: profileData.name || '',
+        email: profileData.email || '',
+      });
+    }
+  }, [profileData]);
+
+  const handleProfileUpdate = () => {
+    updateProfileMutation.mutate({
+      name: profile.name,
+      email: profile.email,
+    });
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      uploadPictureMutation.mutate(file);
+    }
+  };
+
+  const handleSendEmailOTP = async () => {
+    if (!newEmail) {
+      toast.error('Please enter a new email address');
+      return;
+    }
+
+    if (newEmail === profileData?.email) {
+      toast.error('New email is the same as current email');
+      return;
+    }
+
+    try {
+      setSendingOtp(true);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/email/request-change`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('smartclips_token')}`,
+        },
+        body: JSON.stringify({ newEmail }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send verification code');
+      }
+
+      setOtpSent(true);
+      toast.success('Verification code sent to your new email!');
+    } catch (error: any) {
+      console.error('Send OTP error:', error);
+      toast.error(error.message || 'Failed to send verification code');
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
+  const handleVerifyEmailOTP = async () => {
+    if (!otp || otp.length !== 6) {
+      toast.error('Please enter the 6-digit verification code');
+      return;
+    }
+
+    try {
+      setVerifyingOtp(true);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/email/verify-change`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('smartclips_token')}`,
+        },
+        body: JSON.stringify({ newEmail, otp }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to verify code');
+      }
+
+      // Reset state
+      setIsChangingEmail(false);
+      setOtpSent(false);
+      setNewEmail('');
+      setOtp('');
+      
+      // Refresh profile data
+      window.location.reload();
+      
+      toast.success('Email updated successfully!');
+    } catch (error: any) {
+      console.error('Verify OTP error:', error);
+      toast.error(error.message || 'Failed to verify code');
+    } finally {
+      setVerifyingOtp(false);
+    }
+  };
+
+  const handleCancelEmailChange = () => {
+    setIsChangingEmail(false);
+    setOtpSent(false);
+    setNewEmail('');
+    setOtp('');
+  };
 
   const [notifications, setNotifications] = useState({
     emailNotifications: true,
@@ -77,17 +201,9 @@ export default function SettingsPage() {
     { id: 'data', label: 'Data & Storage', icon: Database },
   ];
 
-  const usageStats = {
-    videosProcessed: 147,
-    storageUsed: 2.4,
-    storageLimit: 10,
-    apiCalls: 1250,
-    apiLimit: 5000
-  };
-
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
           <motion.div
             variants={staggerContainer}
@@ -126,7 +242,7 @@ export default function SettingsPage() {
                             className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
                               activeTab === tab.id
                                 ? 'bg-primary text-primary-foreground'
-                                : 'hover:bg-slate-100'
+                                : 'hover:bg-slate-800 hover:text-white'
                             }`}
                           >
                             <Icon className="w-4 h-4" />
@@ -157,27 +273,38 @@ export default function SettingsPage() {
                         {/* Profile Picture */}
                         <div className="flex items-center gap-6">
                           <Avatar className="w-20 h-20">
-                            <AvatarImage src="/api/placeholder/80/80" />
+                            <AvatarImage src={profileData?.image || '/api/placeholder/80/80'} />
                             <AvatarFallback className="text-lg">
-                              {profile.name.split(' ').map(n => n[0]).join('')}
+                              {profileData?.name?.split(' ').map(n => n[0]).join('') || 'U'}
                             </AvatarFallback>
                           </Avatar>
                           <div className="space-y-2">
-                            <Button variant="outline" className="gap-2">
+                            <input
+                              ref={fileInputRef}
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={handleImageUpload}
+                            />
+                            <Button 
+                              variant="outline" 
+                              className="gap-2"
+                              onClick={() => fileInputRef.current?.click()}
+                              disabled={uploadPictureMutation.isPending}
+                            >
                               <Upload className="w-4 h-4" />
-                              Upload Photo
+                              {uploadPictureMutation.isPending ? 'Uploading...' : 'Upload Photo'}
                             </Button>
-                            <Button variant="ghost" className="gap-2">
-                              <Camera className="w-4 h-4" />
-                              Take Photo
-                            </Button>
+                            <p className="text-xs text-muted-foreground">
+                              JPG, PNG or WebP. Max 5MB
+                            </p>
                           </div>
                         </div>
 
                         <Separator />
 
                         {/* Profile Form */}
-                        <div className="grid md:grid-cols-2 gap-6">
+                        <div className="space-y-6">
                           <div className="space-y-2">
                             <Label htmlFor="name">Full Name</Label>
                             <Input
@@ -187,60 +314,130 @@ export default function SettingsPage() {
                             />
                           </div>
                           
-                          <div className="space-y-2">
-                            <Label htmlFor="email">Email Address</Label>
-                            <Input
-                              id="email"
-                              type="email"
-                              value={profile.email}
-                              onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                            />
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <Label htmlFor="phone">Phone Number</Label>
-                            <Input
-                              id="phone"
-                              value={profile.phone}
-                              onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                            />
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <Label htmlFor="website">Website</Label>
-                            <Input
-                              id="website"
-                              type="url"
-                              value={profile.website}
-                              onChange={(e) => setProfile({ ...profile, website: e.target.value })}
-                            />
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <Label htmlFor="location">Location</Label>
-                            <Input
-                              id="location"
-                              value={profile.location}
-                              onChange={(e) => setProfile({ ...profile, location: e.target.value })}
-                            />
-                          </div>
-                        </div>
+                          {/* Email Change Section */}
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="email">Email Address</Label>
+                              {!isChangingEmail ? (
+                                <div className="space-y-2">
+                                  <Input
+                                    id="email"
+                                    type="email"
+                                    value={profileData?.email || ''}
+                                    disabled
+                                    className="bg-muted"
+                                  />
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setIsChangingEmail(true)}
+                                    className="w-full sm:w-auto"
+                                  >
+                                    <Mail className="w-4 h-4 mr-2" />
+                                    Change Email Address
+                                  </Button>
+                                </div>
+                              ) : (
+                                <Card className="p-4 border-2 border-blue-500/20 bg-blue-500/5">
+                                  <div className="space-y-4">
+                                    <div className="space-y-2">
+                                      <Label htmlFor="newEmail">New Email Address</Label>
+                                      <Input
+                                        id="newEmail"
+                                        type="email"
+                                        placeholder="Enter new email"
+                                        value={newEmail}
+                                        onChange={(e) => setNewEmail(e.target.value)}
+                                        disabled={otpSent}
+                                      />
+                                    </div>
 
-                        <div className="space-y-2">
-                          <Label htmlFor="bio">Bio</Label>
-                          <Textarea
-                            id="bio"
-                            rows={3}
-                            value={profile.bio}
-                            onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
-                            placeholder="Tell us about yourself..."
-                          />
+                                    {!otpSent ? (
+                                      <div className="flex gap-2">
+                                        <Button
+                                          onClick={handleSendEmailOTP}
+                                          disabled={sendingOtp || !newEmail}
+                                          className="flex-1"
+                                        >
+                                          <Mail className="w-4 h-4 mr-2" />
+                                          {sendingOtp ? 'Sending...' : 'Send Verification Code'}
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          onClick={handleCancelEmailChange}
+                                        >
+                                          Cancel
+                                        </Button>
+                                      </div>
+                                    ) : (
+                                      <div className="space-y-3">
+                                        <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                                          <p className="text-sm text-green-700 dark:text-green-400 flex items-center gap-2">
+                                            <Check className="w-4 h-4" />
+                                            Verification code sent to {newEmail}
+                                          </p>
+                                        </div>
+                                        
+                                        <div className="space-y-2">
+                                          <Label htmlFor="otp">Enter Verification Code</Label>
+                                          <Input
+                                            id="otp"
+                                            type="text"
+                                            placeholder="Enter 6-digit code"
+                                            value={otp}
+                                            onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                            maxLength={6}
+                                            className="text-center text-2xl tracking-widest font-mono"
+                                          />
+                                          <p className="text-xs text-muted-foreground">
+                                            Code expires in 10 minutes
+                                          </p>
+                                        </div>
+
+                                        <div className="flex gap-2">
+                                          <Button
+                                            onClick={handleVerifyEmailOTP}
+                                            disabled={verifyingOtp || otp.length !== 6}
+                                            className="flex-1"
+                                          >
+                                            {verifyingOtp ? 'Verifying...' : 'Verify & Update Email'}
+                                          </Button>
+                                          <Button
+                                            variant="ghost"
+                                            onClick={handleCancelEmailChange}
+                                          >
+                                            Cancel
+                                          </Button>
+                                        </div>
+
+                                        <Button
+                                          variant="link"
+                                          size="sm"
+                                          onClick={() => {
+                                            setOtpSent(false);
+                                            setOtp('');
+                                          }}
+                                          className="w-full"
+                                        >
+                                          Didn't receive code? Try again
+                                        </Button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </Card>
+                              )}
+                            </div>
+                          </div>
                         </div>
 
                         <div className="flex justify-end">
-                          <Button className="gap-2">
+                          <Button 
+                            className="gap-2"
+                            onClick={handleProfileUpdate}
+                            disabled={updateProfileMutation.isPending}
+                          >
                             <Save className="w-4 h-4" />
-                            Save Changes
+                            {updateProfileMutation.isPending ? 'Saving...' : 'Save Changes'}
                           </Button>
                         </div>
                       </CardContent>
@@ -474,42 +671,62 @@ export default function SettingsPage() {
                         <CardDescription>Manage your subscription and billing</CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-6">
-                        <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
+                        <div className="flex items-center justify-between p-4 bg-slate-900 rounded-lg border border-slate-700">
                           <div>
-                            <h3 className="font-semibold text-lg">Pro Plan</h3>
-                            <p className="text-muted-foreground">Perfect for content creators</p>
+                            <h3 className="font-semibold text-lg capitalize">{stats?.subscriptionTier || 'Free'} Plan</h3>
+                            <p className="text-muted-foreground">
+                              {stats?.subscriptionTier === 'premium' ? 'Unlimited features' : 
+                               stats?.subscriptionTier === 'pro' ? 'Perfect for content creators' : 
+                               'Get started with basic features'}
+                            </p>
                           </div>
                           <div className="text-right">
-                            <div className="text-2xl font-bold">$29/month</div>
-                            <Badge variant="secondary">Active</Badge>
+                            <div className="text-2xl font-bold">
+                              {stats?.subscriptionTier === 'premium' ? '$99/month' : 
+                               stats?.subscriptionTier === 'pro' ? '$29/month' : 
+                               'Free'}
+                            </div>
+                            <Badge variant={stats?.subscriptionTier === 'free' ? 'secondary' : 'default'}>
+                              Active
+                            </Badge>
                           </div>
                         </div>
 
                         <div className="grid md:grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label>Next Billing Date</Label>
-                            <p className="text-sm">December 15, 2025</p>
+                            <Label>Credits Available</Label>
+                            <p className="text-sm font-medium">{stats?.creditsAvailable || 0} credits</p>
                           </div>
                           <div className="space-y-2">
-                            <Label>Payment Method</Label>
-                            <p className="text-sm">**** **** **** 4242</p>
+                            <Label>Videos Processed</Label>
+                            <p className="text-sm font-medium">{stats?.videosProcessed || 0} videos</p>
                           </div>
                         </div>
 
                         <Separator />
 
-                        <div className="flex gap-2">
-                          <Button variant="outline">
-                            <CreditCard className="w-4 h-4 mr-2" />
-                            Update Payment Method
-                          </Button>
-                          <Button variant="outline">
-                            <Download className="w-4 h-4 mr-2" />
-                            Download Invoices
-                          </Button>
-                          <Button variant="destructive">
-                            Cancel Subscription
-                          </Button>
+                        <div className="flex gap-2 flex-wrap">
+                          {stats?.subscriptionTier === 'free' && (
+                            <Button>
+                              <CreditCard className="w-4 h-4 mr-2" />
+                              Upgrade Plan
+                            </Button>
+                          )}
+                          {stats?.subscriptionTier !== 'free' && (
+                            <>
+                              <Button variant="outline">
+                                <CreditCard className="w-4 h-4 mr-2" />
+                                Update Payment Method
+                              </Button>
+                              <Button variant="outline">
+                                <Download className="w-4 h-4 mr-2" />
+                                Download Invoices
+                              </Button>
+                              <Button variant="destructive">
+                                Cancel Subscription
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </CardContent>
                     </Card>
@@ -517,30 +734,28 @@ export default function SettingsPage() {
                     <Card>
                       <CardHeader>
                         <CardTitle>Usage Statistics</CardTitle>
-                        <CardDescription>Track your plan usage and limits</CardDescription>
+                        <CardDescription>Track your usage and activity</CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-4">
                         <div className="space-y-2">
                           <div className="flex justify-between text-sm">
                             <span>Videos Processed</span>
-                            <span>{usageStats.videosProcessed} this month</span>
+                            <span className="font-medium">{stats?.videosProcessed || 0} total</span>
                           </div>
                         </div>
 
                         <div className="space-y-2">
                           <div className="flex justify-between text-sm">
-                            <span>Storage Used</span>
-                            <span>{usageStats.storageUsed}GB / {usageStats.storageLimit}GB</span>
+                            <span>Projects Created</span>
+                            <span className="font-medium">{stats?.projectsCreated || 0} projects</span>
                           </div>
-                          <Progress value={(usageStats.storageUsed / usageStats.storageLimit) * 100} />
                         </div>
 
                         <div className="space-y-2">
                           <div className="flex justify-between text-sm">
-                            <span>API Calls</span>
-                            <span>{usageStats.apiCalls} / {usageStats.apiLimit}</span>
+                            <span>Credits Remaining</span>
+                            <span className="font-medium">{stats?.creditsAvailable || 0} credits</span>
                           </div>
-                          <Progress value={(usageStats.apiCalls / usageStats.apiLimit) * 100} />
                         </div>
                       </CardContent>
                     </Card>

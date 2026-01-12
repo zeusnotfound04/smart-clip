@@ -116,6 +116,40 @@ export default function AutoSubtitlesPage() {
     fetchLanguages();
   }, []);
 
+  // Handle auto-upload from AI script generator
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const videoUrl = urlParams.get('videoUrl');
+    const videoName = urlParams.get('videoName');
+    
+    if (videoUrl && videoUrl.includes('s3.') && !videoData) {
+      console.log('📦 Auto-uploading S3 video from AI script generator');
+      console.log('   - URL:', videoUrl);
+      console.log('   - Name:', videoName);
+      
+      // Set video data as URL preview to trigger upload
+      const s3VideoData: VideoData = {
+        id: `s3-${Date.now()}`,
+        name: decodeURIComponent(videoName || 'AI Generated Video'),
+        size: 0,
+        filePath: decodeURIComponent(videoUrl),
+        videoUrl: decodeURIComponent(videoUrl),
+        isUrlPreview: true,
+        urlData: {
+          url: decodeURIComponent(videoUrl),
+          platform: 'S3',
+        }
+      };
+      
+      setVideoData(s3VideoData);
+      setVideoPreviewUrl(decodeURIComponent(videoUrl));
+      setUploadStage('configuring');
+      
+      // Clear URL params after loading
+      window.history.replaceState({}, '', '/dashboard/auto-subtitles');
+    }
+  }, []);
+
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {

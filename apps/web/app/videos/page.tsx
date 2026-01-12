@@ -157,9 +157,9 @@ export default function VideosPage() {
 
   const getStatusBadge = (status: string) => {
     const styles = {
-      processed: 'bg-green-100 text-green-800 border-green-200',
-      processing: 'bg-blue-100 text-blue-800 border-blue-200',
-      failed: 'bg-red-100 text-red-800 border-red-200'
+      processed: 'bg-green-900/20 text-green-400 border-green-800',
+      processing: 'bg-blue-900/20 text-blue-400 border-blue-800',
+      failed: 'bg-red-900/20 text-red-400 border-red-800'
     };
     
     return (
@@ -179,7 +179,7 @@ export default function VideosPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
           <motion.div
             variants={staggerContainer}
@@ -301,12 +301,12 @@ export default function VideosPage() {
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: index * 0.05 }}
-                          className={`group relative border rounded-lg overflow-hidden bg-white hover:shadow-md transition-shadow ${
+                          className={`group relative border rounded-lg overflow-hidden bg-card hover:shadow-md transition-shadow ${
                             selectedVideos.includes(video.id) ? 'ring-2 ring-blue-500' : ''
                           }`}
                           onClick={() => toggleVideoSelection(video.id)}
                         >
-                          <div className="relative aspect-video bg-slate-100">
+                          <div className="relative aspect-video bg-muted">
                             <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
                             <div className="absolute bottom-2 right-2">
                               <span className="bg-black/80 text-white text-xs px-2 py-1 rounded">
@@ -347,7 +347,7 @@ export default function VideosPage() {
                           <div className="absolute top-2 right-2">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 bg-white/80 hover:bg-white">
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 bg-card/80 hover:bg-card">
                                   <MoreVertical className="w-4 h-4" />
                                 </Button>
                               </DropdownMenuTrigger>
@@ -383,7 +383,7 @@ export default function VideosPage() {
                           initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: index * 0.02 }}
-                          className={`flex items-center gap-4 p-3 rounded-lg border bg-white hover:bg-slate-50 transition-colors ${
+                          className={`flex items-center gap-4 p-3 rounded-lg border bg-card hover:bg-accent transition-colors ${
                             selectedVideos.includes(video.id) ? 'ring-2 ring-blue-500' : ''
                           }`}
                           onClick={() => toggleVideoSelection(video.id)}
@@ -396,8 +396,8 @@ export default function VideosPage() {
                             onClick={(e) => e.stopPropagation()}
                           />
                           
-                          <div className="w-16 h-9 bg-slate-100 rounded flex items-center justify-center">
-                            <FileVideo className="w-4 h-4 text-slate-400" />
+                          <div className="w-16 h-9 bg-muted rounded flex items-center justify-center">
+                            <FileVideo className="w-4 h-4 text-muted-foreground" />
                           </div>
                           
                           <div className="flex-1 min-w-0">

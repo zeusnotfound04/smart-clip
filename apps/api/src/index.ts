@@ -25,6 +25,7 @@ import testRoutes from './routes/test.routes.js';
 import myClipsRoutes from './routes/my-clips.routes';
 import adminRoutes from './routes/admin.routes';
 import videoUrlUploadRoutes from './routes/video-url-upload.routes';
+import userRoutes from './routes/user.routes';
 import { 
   errorHandler, 
   notFoundHandler, 
@@ -109,6 +110,7 @@ app.use((req, res, next) => {
 });
 
 app.use('/api/auth', authRoutes);
+app.use('/api/user', userRoutes);
 app.use('/api/videos', videoRoutes);
 app.use('/api/my-clips', myClipsRoutes);
 app.use('/api/projects', projectRoutes);

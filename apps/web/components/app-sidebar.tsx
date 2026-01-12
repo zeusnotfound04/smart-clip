@@ -53,14 +53,6 @@ export function AppSidebar({ user }: AppSidebarProps) {
     ? [...navigation, { name: "Admin", href: "/admin", icon: HiShieldCheck }]
     : navigation;
 
-  const initials =
-    user.name
-      ?.split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase() ||
-    user.email[0].toUpperCase();
-
   return (
     <Sidebar>
       <SidebarHeader>
@@ -92,6 +84,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
                 transition={{ type: "spring", stiffness: 300 }}
               >
                 <Avatar className="size-16">
+                  <AvatarImage src={user.image || undefined} alt={user.name || 'User'} />
                   <AvatarFallback>{initials}</AvatarFallback>
                 </Avatar>
               </motion.div>

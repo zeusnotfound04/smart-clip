@@ -101,15 +101,15 @@ export default function PricingSection() {
                 className={`
                   relative rounded-2xl p-6 border-2 transition-all duration-200
                   ${plan.popular 
-                    ? 'bg-gradient-to-br from-blue-600 to-cyan-600 text-white border-transparent shadow-xl hover:shadow-2xl' 
-                    : 'bg-card border-border hover:border-primary/50 hover:shadow-lg'
+                    ? 'bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white border-blue-500/50 shadow-xl shadow-blue-500/20 hover:shadow-2xl hover:shadow-blue-500/30' 
+                    : 'bg-gradient-to-br from-slate-900 to-slate-950 border-slate-800 hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-500/10'
                   }
                 `}
               >
                 {/* Popular badge */}
                 {plan.popular && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <div className="bg-orange-500 text-white px-3 py-1 rounded-full text-xs font-semibold shadow-md flex items-center gap-1">
+                    <div className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-3 py-1 rounded-full text-xs font-semibold shadow-lg shadow-blue-500/50 flex items-center gap-1">
                       <Star className="w-3 h-3 fill-current" />
                       Most Popular
                     </div>
@@ -118,29 +118,29 @@ export default function PricingSection() {
 
                 {/* Icon */}
                 <div className={`w-12 h-12 rounded-lg flex items-center justify-center mb-4 ${
-                  plan.popular ? 'bg-white/20' : 'bg-primary/10'
+                  plan.popular ? 'bg-white/20' : 'bg-blue-500/10'
                 }`}>
-                  <Icon className={`w-6 h-6 ${plan.popular ? 'text-white' : 'text-primary'}`} />
+                  <Icon className={`w-6 h-6 ${plan.popular ? 'text-white' : 'text-blue-400'}`} />
                 </div>
 
                 {/* Plan name */}
-                <h3 className={`text-xl font-bold mb-2 ${plan.popular ? 'text-white' : ''}`}>
+                <h3 className={`text-xl font-bold mb-2 ${plan.popular ? 'text-white' : 'text-white'}`}>
                   {plan.name}
                 </h3>
 
                 {/* Description */}
-                <p className={`text-sm mb-6 ${plan.popular ? 'text-blue-100' : 'text-muted-foreground'}`}>
+                <p className={`text-sm mb-6 ${plan.popular ? 'text-blue-100' : 'text-slate-400'}`}>
                   {plan.description}
                 </p>
 
                 {/* Price */}
                 <div className="mb-6">
                   <div className="flex items-baseline gap-1">
-                    <span className={`text-4xl font-bold ${plan.popular ? 'text-white' : ''}`}>
+                    <span className={`text-4xl font-bold ${plan.popular ? 'text-white' : 'text-white'}`}>
                       {plan.price}
                     </span>
                     {plan.period && (
-                      <span className={`text-base ${plan.popular ? 'text-blue-200' : 'text-muted-foreground'}`}>
+                      <span className={`text-base ${plan.popular ? 'text-blue-200' : 'text-slate-400'}`}>
                         {plan.period}
                       </span>
                     )}
@@ -148,7 +148,7 @@ export default function PricingSection() {
                 </div>
 
                 {/* Divider */}
-                <div className={`h-px w-full mb-6 ${plan.popular ? 'bg-white/20' : 'bg-border'}`} />
+                <div className={`h-px w-full mb-6 ${plan.popular ? 'bg-white/20' : 'bg-slate-800'}`} />
 
                 {/* Features */}
                 <ul className="space-y-3 mb-6">
@@ -156,11 +156,11 @@ export default function PricingSection() {
                     <li key={i} className="flex items-start gap-3 text-sm">
                       <div className={`
                         flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mt-0.5
-                        ${plan.popular ? 'bg-white/20' : 'bg-primary/10'}
+                        ${plan.popular ? 'bg-white/20' : 'bg-blue-500/20'}
                       `}>
-                        <Check className={`w-3 h-3 ${plan.popular ? 'text-white' : 'text-primary'}`} />
+                        <Check className={`w-3 h-3 ${plan.popular ? 'text-white' : 'text-blue-400'}`} />
                       </div>
-                      <span className={plan.popular ? 'text-white' : ''}>{feature}</span>
+                      <span className={plan.popular ? 'text-white' : 'text-slate-300'}>{feature}</span>
                     </li>
                   ))}
                 </ul>
@@ -169,8 +169,8 @@ export default function PricingSection() {
                 <Button
                   className={`w-full ${
                     plan.popular 
-                      ? 'bg-white text-blue-600 hover:bg-blue-50' 
-                      : ''
+                      ? 'bg-white text-blue-600 hover:bg-blue-50 font-semibold' 
+                      : 'bg-blue-600 hover:bg-blue-500 text-white'
                   }`}
                   variant={plan.popular ? 'secondary' : 'default'}
                 >
@@ -181,12 +181,6 @@ export default function PricingSection() {
           })}
         </div>
 
-        {/* Bottom text */}
-        <div className="text-center mt-12">
-          <p className="text-muted-foreground">
-            All plans include a 14-day money-back guarantee · Each credit = 1 minute of video processing
-          </p>
-        </div>
       </div>
     </section>
   )

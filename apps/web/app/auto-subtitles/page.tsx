@@ -3,21 +3,23 @@
 import { useAuth } from "@/lib/auth-context";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { apiClient } from "@/lib/api-client";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { CreditExhaustedDialog } from "@/components/credit-exhausted-dialog";
 import { useCreditError } from "@/hooks/use-credit-error";
 import { SubtitleConfigurationPanel } from "@/components/auto-subtitles/SubtitleConfigurationPanel";
 import { Button } from "@/components/ui/button";
-import { Settings, Upload } from "lucide-react";
+import { Settings, Upload, Loader2 } from "lucide-react";
 import { VideoSelectorModal } from "@/components/video-selector-modal";
 import { VideoUrlUpload } from "@/components/video-url-upload";
 
 export default function AutoSubtitlesPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [uploading, setUploading] = useState(false);
+  const [isAutoProcessing, setIsAutoProcessing] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [videos, setVideos] = useState<any[]>([]);
   const [subtitleResults, setSubtitleResults] = useState<{[key: string]: any}>({});
@@ -72,6 +74,57 @@ export default function AutoSubtitlesPage() {
     router.push("/auth/signin");
     return null;
   }
+
+  // Auto-process video from URL parameters (when redirected from AI script generator)
+  useEffect(() => {
+    const videoUrl = searchParams.get('videoUrl');
+    const videoName = searchParams.get('videoName');
+    const autoProcess = searchParams.get('autoProcess');
+    
+    if (videoUrl && !isAutoProcessing && videos.length === 0) {
+      setIsAutoProcessing(true);
+      setUploading(true);
+      
+      // Upload the video from URL to create a proper video record
+      apiClient.uploadFromUrl({
+        url: decodeURIComponent(videoUrl),
+        projectName: decodeURIComponent(videoName || 'AI Generated Video'),
+        processType: 'none' // Don't auto-process, let user configure
+      })
+      .then((result) => {
+        if (result.success && result.video) {
+          // Add the video to the list
+          setVideos([{
+            id: result.video.id,
+            originalName: result.video.title || videoName,
+            url: result.video.s3Url,
+            status: 'uploaded',
+            size: 0,
+            duration: result.video.duration || 0,
+            uploadedAt: new Date().toISOString()
+          }]);
+          
+          // If autoProcess is true, automatically open the configuration panel
+          if (autoProcess === 'true') {
+            setTimeout(() => {
+              setSelectedVideoId(result.video.id);
+              setShowConfiguration(true);
+            }, 800);
+          }
+        } else {
+          console.error('Failed to upload video from URL:', result);
+          alert('Failed to load video. Please try uploading it manually.');
+        }
+      })
+      .catch((error) => {
+        console.error('Error uploading video from URL:', error);
+        alert('Failed to load video. Please try uploading it manually.');
+      })
+      .finally(() => {
+        setUploading(false);
+      });
+    }
+  }, [searchParams, isAutoProcessing, videos.length]);
 
   const handleVideoSelect = async (video: any) => {
     // If video is already in the list, don't add it again
@@ -196,6 +249,12 @@ export default function AutoSubtitlesPage() {
             <p className="text-muted-foreground">
               Upload a video and generate accurate subtitles using AI speech recognition
             </p>
+            {isAutoProcessing && uploading && (
+              <div className="flex items-center gap-2 text-blue-600 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span className="font-medium">Loading your generated video for subtitle processing...</span>
+              </div>
+            )}
           </div>
 
           {/* URL Upload Section */}

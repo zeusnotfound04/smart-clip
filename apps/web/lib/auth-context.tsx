@@ -6,6 +6,7 @@ import { apiClient, User } from '@/lib/api-client';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  session: { accessToken: string | null } | null;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (name: string, email: string, password: string, otp: string) => Promise<void>;
   signOut: () => void;
@@ -63,6 +64,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const contextValue = useMemo(() => ({
     user,
     loading,
+    session: {
+      accessToken: typeof window !== 'undefined' ? localStorage.getItem('smartclips_token') : null
+    },
     signIn,
     signUp,
     signOut

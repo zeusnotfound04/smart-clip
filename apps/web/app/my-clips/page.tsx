@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -163,8 +164,9 @@ export default function MyClipsPage() {
   });
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto p-6 space-y-6">
+        <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">My Clips</h1>
           <p className="text-muted-foreground mt-1">

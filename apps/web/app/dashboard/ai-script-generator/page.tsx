@@ -13,13 +13,14 @@ import { Progress } from "@/components/ui/progress";
 import { 
   Loader2, Copy, RefreshCw, Star, Clock, Type, Wand2, Sparkles, 
   FileText, Mic, Video, ArrowRight, ArrowLeft, CheckCircle, 
-  Download, Play, Pause 
+  Download, Play, Pause, Captions 
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiClient } from "@/lib/api-client";
 import { motion } from "framer-motion";
 import { useAuth } from '@/lib/auth-context';
 import { DownloadButton } from '@/components/download-button';
+import { useRouter } from 'next/navigation';
 
 // API Base URL - Remove trailing slashes to prevent double slashes in URLs
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001').replace(/\/+$/, '');
@@ -100,6 +101,7 @@ interface ScriptGenerationOptions {
 export default function AIScriptGenerator() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const router = useRouter();
   
   // Phase management
   const [currentPhase, setCurrentPhase] = useState<VideoGenerationPhase>('script');
@@ -978,13 +980,27 @@ export default function AIScriptGenerator() {
             
             <div className="flex gap-3">
               {!project.isMockVideo && project.finalVideoUrl && (
-                <DownloadButton
-                  s3Url={project.finalVideoUrl}
-                  fileName={`${project.projectName || 'generated-video'}.mp4`}
-                  className="flex-1"
-                >
-                  Download Video
-                </DownloadButton>
+                <>
+                  <DownloadButton
+                    s3Url={project.finalVideoUrl}
+                    fileName={`${project.projectName || 'generated-video'}.mp4`}
+                    className="flex-1"
+                  >
+                    Download Video
+                  </DownloadButton>
+                  <Button 
+                    onClick={() => {
+                      const encodedUrl = encodeURIComponent(project.finalVideoUrl);
+                      const encodedName = encodeURIComponent(project.projectName || 'AI Generated Video');
+                      router.push(`/dashboard/auto-subtitles?videoUrl=${encodedUrl}&videoName=${encodedName}`);
+                    }}
+                    className="flex-1"
+                    variant="secondary"
+                  >
+                    <Captions className="w-4 h-4 mr-2" />
+                    Add Subtitles
+                  </Button>
+                </>
               )}
               {project.isMockVideo && (
                 <Button disabled className="flex-1">

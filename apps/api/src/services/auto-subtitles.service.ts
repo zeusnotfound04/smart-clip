@@ -347,6 +347,10 @@ const FONT_FILE_MAP: Record<string, { regular: string; bold?: string }> = {
     regular: getFontPath('Poppins', 'Poppins-Regular.ttf'),
     bold: getFontPath('Poppins', 'Poppins-Black.ttf')
   },
+  'Poppins Thin': {
+    regular: getFontPath('Poppins', 'Poppins-Thin.ttf'),
+    bold: getFontPath('Poppins', 'Poppins-Light.ttf')
+  },
   'Roboto': {
     regular: getFontPath('Roboto', 'Roboto-Regular.ttf'),
     bold: getFontPath('Roboto', 'Roboto-Black.ttf')
@@ -359,7 +363,7 @@ const FONT_FILE_MAP: Record<string, { regular: string; bold?: string }> = {
     bold: getFontPath('Fira_Sans_Condensed', 'FiraSansCondensed-Black.ttf')
   },
   'Teko': {
-    regular: getFontPath('Teko', 'Teko-SemiBold.ttf'),
+    regular: getFontPath('Teko', 'Teko-Regular.ttf'),
     bold: getFontPath('Teko', 'Teko-Bold.ttf')
   },
   'TikTok Sans': {
@@ -2034,27 +2038,24 @@ export const convertSRTToASS = (srtContent: string, style?: SubtitleStyle, video
   const fontFilePath = style ? getFontFilePath(style.fontFamily, style.bold) : 'Arial';
   
   // Font size scaling
-  // If fontSize > 30, assume it's already properly scaled from frontend (includes user's drag adjustments)
-  // Otherwise, apply automatic scaling for legacy/default values
+  // Apply user's scale multiplier if provided, then apply video resolution scaling and ASS multiplier
   const scaleFontSize = (baseFontSize: number): number => {
     const referenceHeight = 1080; // Reference resolution height (1080p)
-    const scaleFactor = videoHeight / referenceHeight;
+    const videoScaleFactor = videoHeight / referenceHeight;
     
-    // Check if this is a user-adjusted size from frontend
-    const isUserAdjusted = baseFontSize > 30;
+    // Apply user's scale multiplier (from drag/slider in UI)
+    const userScale = style?.scale || 1;
+    const userScaledSize = baseFontSize * userScale;
     
-    if (isUserAdjusted) {
-      // Use exact size from frontend (already includes scale and ASS multiplier)
-      const finalSize = Math.round(baseFontSize * 2.5); // ASS needs 2.5x for proper rendering
-      console.log(`📏 [FONT SCALE] Using exact frontend size: ${baseFontSize}px → ${finalSize}px (2.5x ASS multiplier)`);
-      return finalSize;
-    } else {
-      // Legacy path: apply full scaling for default sizes
-      const scaledSize = Math.round(baseFontSize * scaleFactor);
-      const finalSize = Math.round(scaledSize * 2.5);
-      console.log(`📏 [FONT SCALE] Base: ${baseFontSize}px, Video: ${videoHeight}p, Scale: ${scaleFactor.toFixed(2)}x, Final: ${finalSize}px (2.5x boost)`);
-      return finalSize;
-    }
+    // Apply video resolution scaling
+    const scaledSize = Math.round(userScaledSize * videoScaleFactor);
+    
+    // ASS subtitle system requires a multiplier for proper visual size
+    // This ensures the font appears at the expected size relative to video dimensions
+    const finalSize = Math.round(scaledSize * 2.5);
+    
+    console.log(`📏 [FONT SCALE] Base: ${baseFontSize}px, User Scale: ${userScale}x, Video: ${videoHeight}p (${videoScaleFactor.toFixed(2)}x), Final: ${finalSize}px`);
+    return finalSize;
   };
   
   // Handle transparent outline (no border)
@@ -2086,13 +2087,25 @@ export const convertSRTToASS = (srtContent: string, style?: SubtitleStyle, video
   } : {...defaultStyle, fontFile: 'Arial', alignment: 2, border: 3, shadow: scaleFontSize(20)};
   
   // Calculate margins from position offset (x, y from center)
-  // ASS MarginV is vertical margin from bottom (for alignment 2 - bottom center)
-  const baseMarginV = 30; // Default bottom margin
-  // Y: positive = move up, negative = move down (subtract from base)
-  const customMarginV = style?.position ? Math.round(baseMarginV - style.position.y) : baseMarginV;
-  // X: negative = move left (increase left margin), positive = move right (increase right margin)
-  const marginL = style?.position && style.position.x < 0 ? Math.max(10, Math.round(10 - style.position.x)) : 10;
-  const marginR = style?.position && style.position.x > 0 ? Math.max(10, Math.round(10 + style.position.x)) : 10;
+  // Position values are pixel offsets from center of the video
+  // ASS uses margins from edges: MarginL (left), MarginR (right), MarginV (bottom for alignment 2)
+  
+  const baseMarginV = 120; // Default bottom margin (in pixels)
+  let marginL = 10;
+  let marginR = 10;
+  let customMarginV = baseMarginV;
+  
+  if (style?.position) {
+    // Y: positive = move UP (increase margin from bottom), negative = move DOWN (decrease margin from bottom)
+    customMarginV = Math.max(10, Math.round(baseMarginV - style.position.y));
+    
+    // X: Calculate horizontal position
+    // For center alignment (alignment=2), we use MarginL and MarginR to shift left/right
+    // Positive X = move RIGHT (decrease left margin, increase right margin)
+    // Negative X = move LEFT (increase left margin, decrease right margin)
+    marginL = Math.max(0, Math.round(style.position.x));
+    marginR = Math.max(0, Math.round(-style.position.x));
+  }
   
   console.log(`📝 [ASS] Using font: ${finalStyle.fontFamily} (${finalStyle.fontSize}px, bold: ${!!finalStyle.bold})`);
   console.log(`📝 [ASS] Font file path: ${finalStyle.fontFile}`);

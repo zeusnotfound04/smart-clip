@@ -38,13 +38,7 @@ const features = [
     gradient: "from-cyan-400 via-sky-500 to-blue-600",
     glowColor: "cyan",
   },
-  {
-    icon: Instagram,
-    title: "Direct Platform Upload",
-    description: "Connect Instagram, TikTok, and YouTube. Clips post directly—no downloading or manual uploads.",
-    gradient: "from-pink-400 via-rose-500 to-red-500",
-    glowColor: "pink",
-  },
+
 ]
 
 const glowColors = {

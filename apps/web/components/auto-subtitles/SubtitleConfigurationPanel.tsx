@@ -42,6 +42,14 @@ const getFontFamilyAndWeight = (fontFamily: string, isBold: boolean = false) => 
     };
   }
   
+  // Handle Poppins Thin
+  if (fontFamily === 'Poppins Thin') {
+    return {
+      fontFamily: 'Poppins',
+      fontWeight: 100
+    };
+  }
+  
   // For other fonts, return as is
   return {
     fontFamily: fontFamily,
@@ -100,6 +108,7 @@ const FONT_FAMILIES = [
   { value: 'Rubik', label: 'Rubik - Punchy Messages' },
   { value: 'Gabarito', label: 'Gabarito - Fitness & TikTok' },
   { value: 'Poppins', label: 'Poppins - Educational Videos' },
+  { value: 'Poppins Thin', label: 'Poppins Thin - Elegant & Light' },
   { value: 'DM Serif Display', label: 'DM Serif - Storytelling' },
   { value: 'Fira Sans Condensed', label: 'Fira Sans - Strong Visuals' },
   { value: 'Roboto', label: 'Roboto - Health Videos' },
@@ -402,6 +411,24 @@ const STYLE_THEMES = [
       shadowIntensity: 3,
       shadowOffsetX: 2,
       shadowOffsetY: 2
+    }
+  },
+  {
+    name: 'Subtitle',
+    style: {
+      textCase: 'normal' as const,
+      primaryColor: '#FFFFFF',
+      outlineColor: '#000000',
+      shadowColor: '#000000',
+      fontFamily: 'Poppins Thin',
+      fontSize: 30,
+      bold: false,
+      italic: false,
+      alignment: 'center' as const,
+      showShadow: true,
+      shadowIntensity: 2,
+      shadowOffsetX: 1,
+      shadowOffsetY: 1
     }
   },
 
