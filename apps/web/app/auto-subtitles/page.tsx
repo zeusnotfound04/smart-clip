@@ -31,6 +31,7 @@ export default function AutoSubtitlesPage() {
   const [showVideoSelector, setShowVideoSelector] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { creditError, hideCreditError, handleApiError } = useCreditError();
+  const [isDragging, setIsDragging] = useState(false);
   
   const [subtitleOptions, setSubtitleOptions] = useState<{
     detectAllLanguages: boolean;
@@ -132,6 +133,43 @@ export default function AutoSubtitlesPage() {
       setVideos(prev => [video, ...prev]);
     }
     setShowVideoSelector(false);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      if (file.type.startsWith('video/')) {
+        setUploading(true);
+        try {
+          const result = await apiClient.uploadVideo(file);
+          setVideos(prev => [result, ...prev]);
+        } catch (error) {
+          console.error('Upload failed:', error);
+          alert('Upload failed. Please try again.');
+        } finally {
+          setUploading(false);
+        }
+      } else {
+        alert('Please drop a video file');
+      }
+    }
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -272,7 +310,16 @@ export default function AutoSubtitlesPage() {
           />
 
           {/* File Upload Section */}
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+          <div 
+            className={`border-2 border-dashed rounded-lg p-8 text-center transition-all ${
+              isDragging 
+                ? 'border-blue-500 bg-blue-500/10' 
+                : 'border-gray-300 hover:border-blue-400'
+            }`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
             <div className="flex flex-col items-center gap-4">
               <Button
                 onClick={() => setShowVideoSelector(true)}
@@ -284,7 +331,7 @@ export default function AutoSubtitlesPage() {
                 {uploading ? 'Uploading...' : 'Select Video'}
               </Button>
               <p className="text-sm text-muted-foreground">
-                Choose from My Clips or upload a new video
+                {isDragging ? 'Drop video here to upload' : 'Drag & drop video here, choose from My Clips, or upload a new video'}
               </p>
               <p className="text-xs text-muted-foreground">
                 Supported formats: MP4, MOV, AVI, WebM (Max: 500MB)

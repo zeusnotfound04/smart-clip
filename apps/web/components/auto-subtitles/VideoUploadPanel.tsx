@@ -45,6 +45,41 @@ export function VideoUploadPanel({
   const [videoInfo, setVideoInfo] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [platform, setPlatform] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      if (file.type.startsWith('video/')) {
+        // Create a synthetic event to reuse onFileSelect
+        const syntheticEvent = {
+          target: { files: [file] },
+          currentTarget: { files: [file] }
+        } as any;
+        onFileSelect(syntheticEvent);
+        setActiveTab('file'); // Switch to file tab
+      } else {
+        setError('Please drop a video file');
+      }
+    }
+  };
 
   const handleVideoSelect = (video: any) => {
     if (onVideoSelect) {
@@ -262,7 +297,16 @@ export function VideoUploadPanel({
 
                 {/* File Upload Tab */}
                 <TabsContent value="file" className="space-y-4 mt-4">
-                  <div className="text-center space-y-3">
+                  <div 
+                    className={`text-center space-y-3 p-6 rounded-lg border-2 border-dashed transition-all ${
+                      isDragging 
+                        ? 'border-blue-500 bg-blue-500/10' 
+                        : 'border-gray-600 hover:border-blue-400'
+                    }`}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                  >
                     <motion.div
                       className="w-16 h-16 mx-auto rounded-full bg-blue-600/20 border-2 border-blue-500/30 flex items-center justify-center"
                       whileHover={{ scale: 1.05 }}
@@ -271,16 +315,18 @@ export function VideoUploadPanel({
                       <Upload className="w-8 h-8 text-blue-400" />
                     </motion.div>
                     
-                    <h3 className="text-lg font-semibold">Choose a video file</h3>
+                    <h3 className="text-lg font-semibold">
+                      {isDragging ? 'Drop video here' : 'Choose a video file'}
+                    </h3>
                     <p className="text-muted-foreground text-sm">
-                      Support for MP4, MOV, AVI formats
+                      {isDragging ? 'Release to upload' : 'Drag & drop or click to browse'}
                     </p>
 
-                    <div className="flex gap-2 justify-center">
+                    <div className="flex flex-wrap gap-2 justify-center">
                       <Button 
-                        size="lg"
+                        size="sm"
                         onClick={() => setShowVideoSelector(true)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3"
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
                       >
                         <Folder className="w-4 h-4 mr-2" />
                         My Clips
@@ -297,9 +343,9 @@ export function VideoUploadPanel({
                       <label htmlFor="video-upload">
                         <Button 
                           asChild
-                          size="lg"
+                          size="sm"
                           variant="outline"
-                          className="px-6 py-3 cursor-pointer"
+                          className="cursor-pointer"
                         >
                           <span>
                             <Upload className="w-4 h-4 mr-2" />
