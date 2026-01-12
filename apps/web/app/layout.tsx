@@ -14,7 +14,9 @@ import {
   gabarito,
   circular,
   bangers,
-  anton
+  anton,
+  teko,
+  tiktokSans
 } from "@/lib/fonts";
 
 export const metadata: Metadata = {
@@ -30,7 +32,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${jetbrainsMono.variable} ${poppins.variable} ${montserrat.variable} ${rubik.variable} ${roboto.variable} ${dmSerifDisplay.variable} ${gabarito.variable} ${circular.variable} ${bangers.variable} ${anton.variable} antialiased font-sans bg-background text-foreground`}
+        className={`${inter.variable} ${jetbrainsMono.variable} ${poppins.variable} ${montserrat.variable} ${rubik.variable} ${roboto.variable} ${dmSerifDisplay.variable} ${gabarito.variable} ${circular.variable} ${bangers.variable} ${anton.variable} ${teko.variable} ${tiktokSans.variable} antialiased font-sans bg-background text-foreground`}
         suppressHydrationWarning
       >
         <ThemeProvider

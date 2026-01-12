@@ -8,6 +8,47 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 
+// Helper function to get font family and weight for Montserrat and TikTok Sans variants
+const getFontFamilyAndWeight = (fontFamily: string, isBold: boolean = false) => {
+  // Handle Montserrat weight variants
+  if (fontFamily.startsWith('Montserrat')) {
+    const mapping: { [key: string]: number } = {
+      'Montserrat Black': 900,
+      'Montserrat ExtraBold': 800,
+      'Montserrat Bold': 700,
+      'Montserrat SemiBold': 600,
+      'Montserrat Medium': 500,
+      'Montserrat': 400,
+    };
+    return {
+      fontFamily: 'var(--font-montserrat)',
+      fontWeight: mapping[fontFamily] || 400
+    };
+  }
+  
+  // Handle TikTok Sans weight variants
+  if (fontFamily.startsWith('TikTok Sans')) {
+    const mapping: { [key: string]: number } = {
+      'TikTok Sans Black': 900,
+      'TikTok Sans ExtraBold': 800,
+      'TikTok Sans Bold': 700,
+      'TikTok Sans SemiBold': 600,
+      'TikTok Sans Medium': 500,
+      'TikTok Sans': 400,
+    };
+    return {
+      fontFamily: 'var(--font-tiktok-sans)',
+      fontWeight: mapping[fontFamily] || 400
+    };
+  }
+  
+  // For other fonts, return as is
+  return {
+    fontFamily: fontFamily,
+    fontWeight: isBold ? 'bold' : 'normal'
+  };
+};
+
 interface SubtitleStyle {
   textCase: 'normal' | 'uppercase' | 'lowercase' | 'capitalize';
   fontFamily: string;
@@ -20,6 +61,15 @@ interface SubtitleStyle {
   alignment: 'left' | 'center' | 'right';
   showShadow: boolean;
   maxWordsPerLine?: number; // Max words per subtitle line (default: 8, TikTok style: 3)
+  // Gradient support
+  useGradient?: boolean;
+  gradientType?: 'linear' | 'radial';
+  gradientColors?: string[]; // Array of colors for gradient (2+ colors)
+  gradientDirection?: number; // Angle in degrees for linear gradient (0-360)
+  // Enhanced shadow
+  shadowIntensity?: number; // 1-10 for multi-layer shadow depth
+  shadowOffsetX?: number; // Horizontal shadow offset
+  shadowOffsetY?: number; // Vertical shadow offset
 }
 
 interface SubtitleOptions {
@@ -41,18 +91,21 @@ interface SubtitleConfigurationPanelProps {
 const FONT_FAMILIES = [
   { value: 'Bangers', label: 'Bangers - VIRAL CHAMPION' },
   { value: 'Anton', label: 'Anton - BOLD IMPACT' },
-  { value: 'Montserrat', label: 'Montserrat - Best Overall' },
-  { value: 'Montserrat Black', label: 'Montserrat Black - HEAVY EMPHASIS' },
-  { value: 'Montserrat ExtraBold', label: 'Montserrat ExtraBold - BOLD IMPACT' },
-  { value: 'Montserrat SemiBold', label: 'Montserrat SemiBold - Smooth Captions' },
-  { value: 'Montserrat Medium', label: 'Montserrat Medium - Clean Look' },
-  { value: 'Montserrat Bold', label: 'Montserrat Bold - Strong Text' },
+  { value: 'Montserrat', label: 'Montserrat - Best Overall (Regular)' },
+  { value: 'Montserrat Medium', label: 'Montserrat - Medium Weight' },
+  { value: 'Montserrat SemiBold', label: 'Montserrat - SemiBold Weight' },
+  { value: 'Montserrat Bold', label: 'Montserrat - Bold Weight' },
+  { value: 'Montserrat ExtraBold', label: 'Montserrat - ExtraBold Weight' },
+  { value: 'Montserrat Black', label: 'Montserrat - Black Weight (HEAVIEST)' },
   { value: 'Rubik', label: 'Rubik - Punchy Messages' },
   { value: 'Gabarito', label: 'Gabarito - Fitness & TikTok' },
   { value: 'Poppins', label: 'Poppins - Educational Videos' },
   { value: 'DM Serif Display', label: 'DM Serif - Storytelling' },
   { value: 'Fira Sans Condensed', label: 'Fira Sans - Strong Visuals' },
   { value: 'Roboto', label: 'Roboto - Health Videos' },
+  { value: 'Teko', label: 'Teko - Modern Impact' },
+  { value: 'TikTok Sans', label: 'TikTok Sans - Official TikTok Font' },
+  { value: 'TikTok Sans Medium', label: 'TikTok Sans - Medium Weight' },
   { value: 'Arial', label: 'Arial - Professional' }
 ];
 
@@ -272,6 +325,87 @@ const STYLE_THEMES = [
       showShadow: true
     }
   },
+
+  {
+    name: 'Subtitle',
+    style: {
+      primaryColor: '#FF0000',
+      outlineColor: '#000000',
+      shadowColor: '#000000',
+      fontFamily: 'Bangers',
+      fontSize: 36,
+      bold: true,
+      italic: false,
+      alignment: 'center' as const,
+      showShadow: true,
+      useGradient: true,
+      gradientType: 'linear' as const,
+      gradientColors: ['#FFFF00', '#FF6600', '#FF0000'],
+      gradientDirection: 180,
+      shadowIntensity: 3,
+      shadowOffsetX: 2,
+      shadowOffsetY: 2
+    }
+  },
+  {
+    name: 'Subtitle',
+    style: {
+      primaryColor: '#FF0000',
+      outlineColor: '#FFFFFF',
+      shadowColor: '#000000',
+      fontFamily: 'Teko',
+      fontSize: 36,
+      bold: true,
+      italic: false,
+      alignment: 'center' as const,
+      showShadow: true,
+      useGradient: true,
+      gradientType: 'linear' as const,
+      gradientColors: ['#FFFFFF', '#FF6B6B', '#C41E3A'],
+      gradientDirection: 180,
+      shadowIntensity: 3,
+      shadowOffsetX: 2,
+      shadowOffsetY: 2
+    }
+  },
+  {
+    name: 'SUBTITLE',
+    style: {
+      textCase: 'uppercase' as const,
+      primaryColor: '#FFFFFF',
+      outlineColor: 'transparent',
+      shadowColor: '#FFFFFF',
+      fontFamily: 'Montserrat ExtraBold',
+      fontSize: 34,
+      bold: false,
+      italic: false,
+      alignment: 'center' as const,
+      showShadow: true,
+      shadowIntensity: 8,
+      shadowOffsetX: 0,
+      shadowOffsetY: 0
+    }
+  },
+  {
+    name: 'Subtitle',
+    style: {
+      textCase: 'uppercase' as const,
+      primaryColor: '#FFFFFF',
+      outlineColor: '#000000',
+      shadowColor: '#000000',
+      fontFamily: 'TikTok Sans Medium',
+      fontSize: 32,
+      bold: false,
+      italic: false,
+      alignment: 'center' as const,
+      showShadow: true,
+      shadowIntensity: 3,
+      shadowOffsetX: 2,
+      shadowOffsetY: 2
+    }
+  },
+
+
 
 ];
 
@@ -515,30 +649,84 @@ export function SubtitleConfigurationPanel({
           </div>
           
           <div className="grid grid-cols-2 gap-2">
-            {STYLE_THEMES.map((theme, index) => (
-              <Button
-                key={index}
-                variant="outline"
-                size="sm"
-                onClick={() => onApplyTheme(theme)}
-                className="h-auto p-2 flex flex-col items-center gap-1 hover:bg-black/80 hover:scale-105 transition-all bg-black"
-              >
-                <span 
-                  className="text-[20px] leading-tight"
-                  style={{
-                    fontFamily: theme.style.fontFamily,
-                    color: theme.style.primaryColor,
-                    fontWeight: theme.style.bold ? 'bold' : 'normal',
-                    fontStyle: theme.style.italic ? 'italic' : 'normal',
-                    textShadow: theme.style.showShadow 
+            {STYLE_THEMES.map((theme, index) => {
+              // Create gradient style if useGradient is enabled
+              const getTextStyle = () => {
+                // Map font family to actual font family and weight
+                const { fontFamily, fontWeight } = getFontFamilyAndWeight(theme.style.fontFamily, theme.style.bold);
+                
+                const baseStyle: any = {
+                  fontFamily: fontFamily,
+                  fontWeight: fontWeight,
+                  fontStyle: theme.style.italic ? 'italic' : 'normal',
+                };
+
+                if (theme.style.useGradient && theme.style.gradientColors) {
+                  // Create linear gradient
+                  const direction = theme.style.gradientDirection || 180;
+                  const colors = theme.style.gradientColors.join(', ');
+                  baseStyle.background = `linear-gradient(${direction}deg, ${colors})`;
+                  baseStyle.WebkitBackgroundClip = 'text';
+                  baseStyle.WebkitTextFillColor = 'transparent';
+                  baseStyle.backgroundClip = 'text';
+                  
+                  // Simple black drop shadow for gradient text
+                  const offsetX = theme.style.shadowOffsetX || 2;
+                  const offsetY = theme.style.shadowOffsetY || 2;
+                  baseStyle.filter = `drop-shadow(${offsetX}px ${offsetY}px 4px rgba(0, 0, 0, 0.8))`;
+                } else {
+                  // Regular solid color with outline and shadow
+                  baseStyle.color = theme.style.primaryColor;
+                  
+                  // Check if this is a glow effect (no offset)
+                  const offsetX = theme.style.shadowOffsetX || 0;
+                  const offsetY = theme.style.shadowOffsetY || 0;
+                  const isGlow = offsetX === 0 && offsetY === 0 && theme.style.showShadow;
+                  
+                  if (isGlow) {
+                    // Create smooth glow effect with multiple shadow layers
+                    const glowColor = theme.style.shadowColor;
+                    const intensity = theme.style.shadowIntensity || 5;
+                    baseStyle.textShadow = [
+                      // Outline
+                      `-1px -1px 0 ${theme.style.outlineColor}`,
+                      `1px -1px 0 ${theme.style.outlineColor}`,
+                      `-1px 1px 0 ${theme.style.outlineColor}`,
+                      `1px 1px 0 ${theme.style.outlineColor}`,
+                      // Smooth multi-layer glow
+                      `0 0 ${intensity * 2}px ${glowColor}`,
+                      `0 0 ${intensity * 4}px ${glowColor}`,
+                      `0 0 ${intensity * 6}px ${glowColor}`
+                    ].join(', ');
+                  } else {
+                    // Regular shadow with outline
+                    baseStyle.textShadow = theme.style.showShadow 
                       ? `-1px -1px 0 ${theme.style.outlineColor}, 1px -1px 0 ${theme.style.outlineColor}, -1px 1px 0 ${theme.style.outlineColor}, 1px 1px 0 ${theme.style.outlineColor}, 0 0 4px ${theme.style.shadowColor}`
-                      : `-1px -1px 0 ${theme.style.outlineColor}, 1px -1px 0 ${theme.style.outlineColor}, -1px 1px 0 ${theme.style.outlineColor}, 1px 1px 0 ${theme.style.outlineColor}`,
-                  }}
+                      : `-1px -1px 0 ${theme.style.outlineColor}, 1px -1px 0 ${theme.style.outlineColor}, -1px 1px 0 ${theme.style.outlineColor}, 1px 1px 0 ${theme.style.outlineColor}`;
+                  }
+                }
+
+                return baseStyle;
+              };
+
+              return (
+                <Button
+                  key={index}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onApplyTheme(theme)}
+                  className="h-auto p-2 flex flex-col items-center gap-1 hover:bg-black/80 hover:scale-105 transition-all bg-black"
                 >
-                  {theme.name}
-                </span>
-              </Button>
-            ))}
+                  <span 
+                    className="text-[20px] leading-tight"
+                    style={getTextStyle()}
+                  >
+                    {theme.name}
+                  </span>
+                 
+                </Button>
+              );
+            })}
           </div>
           
           <div className="space-y-2">

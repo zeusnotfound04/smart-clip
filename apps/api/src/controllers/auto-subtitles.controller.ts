@@ -23,7 +23,23 @@ const generateSchema = z.object({
       bold: z.boolean().default(false),
       italic: z.boolean().default(false),
       alignment: z.enum(['left', 'center', 'right']).default('center'),
-      showShadow: z.boolean().default(true)
+      showShadow: z.boolean().default(true),
+      // Gradient support
+      useGradient: z.boolean().optional(),
+      gradientType: z.enum(['linear', 'radial']).optional(),
+      gradientColors: z.array(z.string()).optional(),
+      gradientDirection: z.number().optional(),
+      // Shadow enhancements
+      shadowIntensity: z.number().optional(),
+      shadowOffsetX: z.number().optional(),
+      shadowOffsetY: z.number().optional(),
+      // Position and scale
+      position: z.object({
+        x: z.number(),
+        y: z.number()
+      }).optional(),
+      scale: z.number().optional(),
+      maxWordsPerLine: z.number().optional()
     })
   }).optional()
 });
@@ -45,7 +61,23 @@ const configSchema = z.object({
       bold: z.boolean().default(false),
       italic: z.boolean().default(false),
       alignment: z.enum(['left', 'center', 'right']).default('center'),
-      showShadow: z.boolean().default(true)
+      showShadow: z.boolean().default(true),
+      // Gradient support
+      useGradient: z.boolean().optional(),
+      gradientType: z.enum(['linear', 'radial']).optional(),
+      gradientColors: z.array(z.string()).optional(),
+      gradientDirection: z.number().optional(),
+      // Shadow enhancements
+      shadowIntensity: z.number().optional(),
+      shadowOffsetX: z.number().optional(),
+      shadowOffsetY: z.number().optional(),
+      // Position and scale
+      position: z.object({
+        x: z.number(),
+        y: z.number()
+      }).optional(),
+      scale: z.number().optional(),
+      maxWordsPerLine: z.number().optional()
     })
   })
 });

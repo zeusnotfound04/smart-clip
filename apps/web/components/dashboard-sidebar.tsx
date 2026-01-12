@@ -34,6 +34,7 @@ import {
   ChevronRight,
   MessageCircle,
   Wand2,
+  Columns2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -69,6 +70,12 @@ const navigationItems = [
     url: "/dashboard/features/smart-clipper",
     icon: Scissors,
     badge: null,
+  },
+  {
+    title: "Split Streamer",
+    url: "/dashboard/features/split-streamer",
+    icon: Columns2,
+    badge: "New",
   },
   // {
   //   title: "Video Enhancement",
@@ -131,7 +138,7 @@ export function DashboardSidebar() {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            <Image src="/logo.png" alt="SmartClip Logo" width={200} height={50} className="object-contain" />
+            <Image src="/dash-logo.png" alt="SmartClip Logo" width={50} height={15} className="object-contain" />
           </motion.div>
         </div>
       </SidebarHeader>

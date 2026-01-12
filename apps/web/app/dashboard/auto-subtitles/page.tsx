@@ -45,6 +45,19 @@ interface SubtitleStyle {
   italic: boolean;
   alignment: 'left' | 'center' | 'right';
   showShadow: boolean;
+  // Gradient support
+  useGradient?: boolean;
+  gradientType?: 'linear' | 'radial';
+  gradientColors?: string[];
+  gradientDirection?: number;
+  // Enhanced shadow
+  shadowIntensity?: number;
+  shadowOffsetX?: number;
+  shadowOffsetY?: number;
+  // Position and scale
+  position?: { x: number; y: number };
+  scale?: number;
+  maxWordsPerLine?: number;
 }
 
 interface SubtitleOptions {
@@ -286,6 +299,9 @@ export default function AutoSubtitlesPage() {
       console.log('   - Scale:', subtitleScale);
       console.log('   - Base Font Size:', subtitleOptions.style.fontSize);
       console.log('   - Final Font Size:', finalFontSize);
+      console.log('   - USE GRADIENT:', subtitleOptions.style.useGradient);
+      console.log('   - Gradient Colors:', subtitleOptions.style.gradientColors);
+      console.log('   - Full Style Object:', JSON.stringify(subtitleOptions.style, null, 2));
 
       // Merge position and scale into subtitle options
       const subtitleOptionsWithPosition = {
@@ -297,6 +313,8 @@ export default function AutoSubtitlesPage() {
           scale: subtitleScale
         }
       };
+      
+      console.log('📤 Final payload being sent:', JSON.stringify(subtitleOptionsWithPosition, null, 2));
 
       // Start subtitle generation (returns immediately with job ID)
       const jobResponse = await apiClient.generateSubtitles(video.id, subtitleOptionsWithPosition, selectedLanguage || undefined);

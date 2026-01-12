@@ -55,18 +55,14 @@ export function VideoPreviewArea({
   const [subtitlePosition, setSubtitlePosition] = useState({ x: 0, y: 0 });
   const [subtitleScale, setSubtitleScale] = useState(1);
   
-  // Check if URL is a YouTube URL
+
   const isYouTubeUrl = (url: string | null) => {
     if (!url) return false;
     return url.includes('youtube.com') || url.includes('youtu.be');
   };
-  
-  // Check if URL is a Twitter/X tweet URL (not direct video)
   const isTwitterUrl = (url: string | null) => {
     if (!url) return false;
-    // Only return true if it's a tweet URL (has /status/), not a direct video URL
     const isTweetUrl = (url.includes('twitter.com') || url.includes('x.com')) && url.includes('/status/');
-    // Exclude if it's a direct video URL (contains video.twimg.com or similar)
     const isDirectVideo = url.includes('video.twimg.com') || url.includes('.mp4') || url.includes('.m3u8');
     return isTweetUrl && !isDirectVideo;
   };
@@ -193,22 +189,9 @@ export function VideoPreviewArea({
     }
   };
 
-  // Calculate actual font size
   const actualFontSize = Math.max(16, Math.min(24, subtitleStyle.fontSize * 0.8)) * subtitleScale;
   
-  // Debug logs
   useEffect(() => {
-    console.log('🎨 Subtitle Debug Info:');
-    console.log('   - Position X:', subtitlePosition.x);
-    console.log('   - Position Y:', subtitlePosition.y);
-    console.log('   - Scale:', subtitleScale);
-    console.log('   - Base Font Size:', subtitleStyle.fontSize);
-    console.log('   - Calculated Font Size:', Math.max(16, Math.min(24, subtitleStyle.fontSize * 0.8)));
-    console.log('   - Actual Font Size (with scale):', actualFontSize);
-    console.log('   - Primary Color:', subtitleStyle.primaryColor);
-    console.log('   - Outline Color:', subtitleStyle.outlineColor);
-    console.log('   - Font Family:', subtitleStyle.fontFamily);
-    console.log('   - Alignment:', subtitleStyle.alignment);
   }, [subtitlePosition, subtitleScale, subtitleStyle, actualFontSize]);
 
   return (
@@ -268,7 +251,6 @@ export function VideoPreviewArea({
                   }
                 })()}
                 
-                {/* Subtitle Overlay - Only show demo text if using original video */}
                 {!subtitledVideoUrl && (
                   <motion.div 
                     drag
@@ -278,7 +260,6 @@ export function VideoPreviewArea({
                       const newPos = { x: info.offset.x, y: info.offset.y };
                       setSubtitlePosition(newPos);
                       onPositionChange?.(newPos);
-                      console.log('🎯 Dragging subtitle to:', newPos);
                     }}
                     className="absolute bottom-8 left-1/2 -translate-x-1/2 cursor-move"
                     style={{
@@ -300,22 +281,92 @@ export function VideoPreviewArea({
                       className="relative max-w-[80vw] bg-black/10 hover:bg-black/20 rounded-lg px-3 py-2 border border-white/10 hover:border-white/30 transition-all"
                     >
                       <span 
-                        style={{
-                          fontFamily: subtitleStyle.fontFamily,
-                          fontSize: `${actualFontSize}px`,
-                          color: subtitleStyle.primaryColor,
-                          fontWeight: subtitleStyle.bold ? 'bold' : 'normal',
-                          fontStyle: subtitleStyle.italic ? 'italic' : 'normal',
-                          textShadow: subtitleStyle.showShadow 
-                            ? `3px 3px 6px ${subtitleStyle.shadowColor}, 1px 1px 2px ${subtitleStyle.outlineColor}`
-                            : `1px 1px 2px ${subtitleStyle.outlineColor}`,
-                          textAlign: subtitleStyle.alignment,
-                          display: 'block',
-                          lineHeight: '1.3',
-                          wordWrap: 'break-word',
-                          WebkitTextStroke: `1px ${subtitleStyle.outlineColor}`,
-                          userSelect: 'none'
-                        }}
+                        style={(() => {
+                          // Get gradient and shadow properties
+                          const useGradient = (subtitleStyle as any).useGradient ?? false;
+                          const gradientColors = (subtitleStyle as any).gradientColors ?? [];
+                          const gradientDirection = (subtitleStyle as any).gradientDirection ?? 180;
+                          const shadowOffsetX = (subtitleStyle as any).shadowOffsetX ?? 2;
+                          const shadowOffsetY = (subtitleStyle as any).shadowOffsetY ?? 2;
+                          const shadowIntensity = (subtitleStyle as any).shadowIntensity ?? 3;
+                          const isGlow = shadowOffsetX === 0 && shadowOffsetY === 0 && subtitleStyle.showShadow;
+                          
+                          const baseStyle: any = {
+                            fontFamily: subtitleStyle.fontFamily,
+                            fontSize: `${actualFontSize}px`,
+                            fontWeight: subtitleStyle.bold ? 'bold' : 'normal',
+                            fontStyle: subtitleStyle.italic ? 'italic' : 'normal',
+                            textAlign: subtitleStyle.alignment,
+                            display: 'block',
+                            lineHeight: '1.3',
+                            wordWrap: 'break-word',
+                            userSelect: 'none'
+                          };
+                          
+                          // Check if this is a gradient style
+                          if (useGradient && gradientColors.length >= 2) {
+                            // Apply gradient
+                            const colors = gradientColors.join(', ');
+                            baseStyle.background = `linear-gradient(${gradientDirection}deg, ${colors})`;
+                            baseStyle.WebkitBackgroundClip = 'text';
+                            baseStyle.WebkitTextFillColor = 'transparent';
+                            baseStyle.backgroundClip = 'text';
+                            
+                            // Simple black drop shadow for gradient text
+                            baseStyle.filter = `drop-shadow(${shadowOffsetX}px ${shadowOffsetY}px 4px rgba(0, 0, 0, 0.8))`;
+                          } else {
+                            // Regular solid color
+                            baseStyle.color = subtitleStyle.primaryColor;
+                            
+                            // Handle transparent outline
+                            if (subtitleStyle.outlineColor !== 'transparent') {
+                              baseStyle.WebkitTextStroke = `1px ${subtitleStyle.outlineColor}`;
+                            }
+                            
+                            // Handle glow effect vs regular shadow
+                            if (isGlow) {
+                              // Glow effect - multiple shadow layers with no offset
+                              const glowColor = subtitleStyle.shadowColor;
+                              const shadows = [
+                                `0 0 ${shadowIntensity * 2}px ${glowColor}`,
+                                `0 0 ${shadowIntensity * 4}px ${glowColor}`,
+                                `0 0 ${shadowIntensity * 6}px ${glowColor}`
+                              ];
+                              // Add outline if not transparent
+                              if (subtitleStyle.outlineColor !== 'transparent') {
+                                shadows.unshift(
+                                  `-1px -1px 0 ${subtitleStyle.outlineColor}`,
+                                  `1px -1px 0 ${subtitleStyle.outlineColor}`,
+                                  `-1px 1px 0 ${subtitleStyle.outlineColor}`,
+                                  `1px 1px 0 ${subtitleStyle.outlineColor}`
+                                );
+                              }
+                              baseStyle.textShadow = shadows.join(', ');
+                            } else {
+                              // Regular shadow with outline
+                              if (subtitleStyle.showShadow) {
+                                const shadows = [];
+                                // Add outline
+                                if (subtitleStyle.outlineColor !== 'transparent') {
+                                  shadows.push(
+                                    `-1px -1px 0 ${subtitleStyle.outlineColor}`,
+                                    `1px -1px 0 ${subtitleStyle.outlineColor}`,
+                                    `-1px 1px 0 ${subtitleStyle.outlineColor}`,
+                                    `1px 1px 0 ${subtitleStyle.outlineColor}`
+                                  );
+                                }
+                                // Add shadow
+                                shadows.push(`${shadowOffsetX}px ${shadowOffsetY}px 4px ${subtitleStyle.shadowColor}`);
+                                baseStyle.textShadow = shadows.join(', ');
+                              } else if (subtitleStyle.outlineColor !== 'transparent') {
+                                // Only outline, no shadow
+                                baseStyle.textShadow = `-1px -1px 0 ${subtitleStyle.outlineColor}, 1px -1px 0 ${subtitleStyle.outlineColor}, -1px 1px 0 ${subtitleStyle.outlineColor}, 1px 1px 0 ${subtitleStyle.outlineColor}`;
+                              }
+                            }
+                          }
+                          
+                          return baseStyle;
+                        })()}
                       >
                         {formatDemoText(demoText)}
                       </span>
@@ -328,7 +379,6 @@ export function VideoPreviewArea({
                             const newScale = Math.max(0.5, subtitleScale - 0.1);
                             setSubtitleScale(newScale);
                             onScaleChange?.(newScale);
-                            console.log('📉 Decreased scale to:', newScale);
                           }}
                           className="text-white hover:text-blue-400 transition-colors"
                         >
@@ -342,7 +392,6 @@ export function VideoPreviewArea({
                             setSubtitlePosition({ x: 0, y: 0 });
                             onScaleChange?.(1);
                             onPositionChange?.({ x: 0, y: 0 });
-                            console.log('🔄 Reset position and scale');
                           }}
                           className="text-white hover:text-blue-400 transition-colors"
                         >

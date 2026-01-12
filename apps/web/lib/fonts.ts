@@ -50,6 +50,16 @@ export const montserrat = localFont({
       style: 'normal',
     },
     {
+      path: '../public/fonts/Montserrat/Montserrat-Medium.ttf',
+      weight: '500',
+      style: 'normal',
+    },
+    {
+      path: '../public/fonts/Montserrat/Montserrat-SemiBold.ttf',
+      weight: '600',
+      style: 'normal',
+    },
+    {
       path: '../public/fonts/Montserrat/Montserrat-Bold.ttf',
       weight: '700',
       style: 'normal',
@@ -204,5 +214,71 @@ export const circular = localFont({
     },
   ],
   variable: '--font-circular',
+  display: 'swap',
+});
+
+// Teko - Modern Impact (SemiBold)
+export const teko = localFont({
+  src: [
+    {
+      path: '../public/fonts/Teko/Teko-Regular.ttf',
+      weight: '400',
+      style: 'normal',
+    },
+    {
+      path: '../public/fonts/Teko/Teko-Medium.ttf',
+      weight: '500',
+      style: 'normal',
+    },
+    {
+      path: '../public/fonts/Teko/Teko-SemiBold.ttf',
+      weight: '600',
+      style: 'normal',
+    },
+    {
+      path: '../public/fonts/Teko/Teko-Bold.ttf',
+      weight: '700',
+      style: 'normal',
+    },
+  ],
+  variable: '--font-teko',
+  display: 'swap',
+});
+
+// TikTok Sans - Official TikTok Font
+export const tiktokSans = localFont({
+  src: [
+    {
+      path: '../public/fonts/TikTok_Sans/TikTokSans-Regular.ttf',
+      weight: '400',
+      style: 'normal',
+    },
+    {
+      path: '../public/fonts/TikTok_Sans/TikTokSans-Medium.ttf',
+      weight: '500',
+      style: 'normal',
+    },
+    {
+      path: '../public/fonts/TikTok_Sans/TikTokSans-SemiBold.ttf',
+      weight: '600',
+      style: 'normal',
+    },
+    {
+      path: '../public/fonts/TikTok_Sans/TikTokSans-Bold.ttf',
+      weight: '700',
+      style: 'normal',
+    },
+    {
+      path: '../public/fonts/TikTok_Sans/TikTokSans-ExtraBold.ttf',
+      weight: '800',
+      style: 'normal',
+    },
+    {
+      path: '../public/fonts/TikTok_Sans/TikTokSans-Black.ttf',
+      weight: '900',
+      style: 'normal',
+    },
+  ],
+  variable: '--font-tiktok-sans',
   display: 'swap',
 });
