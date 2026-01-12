@@ -149,11 +149,57 @@ export class VideoDownloaderService {
       if (isYouTube) {
         // Strategy 1: Use cookies file if available
         if (process.env.YT_COOKIES_PATH) {
-          options.cookies = process.env.YT_COOKIES_PATH;
-          console.log(' Using cookies file for YouTube:', process.env.YT_COOKIES_PATH);
+          console.log('🔍 [DEBUG] YT_COOKIES_PATH env var found:', process.env.YT_COOKIES_PATH);
+          
+          try {
+            // Check if file exists and is readable
+            const stats = await fs.stat(process.env.YT_COOKIES_PATH);
+            console.log('✅ [DEBUG] Cookies file exists');
+            console.log('📊 [DEBUG] File size:', stats.size, 'bytes');
+            console.log('🔐 [DEBUG] File permissions:', stats.mode.toString(8).slice(-3));
+            
+            // Read first few lines to verify format (without exposing sensitive data)
+            const content = await fs.readFile(process.env.YT_COOKIES_PATH, 'utf-8');
+            const lines = content.split('\n').slice(0, 5);
+            console.log('📄 [DEBUG] First 5 lines of cookies file:');
+            lines.forEach((line, i) => {
+              if (line.startsWith('#') || line.trim() === '') {
+                console.log(`   Line ${i + 1}: ${line}`);
+              } else {
+                // Mask cookie values for security
+                const parts = line.split('\t');
+                if (parts.length >= 6) {
+                  console.log(`   Line ${i + 1}: Domain=${parts[0]} Name=${parts[5]} Value=[MASKED]`);
+                }
+              }
+            });
+            
+            const cookieCount = content.split('\n').filter(line => 
+              !line.startsWith('#') && line.trim() !== ''
+            ).length;
+            console.log('🍪 [DEBUG] Total cookies in file:', cookieCount);
+            
+            // Check for critical YouTube cookies
+            const criticalCookies = ['SID', 'HSID', 'SSID', 'APISID', 'SAPISID'];
+            const foundCookies = criticalCookies.filter(cookie => content.includes(`\t${cookie}\t`));
+            console.log('🔑 [DEBUG] Critical cookies found:', foundCookies.length > 0 ? foundCookies.join(', ') : 'NONE');
+            
+            if (foundCookies.length === 0) {
+              console.warn('⚠️  [DEBUG] Missing critical authentication cookies (SID, HSID, SSID, APISID, SAPISID)');
+              console.warn('⚠️  [DEBUG] Cookies may be incomplete. Consider re-exporting from browser.');
+            }
+            
+            options.cookies = process.env.YT_COOKIES_PATH;
+            console.log('✅ [DEBUG] Using cookies file for YouTube');
+          } catch (error) {
+            console.error('❌ [DEBUG] Failed to read cookies file:', error);
+            console.error('❌ [DEBUG] Error details:', error instanceof Error ? error.message : String(error));
+            console.log('📱 [DEBUG] Falling back to mobile client strategy');
+            options.extractorArgs = 'youtube:player_client=android';
+          }
         } else {
           // Strategy 2: Use mobile client to bypass bot detection
-          console.log(' Using mobile client for YouTube (bot detection bypass)');
+          console.log('📱 [DEBUG] No YT_COOKIES_PATH set, using mobile client for YouTube (bot detection bypass)');
           options.extractorArgs = 'youtube:player_client=android';
         }
       }
@@ -268,11 +314,24 @@ export class VideoDownloaderService {
       if (isYouTube) {
         // Strategy 1: Use cookies file if available
         if (process.env.YT_COOKIES_PATH) {
-          downloadOptions.cookies = process.env.YT_COOKIES_PATH;
-          console.log('🍪 Using cookies file for YouTube:', process.env.YT_COOKIES_PATH);
+          console.log('🔍 [DEBUG] YT_COOKIES_PATH env var found:', process.env.YT_COOKIES_PATH);
+          
+          try {
+            // Check if file exists and is readable
+            const stats = await fs.stat(process.env.YT_COOKIES_PATH);
+            console.log('✅ [DEBUG] Cookies file exists for download');
+            console.log('📊 [DEBUG] File size:', stats.size, 'bytes');
+            
+            downloadOptions.cookies = process.env.YT_COOKIES_PATH;
+            console.log('🍪 [DEBUG] Using cookies file for YouTube download');
+          } catch (error) {
+            console.error('❌ [DEBUG] Failed to access cookies file:', error);
+            console.log('📱 [DEBUG] Falling back to mobile client strategy for download');
+            downloadOptions.extractorArgs = 'youtube:player_client=android';
+          }
         } else {
           // Strategy 2: Use mobile client to bypass bot detection
-          console.log('📱 Using mobile client for YouTube (bot detection bypass)');
+          console.log('📱 [DEBUG] No YT_COOKIES_PATH set, using mobile client for YouTube download');
           downloadOptions.extractorArgs = 'youtube:player_client=android';
         }
       }
