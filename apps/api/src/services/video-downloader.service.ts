@@ -16,11 +16,11 @@ import { v4 as uuidv4 } from 'uuid';
  * - Separate audio/video tracks
  * 
  * yt-dlp automatically handles:
- * ✅ Token extraction from page
- * ✅ .m3u8 playlist parsing
- * ✅ Segment downloading & merging
- * ✅ Audio/video synchronization
- * ✅ Output as clean MP4
+ * Token extraction from page
+ * .m3u8 playlist parsing
+ * Segment downloading & merging
+ * Audio/video synchronization
+ * Output as clean MP4
  * 
  * Golden Command: yt-dlp -f "bv*+ba/b" --merge-output-format mp4
  * 
@@ -59,7 +59,6 @@ export class VideoDownloaderService {
   private readonly downloadDir: string;
 
   constructor() {
-    // Use uploads directory for downloaded videos
     this.downloadDir = path.join(process.cwd(), 'uploads', 'downloaded-videos');
     this.ensureDownloadDir();
   }
@@ -83,32 +82,26 @@ export class VideoDownloaderService {
       const urlObj = new URL(url);
       const hostname = urlObj.hostname.toLowerCase();
 
-      // YouTube
       if (hostname.includes('youtube.com') || hostname.includes('youtu.be')) {
         return { isValid: true, platform: 'YouTube' };
       }
 
-      // Twitter/X
       if (hostname.includes('twitter.com') || hostname.includes('x.com')) {
         return { isValid: true, platform: 'Twitter/X' };
       }
 
-      // Instagram
       if (hostname.includes('instagram.com')) {
         return { isValid: true, platform: 'Instagram' };
       }
 
-      // TikTok
       if (hostname.includes('tiktok.com')) {
         return { isValid: true, platform: 'TikTok' };
       }
 
-      // Vimeo
       if (hostname.includes('vimeo.com')) {
         return { isValid: true, platform: 'Vimeo' };
       }
 
-      // Facebook
       if (hostname.includes('facebook.com') || hostname.includes('fb.watch')) {
         return { isValid: true, platform: 'Facebook' };
       }
@@ -130,7 +123,6 @@ export class VideoDownloaderService {
    */
   async getVideoInfo(url: string): Promise<VideoInfo> {
     try {
-      // Check platform to determine if we need cookies
       const validation = this.validateUrl(url);
       const isYouTube = validation.platform === 'YouTube';
       
@@ -145,28 +137,23 @@ export class VideoDownloaderService {
         ],
       };
       
-      // YouTube bot detection bypass strategies
       if (isYouTube) {
-        // Strategy 1: Use cookies file if available
         if (process.env.YT_COOKIES_PATH) {
-          console.log('🔍 [DEBUG] YT_COOKIES_PATH env var found:', process.env.YT_COOKIES_PATH);
+          console.log('[DEBUG] YT_COOKIES_PATH env var found:', process.env.YT_COOKIES_PATH);
           
           try {
-            // Check if file exists and is readable
             const stats = await fs.stat(process.env.YT_COOKIES_PATH);
-            console.log('✅ [DEBUG] Cookies file exists');
-            console.log('📊 [DEBUG] File size:', stats.size, 'bytes');
-            console.log('🔐 [DEBUG] File permissions:', stats.mode.toString(8).slice(-3));
+            console.log('[DEBUG] Cookies file exists');
+            console.log('[DEBUG] File size:', stats.size, 'bytes');
+            console.log('[DEBUG] File permissions:', stats.mode.toString(8).slice(-3));
             
-            // Read first few lines to verify format (without exposing sensitive data)
             const content = await fs.readFile(process.env.YT_COOKIES_PATH, 'utf-8');
             const lines = content.split('\n').slice(0, 5);
-            console.log('📄 [DEBUG] First 5 lines of cookies file:');
+            console.log('[DEBUG] First 5 lines of cookies file:');
             lines.forEach((line, i) => {
               if (line.startsWith('#') || line.trim() === '') {
                 console.log(`   Line ${i + 1}: ${line}`);
               } else {
-                // Mask cookie values for security
                 const parts = line.split('\t');
                 if (parts.length >= 6) {
                   console.log(`   Line ${i + 1}: Domain=${parts[0]} Name=${parts[5]} Value=[MASKED]`);
@@ -177,60 +164,54 @@ export class VideoDownloaderService {
             const cookieCount = content.split('\n').filter(line => 
               !line.startsWith('#') && line.trim() !== ''
             ).length;
-            console.log('🍪 [DEBUG] Total cookies in file:', cookieCount);
+            console.log('[DEBUG] Total cookies in file:', cookieCount);
             
-            // Check for critical YouTube cookies
             const criticalCookies = ['SID', 'HSID', 'SSID', 'APISID', 'SAPISID'];
             const foundCookies = criticalCookies.filter(cookie => content.includes(`\t${cookie}\t`));
-            console.log('🔑 [DEBUG] Critical cookies found:', foundCookies.length > 0 ? foundCookies.join(', ') : 'NONE');
+            console.log('[DEBUG] Critical cookies found:', foundCookies.length > 0 ? foundCookies.join(', ') : 'NONE');
             
             if (foundCookies.length === 0) {
-              console.warn('⚠️  [DEBUG] Missing critical authentication cookies (SID, HSID, SSID, APISID, SAPISID)');
-              console.warn('⚠️  [DEBUG] Cookies may be incomplete. Consider re-exporting from browser.');
+              console.warn('[DEBUG] Missing critical authentication cookies (SID, HSID, SSID, APISID, SAPISID)');
+              console.warn('[DEBUG] Cookies may be incomplete. Consider re-exporting from browser.');
             }
             
             options.cookies = process.env.YT_COOKIES_PATH;
-            console.log('✅ [DEBUG] Using cookies file for YouTube');
+            console.log('[DEBUG] Using cookies file for YouTube');
           } catch (error) {
-            console.error('❌ [DEBUG] Failed to read cookies file:', error);
-            console.error('❌ [DEBUG] Error details:', error instanceof Error ? error.message : String(error));
-            console.log('📱 [DEBUG] Falling back to mobile client strategy');
+            console.error('[DEBUG] Failed to read cookies file:', error);
+            console.error('[DEBUG] Error details:', error instanceof Error ? error.message : String(error));
+            console.log('[DEBUG] Falling back to mobile client strategy');
             options.extractorArgs = 'youtube:player_client=android';
           }
         } else {
-          // Strategy 2: Use mobile client to bypass bot detection
-          console.log('📱 [DEBUG] No YT_COOKIES_PATH set, using mobile client for YouTube (bot detection bypass)');
+          console.log('[DEBUG] No YT_COOKIES_PATH set, using mobile client for YouTube (bot detection bypass)');
           options.extractorArgs = 'youtube:player_client=android';
         }
       }
       
       const info = await youtubeDl(url, options) as any;
 
-      console.log('🔍 yt-dlp info retrieved for:', url);
-      console.log('📺 Title:', info.title);
-      console.log('🌐 Platform:', info.webpage_url_domain || info.extractor);
-      console.log('🔗 webpage_url:', info.webpage_url);
+      console.log('yt-dlp info retrieved for:', url);
+      console.log('Title:', info.title);
+      console.log('Platform:', info.webpage_url_domain || info.extractor);
+      console.log('webpage_url:', info.webpage_url);
 
-      // Extract direct video URL if available (for embedding)
       let directUrl = url; // Default to original URL
       
-      // For YouTube, use the watch URL
       if (info.webpage_url) {
         directUrl = info.webpage_url;
-        console.log('✅ Using webpage_url:', directUrl);
+        console.log('Using webpage_url:', directUrl);
       }
       
-      // Try to get a playable format URL (lower quality for preview)
       if (info.formats && Array.isArray(info.formats)) {
-        console.log(`📊 Found ${info.formats.length} formats`);
+        console.log(`Found ${info.formats.length} formats`);
         
-        // Find a format with both video and audio, or just video
         const playableFormat = info.formats.find((f: any) => 
           f.url && (f.vcodec !== 'none' || f.acodec !== 'none')
         );
         
         if (playableFormat?.url) {
-          console.log('🎬 Playable format found:');
+          console.log('Playable format found:');
           console.log('   - Format ID:', playableFormat.format_id);
           console.log('   - Quality:', playableFormat.quality || playableFormat.format_note);
           console.log('   - Resolution:', playableFormat.resolution || `${playableFormat.width}x${playableFormat.height}`);
@@ -239,11 +220,11 @@ export class VideoDownloaderService {
           console.log('   - URL:', playableFormat.url);
           directUrl = playableFormat.url;
         } else {
-          console.log('⚠️  No playable format with direct URL found');
+          console.log('No playable format with direct URL found');
         }
       }
 
-      console.log('🎯 Final directUrl being used:', directUrl);
+      console.log('Final directUrl being used:', directUrl);
 
       return {
         title: info.title || 'Unknown',
@@ -277,28 +258,22 @@ export class VideoDownloaderService {
    */
   async downloadVideo(url: string, userId: string): Promise<DownloadResult> {
     try {
-      // Validate URL first
       const validation = this.validateUrl(url);
       if (!validation.isValid) {
         throw new Error(validation.error || 'Invalid URL');
       }
 
-      console.log(`📥 Downloading video from ${validation.platform}: ${url}`);
+      console.log(`Downloading video from ${validation.platform}: ${url}`);
 
-      // Generate unique filename
       const videoId = uuidv4();
       const outputTemplate = path.join(this.downloadDir, `${userId}_${videoId}.%(ext)s`);
 
-      // Download with best quality - optimized for Twitter HLS streams
-      // Twitter videos are HLS (.m3u8) streams, yt-dlp handles extraction & merging
       
-      // Set appropriate referer based on platform
       const referer = validation.platform === 'Twitter/X' ? 'twitter.com' : 'youtube.com';
       const isYouTube = validation.platform === 'YouTube';
       
       const downloadOptions: any = {
         output: outputTemplate,
-        // Golden format selector: best video + best audio, fallback to best combined
         format: 'bv*+ba/b',
         mergeOutputFormat: 'mp4',
         noCheckCertificates: true,
@@ -310,36 +285,30 @@ export class VideoDownloaderService {
         ],
       };
       
-      // YouTube bot detection bypass strategies
       if (isYouTube) {
-        // Strategy 1: Use cookies file if available
         if (process.env.YT_COOKIES_PATH) {
-          console.log('🔍 [DEBUG] YT_COOKIES_PATH env var found:', process.env.YT_COOKIES_PATH);
+          console.log('[DEBUG] YT_COOKIES_PATH env var found:', process.env.YT_COOKIES_PATH);
           
           try {
-            // Check if file exists and is readable
             const stats = await fs.stat(process.env.YT_COOKIES_PATH);
-            console.log('✅ [DEBUG] Cookies file exists for download');
-            console.log('📊 [DEBUG] File size:', stats.size, 'bytes');
+            console.log('[DEBUG] Cookies file exists for download');
+            console.log('[DEBUG] File size:', stats.size, 'bytes');
             
             downloadOptions.cookies = process.env.YT_COOKIES_PATH;
-            console.log('🍪 [DEBUG] Using cookies file for YouTube download');
+            console.log('[DEBUG] Using cookies file for YouTube download');
           } catch (error) {
-            console.error('❌ [DEBUG] Failed to access cookies file:', error);
-            console.log('📱 [DEBUG] Falling back to mobile client strategy for download');
+            console.error('[DEBUG] Failed to access cookies file:', error);
+            console.log('[DEBUG] Falling back to mobile client strategy for download');
             downloadOptions.extractorArgs = 'youtube:player_client=android';
           }
         } else {
-          // Strategy 2: Use mobile client to bypass bot detection
-          console.log('📱 [DEBUG] No YT_COOKIES_PATH set, using mobile client for YouTube download');
+          console.log('[DEBUG] No YT_COOKIES_PATH set, using mobile client for YouTube download');
           downloadOptions.extractorArgs = 'youtube:player_client=android';
         }
       }
 
-      // For Twitter/X, add specific handling for HLS streams
       if (validation.platform === 'Twitter/X') {
-        console.log('🐦 Detected Twitter/X video - using HLS-optimized settings with correct referer');
-        // yt-dlp automatically handles:
+        console.log('Detected Twitter/X video - using HLS-optimized settings with correct referer');
         // - Token extraction
         // - .m3u8 playlist parsing
         // - Segment downloading & merging
@@ -348,10 +317,8 @@ export class VideoDownloaderService {
 
       const output = await youtubeDl(url, downloadOptions);
 
-      // Get video info
       const videoInfo = await this.getVideoInfo(url);
 
-      // Find the downloaded file (yt-dlp may change the extension)
       const files = await fs.readdir(this.downloadDir);
       const downloadedFile = files.find(file => 
         file.startsWith(`${userId}_${videoId}`) && file.endsWith('.mp4')
@@ -363,7 +330,7 @@ export class VideoDownloaderService {
 
       const localPath = path.join(this.downloadDir, downloadedFile);
 
-      console.log(`✅ Video downloaded successfully: ${localPath}`);
+      console.log(`Video downloaded successfully: ${localPath}`);
 
       return {
         localPath,
@@ -382,7 +349,6 @@ export class VideoDownloaderService {
   async downloadAndGetDuration(url: string, userId: string): Promise<DownloadWithDurationResult> {
     const result = await this.downloadVideo(url, userId);
     
-    // Use ffprobe to get accurate duration
     const ffmpeg = await import('fluent-ffmpeg');
     const duration = await new Promise<number>((resolve, reject) => {
       ffmpeg.default.ffprobe(result.localPath, (err, metadata) => {
@@ -409,7 +375,7 @@ export class VideoDownloaderService {
   async cleanupFile(filePath: string): Promise<void> {
     try {
       await fs.unlink(filePath);
-      console.log(`🗑️ Cleaned up file: ${filePath}`);
+      console.log(`Cleaned up file: ${filePath}`);
     } catch (error) {
       console.warn(`Failed to cleanup file ${filePath}:`, error);
     }
@@ -419,7 +385,6 @@ export class VideoDownloaderService {
    * Get download status/progress (for future websocket implementation)
    */
   async checkDownloadProgress(videoId: string): Promise<{ status: string; progress: number }> {
-    // Placeholder for future implementation with progress tracking
     return {
       status: 'processing',
       progress: 0,
@@ -427,8 +392,6 @@ export class VideoDownloaderService {
   }
 }
 
-// Export singleton instance
 export const videoDownloader = new VideoDownloaderService();
 
-// Export for testing
 export default videoDownloader;

@@ -46,7 +46,7 @@ export interface CreateProjectData {
   description?: string;
 }
 
-// 🔥 Hook: Fetch Projects List with filters
+// Hook: Fetch Projects List with filters
 export function useProjects(filters: ProjectFilters = {}) {
   const { session } = useAuth();
   
@@ -81,7 +81,7 @@ export function useProjects(filters: ProjectFilters = {}) {
   });
 }
 
-// 🔥 Hook: Fetch Single Project Details
+// Hook: Fetch Single Project Details
 export function useProject(projectId: string | undefined) {
   const { session } = useAuth();
 
@@ -106,7 +106,7 @@ export function useProject(projectId: string | undefined) {
   });
 }
 
-// 🔥 Hook: Create New Project
+// Hook: Create New Project
 export function useCreateProject() {
   const { session } = useAuth();
   const queryClient = useQueryClient();
@@ -142,7 +142,7 @@ export function useCreateProject() {
   });
 }
 
-// 🔥 Hook: Update Project
+// Hook: Update Project
 export function useUpdateProject() {
   const { session } = useAuth();
   const queryClient = useQueryClient();
@@ -177,7 +177,7 @@ export function useUpdateProject() {
   });
 }
 
-// 🔥 Hook: Delete Project
+// Hook: Delete Project
 export function useDeleteProject() {
   const { session } = useAuth();
   const queryClient = useQueryClient();

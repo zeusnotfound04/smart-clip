@@ -33,7 +33,6 @@ export class EmailService {
       if (error) {
         console.error('Error sending OTP email:', error);
         
-        // Check for Resend testing mode restriction
         if (error.message && error.message.includes('testing emails')) {
           throw new Error('Email service is in testing mode. Please use fbamediallc@gmail.com or verify a domain at resend.com/domains');
         }
@@ -56,14 +55,13 @@ export class EmailService {
       const { data, error } = await resend.emails.send({
         from: this.FROM_EMAIL,
         to,
-        subject: `Welcome to ${this.APP_NAME}! 🎉`,
+        subject: `Welcome to ${this.APP_NAME}! `,
         html: this.generateWelcomeEmailHTML({ name }),
       });
 
       if (error) {
         console.error('Error sending welcome email:', error);
         
-        // Check for Resend testing mode restriction
         if (error.message && error.message.includes('testing emails')) {
           throw new Error('Email service is in testing mode');
         }
@@ -121,7 +119,7 @@ export class EmailService {
               </div>
               
               <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 30px 0 0; padding: 20px; background-color: #f8f9fa; border-radius: 8px; border-left: 4px solid #667eea;">
-                ⏰ <strong>Important:</strong> This code will expire in 10 minutes for security reasons.
+                <strong>Important:</strong> This code will expire in 10 minutes for security reasons.
               </p>
               
               <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 20px 0 0;">
@@ -169,7 +167,7 @@ export class EmailService {
           <tr>
             <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 60px; text-align: center;">
               <img src="${this.APP_URL}/logo.png" alt="${this.APP_NAME}" style="height: 60px; margin-bottom: 20px; border-radius: 8px;" />
-              <h1 style="color: #ffffff; font-size: 32px; font-weight: 700; margin: 0; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">Welcome to ${this.APP_NAME}! 🎉</h1>
+              <h1 style="color: #ffffff; font-size: 32px; font-weight: 700; margin: 0; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">Welcome to ${this.APP_NAME}! </h1>
             </td>
           </tr>
           
@@ -181,7 +179,7 @@ export class EmailService {
               </p>
               
               <p style="color: #333333; font-size: 16px; line-height: 1.6; margin: 0 0 20px;">
-                Your email has been successfully verified! Welcome to the ${this.APP_NAME} family. We're thrilled to have you on board! 🚀
+                Your email has been successfully verified! Welcome to the ${this.APP_NAME} family. We're thrilled to have you on board! 
               </p>
               
               <p style="color: #333333; font-size: 16px; line-height: 1.6; margin: 0 0 30px;">
@@ -191,25 +189,25 @@ export class EmailService {
               <!-- Features List -->
               <div style="background-color: #f8f9fa; border-radius: 12px; padding: 30px; margin: 30px 0;">
                 <div style="margin-bottom: 20px;">
-                  <span style="font-size: 24px; margin-right: 10px;">✨</span>
+                  <span style="font-size: 24px; margin-right: 10px;"></span>
                   <strong style="color: #333333; font-size: 16px;">AI-Powered Clip Generation</strong>
                   <p style="color: #666666; font-size: 14px; margin: 5px 0 0 34px;">Automatically generate engaging clips from your videos</p>
                 </div>
                 
                 <div style="margin-bottom: 20px;">
-                  <span style="font-size: 24px; margin-right: 10px;">🎬</span>
+                  <span style="font-size: 24px; margin-right: 10px;"></span>
                   <strong style="color: #333333; font-size: 16px;">Smart Video Processing</strong>
                   <p style="color: #666666; font-size: 14px; margin: 5px 0 0 34px;">Advanced video editing and processing tools</p>
                 </div>
                 
                 <div style="margin-bottom: 20px;">
-                  <span style="font-size: 24px; margin-right: 10px;">📝</span>
+                  <span style="font-size: 24px; margin-right: 10px;"></span>
                   <strong style="color: #333333; font-size: 16px;">Auto Subtitles</strong>
                   <p style="color: #666666; font-size: 14px; margin: 5px 0 0 34px;">Generate accurate subtitles automatically</p>
                 </div>
                 
                 <div>
-                  <span style="font-size: 24px; margin-right: 10px;">💎</span>
+                  <span style="font-size: 24px; margin-right: 10px;"></span>
                   <strong style="color: #333333; font-size: 16px;">Free Credits</strong>
                   <p style="color: #666666; font-size: 14px; margin: 5px 0 0 34px;">Start with 10 free credits to try our features</p>
                 </div>

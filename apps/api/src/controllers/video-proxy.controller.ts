@@ -17,9 +17,8 @@ export const proxyVideo = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Video URL is required' });
     }
 
-    console.log('🎥 Proxying video request for:', url);
+    console.log('Proxying video request for:', url);
 
-    // Fetch the video with proper headers to bypass CORS
     const response = await axios({
       method: 'GET',
       url: url,
@@ -32,7 +31,6 @@ export const proxyVideo = async (req: AuthRequest, res: Response) => {
       timeout: 30000,
     });
 
-    // Set appropriate headers for video streaming
     res.setHeader('Content-Type', response.headers['content-type'] || 'video/mp4');
     res.setHeader('Accept-Ranges', 'bytes');
     res.setHeader('Cache-Control', 'public, max-age=3600');
@@ -41,7 +39,6 @@ export const proxyVideo = async (req: AuthRequest, res: Response) => {
       res.setHeader('Content-Length', response.headers['content-length']);
     }
 
-    // Stream the video data
     response.data.pipe(res);
 
     response.data.on('error', (error: any) => {

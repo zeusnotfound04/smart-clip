@@ -8,7 +8,7 @@ interface AuthRequest extends Request {
 
 const createProjectSchema = z.object({
   name: z.string().min(1),
-  type: z.enum(['auto-subtitles', 'split-streamer', 'smart-clipper', 'ai-script-generator', 'fake-conversations']),
+  type: z.enum(['auto-subtitles', 'split-streamer', 'smart-clipper', 'ai-script-generator']),
   videoId: z.string().optional(),
   config: z.object({}).optional()
 });

@@ -1,7 +1,9 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/lib/auth-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,7 +48,7 @@ interface Clip {
 }
 
 export default function MyClipsPage() {
-  const { data: session } = useSession();
+  const { user } = useAuth();
   const [clips, setClips] = useState<Clip[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -55,10 +57,10 @@ export default function MyClipsPage() {
   const [filterFavorites, setFilterFavorites] = useState(false);
 
   useEffect(() => {
-    if (session) {
+    if (user) {
       fetchClips();
     }
-  }, [session, sortBy, filterFavorites]);
+  }, [user, sortBy, filterFavorites]);
 
   const fetchClips = async () => {
     try {
@@ -72,9 +74,11 @@ export default function MyClipsPage() {
         params.append('favorite', 'true');
       }
 
+      const token = typeof window !== 'undefined' ? localStorage.getItem('smartclips_token') : null;
+
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/my-clips?${params}`, {
         headers: {
-          Authorization: `Bearer ${session?.accessToken}`,
+          Authorization: `Bearer ${token}`,
         },
       });
 
@@ -92,10 +96,12 @@ export default function MyClipsPage() {
 
   const toggleFavorite = async (clipId: string) => {
     try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('smartclips_token') : null;
+      
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/my-clips/${clipId}/favorite`, {
         method: 'PATCH',
         headers: {
-          Authorization: `Bearer ${session?.accessToken}`,
+          Authorization: `Bearer ${token}`,
         },
       });
 
@@ -114,10 +120,12 @@ export default function MyClipsPage() {
     if (!confirm('Are you sure you want to delete this clip?')) return;
 
     try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('smartclips_token') : null;
+      
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/videos/${clipId}`, {
         method: 'DELETE',
         headers: {
-          Authorization: `Bearer ${session?.accessToken}`,
+          Authorization: `Bearer ${token}`,
         },
       });
 
@@ -427,6 +435,7 @@ export default function MyClipsPage() {
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }

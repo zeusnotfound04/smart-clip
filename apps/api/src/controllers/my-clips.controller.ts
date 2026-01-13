@@ -26,12 +26,10 @@ export const getMyClips = async (req: AuthRequest, res: Response) => {
       status: 'uploaded' // Only show successfully uploaded videos
     };
 
-    // Filter by favorite
     if (favorite === 'true') {
       where.isFavorite = true;
     }
 
-    // Filter by tags
     if (tags) {
       const tagArray = typeof tags === 'string' ? tags.split(',') : tags;
       where.tags = {
@@ -72,7 +70,6 @@ export const getMyClips = async (req: AuthRequest, res: Response) => {
       }
     });
 
-    // Generate signed URLs for videos and thumbnails
     const clipsWithUrls = await Promise.all(
       videos.map(async (video) => {
         const videoUrl = await getSignedDownloadUrl(video.filePath);
@@ -89,7 +86,6 @@ export const getMyClips = async (req: AuthRequest, res: Response) => {
       })
     );
 
-    // Get total count for pagination
     const totalCount = await prisma.video.count({ where });
 
     res.json({
@@ -173,7 +169,6 @@ export const updateClipMetadata = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const { title, description, tags } = req.body;
 
-    // Verify ownership
     const video = await prisma.video.findFirst({
       where: { id, userId: req.userId }
     });

@@ -47,22 +47,16 @@ export class ClipGenerationService {
   constructor() {
     this.uploadsDir = path.join(process.cwd(), 'uploads');
     this.outputDir = path.join(process.cwd(), 'uploads', 'clips');
-    // Use cross-platform temp directory instead of project-relative temp
     this.tempDir = process.env.TEMP_DIR || path.join(os.tmpdir(), 'smart-clipper');
   }
 
   private normalizePathForFFmpeg(filePath: string): string {
-    // Normalize path for FFmpeg command line usage
-    // FFmpeg works with forward slashes on all platforms, but we need to handle Windows paths carefully
     const resolved = path.resolve(filePath);
     
-    // On Windows, if we have a drive letter, ensure the path is properly formatted for FFmpeg
     if (process.platform === 'win32' && resolved.match(/^[A-Za-z]:\\/)) {
-      // Convert backslashes to forward slashes for FFmpeg on Windows
       return resolved.replace(/\\/g, '/');
     }
     
-    // On Unix-like systems, return as-is (already uses forward slashes)
     return resolved;
   }
 
@@ -77,13 +71,10 @@ export class ClipGenerationService {
     console.log(`Generating clip for segment ${segmentId}: ${startTime}s - ${endTime}s`);
 
     try {
-      // Calculate clip duration for credits
       const clipDuration = endTime - startTime;
       
-      // Import credit service
       const { CreditService } = await import('./credit.service');
       
-      // Validate credits before processing
       const validation = await CreditService.validateAndPrepareProcessing(
         userId,
         clipDuration,
@@ -94,13 +85,11 @@ export class ClipGenerationService {
         throw new Error(validation.message || 'Insufficient credits');
       }
       
-      console.log(`✅ [CREDITS] User has sufficient credits (${validation.currentCredits}/${validation.creditsRequired})`);
-      console.log(`🎨 [WATERMARK] Will apply watermark: ${validation.shouldWatermark ? 'Yes' : 'No'}`);
+      console.log(`[CREDITS] User has sufficient credits (${validation.currentCredits}/${validation.creditsRequired})`);
+      console.log(`[WATERMARK] Will apply watermark: ${validation.shouldWatermark ? 'Yes' : 'No'}`);
 
-      // Ensure output directory exists
       await this.ensureOutputDirectory();
 
-      // Update segment status
       await prisma.highlightSegment.update({
         where: { id: segmentId },
         data: { status: 'generating' }
@@ -115,7 +104,6 @@ export class ClipGenerationService {
         exportSettings
       );
 
-      // Update segment with completion
       await prisma.highlightSegment.update({
         where: { id: segmentId },
         data: { 
@@ -124,7 +112,6 @@ export class ClipGenerationService {
           generatedAt: new Date()
         }
       });
-      // Deduct credits after successful clip generation
       try {
         await CreditService.deductCredits(
           userId,
@@ -137,10 +124,9 @@ export class ClipGenerationService {
             creditsUsed: validation.creditsRequired,
           }
         );
-        console.log(`✅ [CREDITS] Successfully deducted ${validation.creditsRequired} credits`);
+        console.log(`[CREDITS] Successfully deducted ${validation.creditsRequired} credits`);
       } catch (creditError) {
-        console.error('❌ [CREDITS] Failed to deduct credits:', creditError);
-        // Continue even if credit deduction fails (clip already generated)
+        console.error('[CREDITS] Failed to deduct credits:', creditError);
       }
       console.log(`Clip generated successfully: ${outputPath}`);
       return outputPath;
@@ -188,7 +174,6 @@ export class ClipGenerationService {
     }));
 
     try {
-      // Process each segment
       for (let i = 0; i < project.highlightSegments.length; i++) {
         const segment = project.highlightSegments[i];
         const progressIndex = progress.findIndex(p => p.segmentId === segment.id);
@@ -218,7 +203,6 @@ export class ClipGenerationService {
         }
       }
 
-      // Create compilation if requested
       if (options.createCompilation && progress.filter(p => p.status === 'completed').length > 1) {
         await this.createCompilation(
           projectId,
@@ -253,37 +237,31 @@ export class ClipGenerationService {
     let cleanupPath: string | null = null;
 
     try {
-      // Check if inputPath is an S3 key or local path
       if (inputPath.startsWith('videos/')) {
-        console.log(`🚀 Streaming video from S3: ${inputPath}`);
+        console.log(`Streaming video from S3: ${inputPath}`);
         await this.ensureTempDir();
         
-        // 🔥 Use streaming download to file (much faster)
         const videoExtension = path.extname(inputPath) || '.mp4';
         localVideoPath = path.join(this.tempDir, `clip_${segmentId}_input${videoExtension}`);
         await downloadFileToPath(inputPath, localVideoPath);
         cleanupPath = localVideoPath;
         
-        console.log(`✅ Video streamed to: ${localVideoPath}`);
+        console.log(`Video streamed to: ${localVideoPath}`);
       }
 
-      // Build FFmpeg command
       const normalizedInputPath = this.normalizePathForFFmpeg(localVideoPath);
       const normalizedOutputPath = this.normalizePathForFFmpeg(outputPath);
       let command = `ffmpeg -y -i "${normalizedInputPath}" -ss ${startTime} -t ${duration}`;
 
-    // Video encoding settings
     command += this.buildVideoFilters(settings);
     command += this.buildEncodingOptions(settings);
 
-    // Audio settings
     if (settings.includeAudio !== false) {
       command += ' -c:a aac -b:a 128k';
     } else {
       command += ' -an';
     }
 
-    // Output file
     command += ` "${normalizedOutputPath}"`;
 
     console.log(`Executing FFmpeg command: ${command}`);
@@ -294,15 +272,13 @@ export class ClipGenerationService {
         console.warn(`FFmpeg warnings: ${stderr}`);
       }
 
-      // Verify file was created
       const stats = await fs.stat(outputPath);
       if (stats.size === 0) {
         throw new Error('Generated file is empty');
       }
 
-      // Apply watermark if enabled
       if (settings.addWatermark) {
-        console.log(`\n📍 [CLIP-GENERATION] Applying watermark to clip`);
+        console.log(`\n[CLIP-GENERATION] Applying watermark to clip`);
         console.log('   Segment ID:', segmentId);
         console.log('   Output path:', outputPath);
         
@@ -318,15 +294,13 @@ export class ClipGenerationService {
             userId
           });
           
-          // Replace original with watermarked version
           await fs.unlink(outputPath);
           await fs.rename(watermarkedPath, outputPath);
-          console.log(`✅ [CLIP-GENERATION] Watermark applied successfully`);
+          console.log(`[CLIP-GENERATION] Watermark applied successfully`);
         } catch (watermarkError) {
-          console.error('❌ [CLIP-GENERATION] Watermark failed:', watermarkError);
+          console.error('[CLIP-GENERATION] Watermark failed:', watermarkError);
           console.error('   Error:', watermarkError instanceof Error ? watermarkError.message : String(watermarkError));
-          console.warn('⚠️ [CLIP-GENERATION] Continuing without watermark...');
-          // Continue without watermark if it fails
+          console.warn('[CLIP-GENERATION] Continuing without watermark...');
         }
       }
 
@@ -336,7 +310,6 @@ export class ClipGenerationService {
       console.error(`FFmpeg execution failed:`, error);
       throw new Error(`Video processing failed: ${error}`);
     } finally {
-      // Clean up temporary video file if we downloaded it from S3
       if (cleanupPath) {
         try {
           await fs.unlink(cleanupPath);
@@ -351,7 +324,6 @@ export class ClipGenerationService {
   private buildVideoFilters(settings: ClipExportSettings): string {
     const filters: string[] = [];
 
-    // Resolution scaling
     if (settings.resolution && settings.resolution !== 'original') {
       const resolutionMap = {
         '720p': 'scale=-2:720',
@@ -362,7 +334,6 @@ export class ClipGenerationService {
       filters.push(resolutionMap[settings.resolution]);
     }
 
-    // Aspect ratio cropping
     if (settings.cropToAspectRatio && settings.cropToAspectRatio !== 'original') {
       const cropMap = {
         '16:9': 'crop=ih*16/9:ih',
@@ -372,13 +343,10 @@ export class ClipGenerationService {
       filters.push(cropMap[settings.cropToAspectRatio]);
     }
 
-    // Fade in/out effects
     if (settings.fadeInOut) {
       filters.push('fade=in:0:15,fade=out:st=0:d=1');
     }
 
-    // Watermark - now handled via watermarkService after clip generation
-    // Image watermark will be applied post-processing for better quality
 
     return filters.length > 0 ? ` -vf "${filters.join(',')}"` : '';
   }
@@ -386,7 +354,6 @@ export class ClipGenerationService {
   private buildEncodingOptions(settings: ClipExportSettings): string {
     let options = '';
 
-    // Video codec and quality
     const qualityMap = {
       low: '-c:v libx264 -crf 28 -preset fast',
       medium: '-c:v libx264 -crf 23 -preset medium',
@@ -396,12 +363,10 @@ export class ClipGenerationService {
 
     options += ` ${qualityMap[settings.quality]}`;
 
-    // Custom bitrate override
     if (settings.bitrate && settings.quality !== 'source') {
       options += ` -b:v ${settings.bitrate}`;
     }
 
-    // Framerate
     if (settings.framerate) {
       options += ` -r ${settings.framerate}`;
     }
@@ -419,21 +384,18 @@ export class ClipGenerationService {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const compilationPath = path.join(this.outputDir, `compilation_${projectId}_${timestamp}.${options.exportSettings.format}`);
     
-    // Create file list for FFmpeg concat
     const fileListPath = path.join(this.outputDir, `filelist_${projectId}_${timestamp}.txt`);
     const fileList = completedClips
       .filter(clip => clip.outputPath)
-      .map(clip => `file '${this.normalizePathForFFmpeg(clip.outputPath!)}'`)
+      .map((clip: any) => `file '${this.normalizePathForFFmpeg(clip.outputPath!)}'`)
       .join('\n');
     
     await fs.writeFile(fileListPath, fileList);
 
-    // Build compilation command
     const normalizedFileListPath = this.normalizePathForFFmpeg(fileListPath);
     const normalizedCompilationPath = this.normalizePathForFFmpeg(compilationPath);
     let command = `ffmpeg -y -f concat -safe 0 -i "${normalizedFileListPath}"`;
     
-    // Add compilation title if specified
     if (options.compilationTitle) {
       const titleFilter = `drawtext=text='${options.compilationTitle}':fontsize=48:fontcolor=white:x=(w-tw)/2:y=(h-th)/2:enable='between(t,0,3)'`;
       command += ` -vf "${titleFilter}"`;
@@ -444,7 +406,6 @@ export class ClipGenerationService {
     try {
       await execAsync(command);
       
-      // Clean up temp file
       await fs.unlink(fileListPath);
       
       console.log(`Compilation created: ${compilationPath}`);
@@ -577,7 +538,6 @@ export class ClipGenerationService {
     estimatedSizeMB: number;
     estimatedProcessingTime: number;
   }> {
-    // Rough estimates based on common encoding settings
     const baseSizePerSecond = {
       low: 0.1,     // ~100KB per second
       medium: 0.3,  // ~300KB per second  
@@ -596,7 +556,6 @@ export class ClipGenerationService {
     const multiplier = resolution ? (resolutionMultiplier[resolution as keyof typeof resolutionMultiplier] || 1) : 1;
     const estimatedSizeMB = (duration * baseSizePerSecond[quality] * multiplier);
     
-    // Processing time estimate (very rough)
     const processingTimeMultiplier = quality === 'source' ? 0.1 : (quality === 'high' ? 1.5 : 1);
     const estimatedProcessingTime = duration * processingTimeMultiplier * 0.2; // ~0.2x real-time for medium quality
 

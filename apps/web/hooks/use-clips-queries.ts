@@ -43,7 +43,7 @@ export interface ClipFilters {
   isFavorite?: boolean;
 }
 
-// 🔥 Hook: Fetch Clips List with filters
+// Hook: Fetch Clips List with filters
 export function useClips(filters: ClipFilters = {}) {
   const { session } = useAuth();
   
@@ -78,7 +78,7 @@ export function useClips(filters: ClipFilters = {}) {
   });
 }
 
-// 🔥 Hook: Fetch Single Clip Details
+// Hook: Fetch Single Clip Details
 export function useClip(clipId: string | undefined) {
   const { session } = useAuth();
 
@@ -103,7 +103,7 @@ export function useClip(clipId: string | undefined) {
   });
 }
 
-// 🔥 Hook: Toggle Clip Favorite
+// Hook: Toggle Clip Favorite
 export function useToggleClipFavorite() {
   const { session } = useAuth();
   const queryClient = useQueryClient();
@@ -155,7 +155,7 @@ export function useToggleClipFavorite() {
   });
 }
 
-// 🔥 Hook: Delete Clip
+// Hook: Delete Clip
 export function useDeleteClip() {
   const { session } = useAuth();
   const queryClient = useQueryClient();
@@ -189,7 +189,7 @@ export function useDeleteClip() {
   });
 }
 
-// 🔥 Hook: Mark Clip as Used (updates lastUsedAt)
+// Hook: Mark Clip as Used (updates lastUsedAt)
 export function useMarkClipAsUsed() {
   const { session } = useAuth();
   const queryClient = useQueryClient();

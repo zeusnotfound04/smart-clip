@@ -31,12 +31,11 @@ interface AudioResult {
 export async function generateTTSAudio(options: TTSOptions): Promise<AudioResult> {
   const startTime = Date.now();
   
-  console.log(`🎵 [TTS] Text length: ${options.text.length} characters`);
-  console.log(`🎵 [TTS] Using Fish Audio for TTS generation`);
-  console.log(`🎵 [TTS] Voice: ${options.voice?.name || 'default'}`);
+  console.log(`[TTS] Text length: ${options.text.length} characters`);
+  console.log(`[TTS] Using Fish Audio for TTS generation`);
+  console.log(`[TTS] Voice: ${options.voice?.name || 'default'}`);
 
   try {
-    // Generate audio using Fish Audio
     const result = await fishAudioService.generateTTS({
       text: options.text,
       referenceId: options.voice?.name, // Pass the voice ID as referenceId
@@ -53,8 +52,8 @@ export async function generateTTSAudio(options: TTSOptions): Promise<AudioResult
     }
 
     const processingTime = Date.now() - startTime;
-    console.log(`✅ [TTS] Audio generated successfully with Fish Audio in ${processingTime}ms`);
-    console.log(`✅ [TTS] Audio URL: ${result.audioUrl}`);
+    console.log(`[TTS] Audio generated successfully with Fish Audio in ${processingTime}ms`);
+    console.log(`[TTS] Audio URL: ${result.audioUrl}`);
 
     return {
       success: true,
@@ -64,7 +63,7 @@ export async function generateTTSAudio(options: TTSOptions): Promise<AudioResult
     };
 
   } catch (error) {
-    console.error(`❌ [TTS] Fish Audio TTS failed:`, error instanceof Error ? error.message : 'Unknown error');
+    console.error(`[TTS] Fish Audio TTS failed:`, error instanceof Error ? error.message : 'Unknown error');
     throw new Error(`TTS generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
@@ -73,8 +72,6 @@ export async function generateTTSAudio(options: TTSOptions): Promise<AudioResult
  * Upload audio buffer to S3 (kept for compatibility but not used with Fish Audio)
  */
 async function uploadAudioToS3(audioBuffer: Buffer, type: string): Promise<string> {
-  // This function is kept for backward compatibility but not used with Fish Audio
-  // Fish Audio service handles S3 uploads internally
   return '';
 }
 
@@ -83,15 +80,13 @@ async function uploadAudioToS3(audioBuffer: Buffer, type: string): Promise<strin
  */
 export async function storeAudioInfo(scriptProjectId: string, audioUrl: string, duration: number, type: 'fish-audio', userId?: string): Promise<void> {
   try {
-    console.log(`🎵 [SERVICE] Storing audio info for script project ${scriptProjectId}`);
+    console.log(`[SERVICE] Storing audio info for script project ${scriptProjectId}`);
 
-    // Find or create a VideoGenerationProject for this script
     let videoProject = await prisma.videoGenerationProject.findFirst({
       where: { scriptProjectId }
     });
 
     if (!videoProject) {
-      // Create a new VideoGenerationProject with minimal required data
       videoProject = await prisma.videoGenerationProject.create({
         data: {
           userId: userId || 'temp-user',
@@ -105,7 +100,7 @@ export async function storeAudioInfo(scriptProjectId: string, audioUrl: string, 
           overallStatus: 'voice_generation',
         }
       });
-      console.log(`✅ [SERVICE] Created new VideoGenerationProject: ${videoProject.id}`);
+      console.log(`[SERVICE] Created new VideoGenerationProject: ${videoProject.id}`);
     } else {
       await prisma.videoGenerationProject.update({
         where: { id: videoProject.id },
@@ -118,12 +113,12 @@ export async function storeAudioInfo(scriptProjectId: string, audioUrl: string, 
           updatedAt: new Date(),
         }
       });
-      console.log(`✅ [SERVICE] Updated VideoGenerationProject: ${videoProject.id}`);
+      console.log(`[SERVICE] Updated VideoGenerationProject: ${videoProject.id}`);
     }
 
-    console.log(`✅ [SERVICE] Audio info stored successfully (Fish Audio)`);
+    console.log(`[SERVICE] Audio info stored successfully (Fish Audio)`);
   } catch (error) {
-    console.error(`❌ [SERVICE] Failed to store audio info:`, error);
+    console.error(`[SERVICE] Failed to store audio info:`, error);
     throw error;
   }
 }
@@ -139,7 +134,7 @@ export async function getAudioInfo(scriptProjectId: string) {
 
     return videoProject;
   } catch (error) {
-    console.error(`❌ [SERVICE] Failed to get audio info:`, error);
+    console.error(`[SERVICE] Failed to get audio info:`, error);
     return null;
   }
 }

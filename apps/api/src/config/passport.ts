@@ -16,13 +16,11 @@ passport.use(
           return done(new Error('No email found in Google profile'), undefined);
         }
 
-        // Find or create user
         let user = await prisma.user.findUnique({
           where: { email },
         });
 
         if (!user) {
-          // Create new user
           user = await prisma.user.create({
             data: {
               email,
@@ -32,7 +30,6 @@ passport.use(
             },
           });
 
-          // Create account link
           await prisma.account.create({
             data: {
               userId: user.id,
@@ -46,7 +43,6 @@ passport.use(
             },
           });
         } else {
-          // Update existing user's Google account info
           const existingAccount = await prisma.account.findFirst({
             where: {
               userId: user.id,
@@ -55,7 +51,6 @@ passport.use(
           });
 
           if (existingAccount) {
-            // Update tokens
             await prisma.account.update({
               where: { id: existingAccount.id },
               data: {
@@ -64,7 +59,6 @@ passport.use(
               },
             });
           } else {
-            // Link Google account to existing user
             await prisma.account.create({
               data: {
                 userId: user.id,
@@ -79,7 +73,6 @@ passport.use(
             });
           }
 
-          // Update user profile
           await prisma.user.update({
             where: { id: user.id },
             data: {

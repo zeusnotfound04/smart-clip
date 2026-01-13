@@ -24,16 +24,13 @@ const generateSchema = z.object({
       italic: z.boolean().default(false),
       alignment: z.enum(['left', 'center', 'right']).default('center'),
       showShadow: z.boolean().default(true),
-      // Gradient support
       useGradient: z.boolean().optional(),
       gradientType: z.enum(['linear', 'radial']).optional(),
       gradientColors: z.array(z.string()).optional(),
       gradientDirection: z.number().optional(),
-      // Shadow enhancements
       shadowIntensity: z.number().optional(),
       shadowOffsetX: z.number().optional(),
       shadowOffsetY: z.number().optional(),
-      // Position and scale
       position: z.object({
         x: z.number(),
         y: z.number()
@@ -62,16 +59,13 @@ const configSchema = z.object({
       italic: z.boolean().default(false),
       alignment: z.enum(['left', 'center', 'right']).default('center'),
       showShadow: z.boolean().default(true),
-      // Gradient support
       useGradient: z.boolean().optional(),
       gradientType: z.enum(['linear', 'radial']).optional(),
       gradientColors: z.array(z.string()).optional(),
       gradientDirection: z.number().optional(),
-      // Shadow enhancements
       shadowIntensity: z.number().optional(),
       shadowOffsetX: z.number().optional(),
       shadowOffsetY: z.number().optional(),
-      // Position and scale
       position: z.object({
         x: z.number(),
         y: z.number()
@@ -95,15 +89,13 @@ export const generate = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Video not found' });
     }
 
-    // Check if video is already processing
     if (video.status === 'processing') {
-      // Check if there's an active job for this video
       const { subtitleQueue } = await import('../lib/queues');
       const jobs = await subtitleQueue.getJobs(['active', 'waiting', 'delayed']);
       const existingJob = jobs.find(job => job.data.videoId === videoId);
       
       if (existingJob) {
-        console.log(`⚠️ Video ${videoId} is already being processed by job ${existingJob.id}`);
+        console.log(`Video ${videoId} is already being processed by job ${existingJob.id}`);
         return res.json({
           success: true,
           videoId,
@@ -117,15 +109,13 @@ export const generate = async (req: AuthRequest, res: Response) => {
     }
 
     if (language) {
-      console.log(`🌍 Using specified language: ${language}`);
+      console.log(`Using specified language: ${language}`);
     }
 
-    // Calculate ETA based on video duration
     const videoDuration = video.duration || 0;
     const estimatedMinutes = Math.ceil(videoDuration / 10); // ~10 seconds per minute of video (optimized)
     const eta = estimatedMinutes * 60 * 1000; // Convert to milliseconds
 
-    // Queue the job instead of processing synchronously
     const { subtitleQueue } = await import('../lib/queues');
     const jobId = `subtitle-${videoId}-${Date.now()}`;
     
@@ -148,9 +138,8 @@ export const generate = async (req: AuthRequest, res: Response) => {
       data: { status: 'processing' }
     });
 
-    console.log(`✅ Subtitle job created: ${jobId} for video ${videoId} (${videoDuration}s, ETA: ${estimatedMinutes} min)`);
+    console.log(`Subtitle job created: ${jobId} for video ${videoId} (${videoDuration}s, ETA: ${estimatedMinutes} min)`);
 
-    // Return immediately with job ID and ETA for polling
     res.json({
       success: true,
       videoId,
@@ -161,7 +150,7 @@ export const generate = async (req: AuthRequest, res: Response) => {
       pollUrl: `/api/subtitles/status/${job.id}`
     });
   } catch (error: any) {
-    console.error('❌ Subtitle generation error:', error);
+    console.error('Subtitle generation error:', error);
     
     if (req.body.videoId) {
       await prisma.video.update({
@@ -174,7 +163,6 @@ export const generate = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: error.issues[0].message });
     }
     
-    // Check if it's a credit error
     const errorMessage = error?.message || '';
     const isInsufficientCredits = 
       errorMessage.toLowerCase().includes('insufficient credit') ||
@@ -263,7 +251,6 @@ export const getSubtitleJobStatus = async (req: AuthRequest, res: Response) => {
     const progress = job.progress();
     const jobData = job.data;
 
-    // Get video status
     const video = await prisma.video.findUnique({
       where: { id: jobData.videoId },
       select: {
@@ -274,7 +261,6 @@ export const getSubtitleJobStatus = async (req: AuthRequest, res: Response) => {
       }
     });
 
-    // Calculate remaining time based on progress
     const videoDuration = video?.duration || 0;
     const estimatedTotalMinutes = Math.ceil(videoDuration / 10);
     const progressPercent = typeof progress === 'number' ? progress : 0;
@@ -318,7 +304,7 @@ export const exportSRT = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'No subtitles found' });
     }
 
-    const segments = subtitles.map(sub => ({
+    const segments = subtitles.map((sub: any) => ({
       text: sub.text,
       startTime: sub.startTime,
       endTime: sub.endTime,
@@ -351,7 +337,7 @@ export const downloadSRT = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Subtitles not found' });
     }
 
-    const segments = subtitles.map(sub => ({
+    const segments = subtitles.map((sub: any) => ({
       text: sub.text,
       startTime: sub.startTime,
       endTime: sub.endTime,
@@ -385,7 +371,6 @@ export const getDetailedSubtitles = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Video not found' });
     }
 
-    // Calculate timing information
     const detailedSubtitles = video.subtitles.map((subtitle, index) => {
       const duration = subtitle.endTime - subtitle.startTime;
       const wordsPerMinute = subtitle.text.split(' ').length / (duration / 60);
@@ -407,7 +392,6 @@ export const getDetailedSubtitles = async (req: AuthRequest, res: Response) => {
       };
     });
 
-    // Calculate overall statistics
     const stats = {
       totalSegments: detailedSubtitles.length,
       totalDuration: video.duration || (detailedSubtitles.length > 0 ? Math.max(...detailedSubtitles.map(s => s.endTime)) : 0),
@@ -450,11 +434,9 @@ export const updateConfiguration = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Video not found' });
     }
 
-    // Regenerate the video with new subtitle configuration
     try {
       const result = await generateVideoWithSubtitles(videoId, video.filePath, req.userId!, options);
       
-      // Update video with new subtitled video URL
       await prisma.video.update({
         where: { id: videoId },
         data: { 
@@ -464,8 +446,6 @@ export const updateConfiguration = async (req: AuthRequest, res: Response) => {
 
       console.log('Successfully updated subtitle configuration and regenerated video:', videoId);
 
-    // Optionally, regenerate video with new subtitle styling
-    // This would be done asynchronously in a production environment
       console.log('Successfully updated subtitle configuration and regenerated video:', videoId);
 
       res.json({
@@ -487,7 +467,6 @@ export const updateConfiguration = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// Helper function to format time in MM:SS.mmm format
 const formatTime = (seconds: number): string => {
   const minutes = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);

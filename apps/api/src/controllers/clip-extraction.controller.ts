@@ -22,7 +22,6 @@ export async function extractClip(req: AuthRequest, res: Response): Promise<void
       return;
     }
 
-    // Create project record
     const project = await prisma.project.create({
       data: {
         userId,
@@ -38,7 +37,6 @@ export async function extractClip(req: AuthRequest, res: Response): Promise<void
       }
     });
 
-    // Add job to queue
     const job = await extractClipQueue.add('extract-clip', {
       projectId: project.id,
       videoUrl,
@@ -94,7 +92,7 @@ export async function getClips(req: AuthRequest, res: Response): Promise<void> {
 
     res.json({ 
       success: true,
-      clips: clips.map(clip => ({
+      clips: clips.map((clip: any) => ({
         id: clip.id,
         status: clip.status,
         outputPath: clip.outputPath,

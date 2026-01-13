@@ -107,12 +107,12 @@ export default function CreditsPage() {
       // Call test endpoint to simulate webhook and add credits
       apiClient.simulateCheckoutSuccess(tier, billing)
         .then(() => {
-          alert('🎉 Subscription created successfully! Your credits have been added.');
+          alert('Subscription created successfully! Your credits have been added.');
           loadData(); // Reload to show new credits
         })
         .catch((error) => {
           console.error('Failed to activate subscription:', error);
-          alert('⚠️ Payment successful but failed to add credits. Please contact support.');
+          alert('Payment successful but failed to add credits. Please contact support.');
         })
         .finally(() => {
           // Clean up URL

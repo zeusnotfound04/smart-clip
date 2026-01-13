@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 import path from "path";
 
 const nextConfig: NextConfig = {
+  // Enable standalone output for Docker optimization
+  output: 'standalone',
+  
   // Allow cross-origin requests from your domain
   allowedDevOrigins: [
     'smartclips.gunman.social',
@@ -14,7 +17,7 @@ const nextConfig: NextConfig = {
   
   // Turbopack configuration
   turbopack: {
-    root: path.resolve(__dirname, '../../'), // Set to monorepo root with absolute path
+    root: path.resolve(__dirname, '../../'),
   },
   
   // Image optimization

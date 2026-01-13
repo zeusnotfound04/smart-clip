@@ -78,7 +78,6 @@ export const deductCredits = (
         projectType: req.body.projectType || req.path.split('/')[1],
       });
 
-      // Attach credit info to response
       res.locals.creditInfo = {
         deducted: amount,
         newBalance: result.newBalance,

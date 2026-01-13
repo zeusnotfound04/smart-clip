@@ -3,7 +3,6 @@ import { apiDocs } from '../controllers/docs.controller';
 
 const router: Router = Router();
 
-// API Documentation
 router.get('/', apiDocs);
 
 export default router;

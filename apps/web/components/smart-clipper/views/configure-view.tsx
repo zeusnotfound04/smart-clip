@@ -25,12 +25,12 @@ export function ConfigureView({
   currentProject,
   onAnalyzeVideo
 }: ConfigureViewProps) {
-  console.log('🎛️ [SMART_CLIPPER] Rendering configure view');
-  console.log('📊 Content types count:', contentTypes.length);
-  console.log('📋 Content types:', contentTypes);
-  console.log('🎯 Selected type:', selectedContentType);
-  console.log('⚙️ Content config:', contentConfig);
-  console.log('🔄 Loading state:', loading);
+  console.log('[SMART_CLIPPER] Rendering configure view');
+  console.log('Content types count:', contentTypes.length);
+  console.log('Content types:', contentTypes);
+  console.log('Selected type:', selectedContentType);
+  console.log('Content config:', contentConfig);
+  console.log('Loading state:', loading);
 
   return (
     <div className="space-y-6">

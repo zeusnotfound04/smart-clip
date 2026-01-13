@@ -6,7 +6,6 @@ interface AuthRequest extends Request {
 }
 import { AIScriptGeneratorService } from '../services/ai-script-generator.service.js';
 
-// 🎬 Video Generation Request Schema
 const generateVideoSchema = z.object({
   prompt: z.string().min(10, 'Prompt must be at least 10 characters'),
   selectedVideoId: z.string().uuid('Invalid video ID'),
@@ -30,15 +29,13 @@ export class VideoGenerationController {
     this.aiScriptService = new AIScriptGeneratorService();
   }
 
-  // 🎬 Generate Complete Video with Narration
   generateVideo = async (req: AuthRequest, res: Response): Promise<void> => {
     const startTime = Date.now();
     
     try {
-      console.log(`🎬 [VIDEO-CONTROLLER] Starting video generation request`);
-      console.log(`🎬 [VIDEO-CONTROLLER] Request body:`, JSON.stringify(req.body, null, 2));
+      console.log(`[VIDEO-CONTROLLER] Starting video generation request`);
+      console.log(`[VIDEO-CONTROLLER] Request body:`, JSON.stringify(req.body, null, 2));
       
-      // Validate request
       const validation = generateVideoSchema.safeParse(req.body);
       if (!validation.success) {
         res.status(400).json({
@@ -60,11 +57,10 @@ export class VideoGenerationController {
         return;
       }
 
-      console.log(`🎬 [VIDEO-CONTROLLER] Validated request for user: ${userId}`);
-      console.log(`🎬 [VIDEO-CONTROLLER] Video ID: ${selectedVideoId}`);
-      console.log(`🎬 [VIDEO-CONTROLLER] Prompt: "${prompt.substring(0, 50)}..."`);
+      console.log(`[VIDEO-CONTROLLER] Validated request for user: ${userId}`);
+      console.log(`[VIDEO-CONTROLLER] Video ID: ${selectedVideoId}`);
+      console.log(`[VIDEO-CONTROLLER] Prompt: "${prompt.substring(0, 50)}..."`);
 
-      // Generate complete video
       const result = await this.aiScriptService.generateVideoWithNarration(
         prompt,
         selectedVideoId,
@@ -73,7 +69,7 @@ export class VideoGenerationController {
       );
 
       const totalTime = Date.now() - startTime;
-      console.log(`🎉 [VIDEO-CONTROLLER] Video generation completed in ${totalTime}ms`);
+      console.log(`[VIDEO-CONTROLLER] Video generation completed in ${totalTime}ms`);
 
       res.status(200).json({
         success: true,
@@ -102,13 +98,11 @@ export class VideoGenerationController {
 
     } catch (error: any) {
       const totalTime = Date.now() - startTime;
-      console.error(`❌ [VIDEO-CONTROLLER] Video generation failed after ${totalTime}ms:`, error);
+      console.error(`[VIDEO-CONTROLLER] Video generation failed after ${totalTime}ms:`, error);
 
-      // Determine error type and status code
       let statusCode = 500;
       let errorMessage = 'Failed to generate video';
 
-      // Check for credit errors
       const isInsufficientCredits = 
         error.message?.toLowerCase().includes('insufficient credit') ||
         error.message?.toLowerCase().includes('out of credit') ||
@@ -138,7 +132,6 @@ export class VideoGenerationController {
     }
   };
 
-  // 🎬 Get Video Generation Status
   getVideoStatus = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
       const { projectId } = req.params;
@@ -184,7 +177,7 @@ export class VideoGenerationController {
       });
 
     } catch (error: any) {
-      console.error(`❌ [VIDEO-CONTROLLER] Failed to get video status:`, error);
+      console.error(`[VIDEO-CONTROLLER] Failed to get video status:`, error);
       
       res.status(500).json({
         success: false,
@@ -194,17 +187,16 @@ export class VideoGenerationController {
     }
   };
 
-  // 📚 Get Library Videos
   getLibraryVideos = async (req: Request, res: Response): Promise<void> => {
     try {
-      console.log(`📚 [VIDEO-CONTROLLER] Fetching library videos`);
+      console.log(`[VIDEO-CONTROLLER] Fetching library videos`);
       
       const videos = await this.aiScriptService.getLibraryVideos();
 
       res.status(200).json({
         success: true,
         message: `Found ${videos.length} library videos`,
-        data: videos.map(video => ({
+        data: videos.map((video: any) => ({
           id: video.id,
           title: video.title,
           description: video.description,
@@ -216,7 +208,7 @@ export class VideoGenerationController {
       });
 
     } catch (error: any) {
-      console.error(`❌ [VIDEO-CONTROLLER] Failed to get library videos:`, error);
+      console.error(`[VIDEO-CONTROLLER] Failed to get library videos:`, error);
       
       res.status(500).json({
         success: false,
@@ -226,9 +218,7 @@ export class VideoGenerationController {
     }
   };
 
-  // 🔥 NEW PHASE METHODS
   
-  // Phase 1: Generate Script Only
   generateScript = async (req: AuthRequest, res: Response): Promise<void> => {
     const generateScriptSchema = z.object({
       prompt: z.string().min(10, 'Prompt must be at least 10 characters'),
@@ -242,7 +232,7 @@ export class VideoGenerationController {
     });
 
     try {
-      console.log(`📝 [SCRIPT-GENERATION] Starting script generation`);
+      console.log(`[SCRIPT-GENERATION] Starting script generation`);
       
       const validation = generateScriptSchema.safeParse(req.body);
       if (!validation.success) {
@@ -265,11 +255,10 @@ export class VideoGenerationController {
         return;
       }
 
-      // Generate script using existing service method
       const scriptResult = await this.aiScriptService.generateScript(prompt, options as any, userId);
       
-      console.log(`✅ [SCRIPT-GENERATION] Script generated successfully`);
-      console.log(`📊 [SCRIPT-GENERATION] Stats: ${scriptResult.script.wordCount} words, ~${scriptResult.script.estimatedDuration}s`);
+      console.log(`[SCRIPT-GENERATION] Script generated successfully`);
+      console.log(`[SCRIPT-GENERATION] Stats: ${scriptResult.script.wordCount} words, ~${scriptResult.script.estimatedDuration}s`);
       
       res.status(200).json({
         success: true,
@@ -285,7 +274,7 @@ export class VideoGenerationController {
       });
 
     } catch (error: any) {
-      console.error(`❌ [SCRIPT-GENERATION] Failed:`, error);
+      console.error(`[SCRIPT-GENERATION] Failed:`, error);
       
       res.status(500).json({
         success: false,
@@ -296,10 +285,9 @@ export class VideoGenerationController {
     }
   };
 
-  // Phase 2a: Get Available Voices
   getAvailableVoices = async (req: Request, res: Response): Promise<void> => {
     try {
-      console.log(`🎤 [VOICE-GENERATION] Fetching available voices`);
+      console.log(`[VOICE-GENERATION] Fetching available voices`);
       
       const voices = await this.aiScriptService.getAvailableVoices();
       
@@ -309,7 +297,7 @@ export class VideoGenerationController {
       });
 
     } catch (error: any) {
-      console.error(`❌ [VOICE-GENERATION] Failed to get voices:`, error);
+      console.error(`[VOICE-GENERATION] Failed to get voices:`, error);
       
       res.status(500).json({
         success: false,
@@ -319,7 +307,6 @@ export class VideoGenerationController {
     }
   };
 
-  // Phase 2b: Generate Audio from Script
   generateAudio = async (req: AuthRequest, res: Response): Promise<void> => {
     const generateAudioSchema = z.object({
       projectId: z.string().min(1, 'Project ID is required'),
@@ -336,7 +323,7 @@ export class VideoGenerationController {
     });
 
     try {
-      console.log(`🎵 [AUDIO-GENERATION] Starting audio generation`);
+      console.log(`[AUDIO-GENERATION] Starting audio generation`);
       
       const validation = generateAudioSchema.safeParse(req.body);
       if (!validation.success) {
@@ -359,11 +346,10 @@ export class VideoGenerationController {
         return;
       }
 
-      // Generate TTS audio
       const audioResult = await this.aiScriptService.generateTTSAudio(script, voiceConfig);
       
-      console.log(`✅ [AUDIO-GENERATION] Audio generated successfully`);
-      console.log(`📊 [AUDIO-GENERATION] Duration: ${audioResult.duration}s`);
+      console.log(`[AUDIO-GENERATION] Audio generated successfully`);
+      console.log(`[AUDIO-GENERATION] Duration: ${audioResult.duration}s`);
       
       res.status(200).json({
         success: true,
@@ -372,7 +358,7 @@ export class VideoGenerationController {
       });
 
     } catch (error: any) {
-      console.error(`❌ [AUDIO-GENERATION] Failed:`, error);
+      console.error(`[AUDIO-GENERATION] Failed:`, error);
       
       res.status(500).json({
         success: false,
@@ -383,7 +369,6 @@ export class VideoGenerationController {
     }
   };
 
-  // Phase 3: Prepare Final Video (Combine Audio + Video)
   prepareFinalVideo = async (req: AuthRequest, res: Response): Promise<void> => {
     const prepareFinalSchema = z.object({
       projectId: z.string().min(1, 'Project ID is required'),
@@ -397,7 +382,7 @@ export class VideoGenerationController {
     });
 
     try {
-      console.log(`🎬 [FINAL-VIDEO] Starting final video preparation`);
+      console.log(`[FINAL-VIDEO] Starting final video preparation`);
       
       const validation = prepareFinalSchema.safeParse(req.body);
       if (!validation.success) {
@@ -420,7 +405,6 @@ export class VideoGenerationController {
         return;
       }
 
-      // Prepare final video using existing service method
       const finalResult = await this.aiScriptService.prepareFinalVideo(
         userId,
         projectId,
@@ -429,8 +413,8 @@ export class VideoGenerationController {
         selectedVideo.id
       );
       
-      console.log(`✅ [FINAL-VIDEO] Video prepared successfully`);
-      console.log(`📊 [FINAL-VIDEO] Final video URL: ${finalResult.videoUrl}`);
+      console.log(`[FINAL-VIDEO] Video prepared successfully`);
+      console.log(`[FINAL-VIDEO] Final video URL: ${finalResult.videoUrl}`);
       
       res.status(200).json({
         success: true,
@@ -439,7 +423,7 @@ export class VideoGenerationController {
       });
 
     } catch (error: any) {
-      console.error(`❌ [FINAL-VIDEO] Failed:`, error);
+      console.error(`[FINAL-VIDEO] Failed:`, error);
       
       res.status(500).json({
         success: false,

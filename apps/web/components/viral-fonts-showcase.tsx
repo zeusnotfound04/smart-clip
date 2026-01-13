@@ -71,7 +71,7 @@ export default function ViralFontsShowcase() {
   return (
     <div className="p-8 bg-gray-900 min-h-screen">
       <h1 className="text-4xl font-bold text-white mb-2 text-center">
-        🔥 Viral Subtitle Fonts
+        Viral Subtitle Fonts
       </h1>
       <p className="text-gray-400 text-center mb-12">
         Professional fonts optimized for maximum engagement
@@ -138,14 +138,14 @@ export default function ViralFontsShowcase() {
 
       <div className="mt-12 max-w-4xl mx-auto bg-blue-900/20 border border-blue-500/30 rounded-lg p-6">
         <h3 className="text-xl font-bold text-white mb-3">
-          💡 Pro Tips for Viral Subtitles
+          Pro Tips for Viral Subtitles
         </h3>
         <ul className="space-y-2 text-gray-300">
-          <li>✅ <strong>Use high contrast</strong> - Text should pop against any background</li>
-          <li>✅ <strong>Bold is better</strong> - Most viral videos use bold subtitles</li>
-          <li>✅ <strong>Size matters</strong> - 24-32px works best for most platforms</li>
-          <li>✅ <strong>Match the vibe</strong> - Choose fonts that match your content type</li>
-          <li>✅ <strong>Stay consistent</strong> - Use the same style throughout your video</li>
+          <li><strong>Use high contrast</strong> - Text should pop against any background</li>
+          <li><strong>Bold is better</strong> - Most viral videos use bold subtitles</li>
+          <li><strong>Size matters</strong> - 24-32px works best for most platforms</li>
+          <li><strong>Match the vibe</strong> - Choose fonts that match your content type</li>
+          <li><strong>Stay consistent</strong> - Use the same style throughout your video</li>
         </ul>
       </div>
     </div>

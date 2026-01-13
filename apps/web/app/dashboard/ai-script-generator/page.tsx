@@ -427,7 +427,7 @@ export default function AIScriptGenerator() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('❌ Video preparation failed:', errorData);
+        console.error('Video preparation failed:', errorData);
         throw new Error(errorData.error || errorData.message || 'Failed to prepare video');
       }
 
@@ -990,12 +990,13 @@ export default function AIScriptGenerator() {
                   </DownloadButton>
                   <Button 
                     onClick={() => {
-                      const encodedUrl = encodeURIComponent(project.finalVideoUrl);
+                      const encodedUrl = encodeURIComponent(project.finalVideoUrl || '');
                       const encodedName = encodeURIComponent(project.projectName || 'AI Generated Video');
                       router.push(`/dashboard/auto-subtitles?videoUrl=${encodedUrl}&videoName=${encodedName}`);
                     }}
                     className="flex-1"
                     variant="secondary"
+                    disabled={!project.finalVideoUrl}
                   >
                     <Captions className="w-4 h-4 mr-2" />
                     Add Subtitles

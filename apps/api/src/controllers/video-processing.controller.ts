@@ -27,7 +27,6 @@ export async function compress(req: AuthRequest, res: Response): Promise<void> {
       return;
     }
 
-    // Create project record
     const project = await prisma.project.create({
       data: {
         userId,
@@ -41,10 +40,8 @@ export async function compress(req: AuthRequest, res: Response): Promise<void> {
       }
     });
 
-    // Start compression
     const compressedUrl = await compressVideo(videoUrl, quality);
 
-    // Update project
     await prisma.project.update({
       where: { id: project.id },
       data: {
@@ -95,7 +92,6 @@ export async function convert(req: AuthRequest, res: Response): Promise<void> {
       return;
     }
 
-    // Create project record
     const project = await prisma.project.create({
       data: {
         userId,
@@ -109,10 +105,8 @@ export async function convert(req: AuthRequest, res: Response): Promise<void> {
       }
     });
 
-    // Convert format
     const convertedUrl = await convertVideoFormat(videoUrl, targetFormat);
 
-    // Update project
     await prisma.project.update({
       where: { id: project.id },
       data: {
@@ -154,7 +148,6 @@ export async function watermark(req: AuthRequest, res: Response): Promise<void> 
       return;
     }
 
-    // Create project record
     const project = await prisma.project.create({
       data: {
         userId,
@@ -169,10 +162,8 @@ export async function watermark(req: AuthRequest, res: Response): Promise<void> 
       }
     });
 
-    // Add watermark
     const watermarkedUrl = await addWatermark(videoUrl, watermarkText, position);
 
-    // Update project
     await prisma.project.update({
       where: { id: project.id },
       data: {
@@ -223,7 +214,6 @@ export async function extractVideoAudio(req: AuthRequest, res: Response): Promis
       return;
     }
 
-    // Create project record
     const project = await prisma.project.create({
       data: {
         userId,
@@ -237,10 +227,8 @@ export async function extractVideoAudio(req: AuthRequest, res: Response): Promis
       }
     });
 
-    // Extract audio
     const audioUrl = await extractAudio(videoUrl, format);
 
-    // Update project
     await prisma.project.update({
       where: { id: project.id },
       data: {

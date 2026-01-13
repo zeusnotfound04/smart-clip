@@ -44,12 +44,10 @@ export interface SubtitleStyle {
   maxWordsPerLine?: number; // Max words per subtitle line (default: 8, TikTok style: 3)
   position?: { x: number; y: number }; // Custom position offset from center
   scale?: number; // Scale multiplier for font size
-  // Gradient support
   useGradient?: boolean;
   gradientType?: 'linear' | 'radial';
   gradientColors?: string[]; // Array of colors for gradient (2+ colors)
   gradientDirection?: number; // Angle in degrees for linear gradient (0-360)
-  // Enhanced shadow
   shadowIntensity?: number; // 1-10 for multi-layer shadow depth
   shadowOffsetX?: number; // Horizontal shadow offset
   shadowOffsetY?: number; // Vertical shadow offset
@@ -73,15 +71,14 @@ export interface VideoWithSubtitlesResult {
   audioS3Key?: string;
 }
 
-// Validate Google Cloud credentials
 if (!process.env.GOOGLE_CLOUD_PROJECT_ID) {
-  console.error('❌ GOOGLE_CLOUD_PROJECT_ID is not configured');
+  console.error('GOOGLE_CLOUD_PROJECT_ID is not configured');
 }
 if (!process.env.GOOGLE_CLOUD_CLIENT_EMAIL) {
-  console.error('❌ GOOGLE_CLOUD_CLIENT_EMAIL is not configured');
+  console.error('GOOGLE_CLOUD_CLIENT_EMAIL is not configured');
 }
 if (!process.env.GOOGLE_CLOUD_PRIVATE_KEY) {
-  console.error('❌ GOOGLE_CLOUD_PRIVATE_KEY is not configured');
+  console.error('GOOGLE_CLOUD_PRIVATE_KEY is not configured');
 }
 
 const speechClient = new SpeechClient({
@@ -94,29 +91,25 @@ const speechClient = new SpeechClient({
 
 const tempDir = tmpdir();
 
-// Ensure temp directory exists
 if (!existsSync(tempDir)) {
   mkdirSync(tempDir, { recursive: true });
 }
 
 // ===========================
-// SVG GRADIENT TEXT RENDERING
 // ===========================
 
 /**
  * Check if Inkscape or rsvg-convert is available
  */
 async function getSVGRasterizer(): Promise<'inkscape' | 'rsvg' | null> {
-  // Add Inkscape to PATH if on Windows
   if (process.platform === 'win32') {
     const inkscapePath = 'C:\\Program Files\\Inkscape\\bin';
     if (!process.env.PATH?.includes(inkscapePath)) {
       process.env.PATH = `${process.env.PATH};${inkscapePath}`;
-      console.log(`📦 [SVG_GRADIENT] Added Inkscape to PATH: ${inkscapePath}`);
+      console.log(`[SVG_GRADIENT] Added Inkscape to PATH: ${inkscapePath}`);
     }
   }
   
-  // Try inkscape in PATH (now includes the bin folder)
   try {
     await execAsync('inkscape --version');
     return 'inkscape';
@@ -145,7 +138,6 @@ function generateTextMaskSVG(
   const fontWeight = bold ? '700' : '400';
   const fontStyle = italic ? 'italic' : 'normal';
   
-  // Escape XML special characters
   const escapedText = text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -202,11 +194,10 @@ async function prepareGradientImage(
 ): Promise<string> {
   const gradientPath = join(tempDir, `${videoId}_gradient.png`);
   
-  // Check if red-storm.svg exists in project
   const redStormPath = join(process.cwd(), 'red-storm.svg');
   
   if (existsSync(redStormPath)) {
-    console.log('🎨 [GRADIENT] Using red-storm.svg');
+    console.log('[GRADIENT] Using red-storm.svg');
     const rasterizer = await getSVGRasterizer();
     if (!rasterizer) {
       throw new Error('SVG rasterizer (Inkscape or rsvg-convert) not found');
@@ -215,14 +206,12 @@ async function prepareGradientImage(
     return gradientPath;
   }
   
-  // Fallback: generate gradient using ImageMagick
-  console.log(`🎨 [GRADIENT] Generating gradient with ${gradientColors.length} colors`);
+  console.log(`[GRADIENT] Generating gradient with ${gradientColors.length} colors`);
   if (gradientColors.length === 2) {
     await execAsync(
       `convert -size ${width}x${height} gradient:"${gradientColors[0]}"-"${gradientColors[1]}" "${gradientPath}"`
     );
   } else {
-    // For 3+ colors, create SVG gradient and rasterize
     const gradSvgPath = join(tempDir, `${videoId}_grad.svg`);
     const stops = gradientColors.map((color, i) => 
       `<stop offset="${i / (gradientColors.length - 1)}" stop-color="${color}"/>`
@@ -283,17 +272,13 @@ function parseSRTContent(srtContent: string): SubtitleSegment[] {
 
 console.log(`\ud83d\udccf [AUTO-SUBTITLES] Temp directory: ${tempDir}`);
 
-// Font file path mapping for FFmpeg
-// Try local fonts folder first, then fall back to web public folder
 const getFontPath = (fontFolder: string, fontFile: string): string => {
-  // Try local fonts folder first (after running copy-fonts.ps1)
   const localPath = join(process.cwd(), 'fonts', fontFolder, fontFile);
   if (existsSync(localPath)) {
     console.log(`\ud83d\udc4d [FONT] Using local font: ${localPath}`);
     return localPath;
   }
   
-  // Fall back to web public folder
   const webPath = join(process.cwd(), '..', '..', 'apps', 'web', 'public', 'fonts', fontFolder, fontFile);
   if (existsSync(webPath)) {
     console.log(`\ud83d\udc4d [FONT] Using web font: ${webPath}`);
@@ -379,23 +364,20 @@ const FONT_FILE_MAP: Record<string, { regular: string; bold?: string }> = {
   }
 };
 
-// Helper function to get font file path
 const getFontFilePath = (fontFamily: string, bold: boolean = false): string => {
   const fontConfig = FONT_FILE_MAP[fontFamily] || FONT_FILE_MAP['Arial'];
   const fontPath = bold && fontConfig.bold ? fontConfig.bold : fontConfig.regular;
   
-  // For system fonts (like Arial), return the name
   if (fontPath === fontFamily) {
     return fontFamily;
   }
   
-  // Check if font file exists
   if (existsSync(fontPath)) {
-    console.log(`✅ Font found: ${fontFamily} -> ${fontPath}`);
+    console.log(`Font found: ${fontFamily} -> ${fontPath}`);
     return fontPath;
   }
   
-  console.warn(`⚠️ Font not found: ${fontPath}, falling back to Arial`);
+  console.warn(`Font not found: ${fontPath}, falling back to Arial`);
   return 'Arial';
 };
 
@@ -409,7 +391,6 @@ const validateFFmpeg = (): Promise<boolean> => {
 
 const downloadVideoFromS3 = async (s3Key: string, videoId: string): Promise<string> => {
   const videoPath = join(tempDir, `${randomUUID()}_input.mp4`);
-  // 🔥 Use streaming download to file (much faster, avoids RAM usage)
   await downloadFileToPath(s3Key, videoPath);
   return videoPath;
 };
@@ -432,17 +413,14 @@ const extractAudioFromVideo = async (videoPath: string, videoId: string): Promis
   let audioPath: string | null = null;
 
   try {
-    // Check if videoPath is an S3 key or local path
     if (videoPath.startsWith('videos/')) {
-      console.log(`📥 [AUDIO_EXTRACT] Streaming video from S3: ${videoPath}`);
+      console.log(`[AUDIO_EXTRACT] Streaming video from S3: ${videoPath}`);
       
-      // 🔥 Use streaming download to file (much faster)
       const videoExtension = videoPath.split('.').pop() || 'mp4';
       localVideoPath = join(tempDir, `${randomUUID()}_input.${videoExtension}`);
       await downloadFileToPath(videoPath, localVideoPath);
-      console.log(`✅ [AUDIO_EXTRACT] Video streamed to: ${localVideoPath}`);
+      console.log(`[AUDIO_EXTRACT] Video streamed to: ${localVideoPath}`);
       
-      // Use local path for processing
       videoPath = localVideoPath;
     }
 
@@ -458,7 +436,6 @@ const extractAudioFromVideo = async (videoPath: string, videoId: string): Promis
         .audioFrequency(16000)
         .on('end', async () => {
           try {
-            // Verify audio file exists before proceeding
             if (!existsSync(audioPath!)) {
               throw new Error(`Audio file was not created: ${audioPath}`);
             }
@@ -470,16 +447,13 @@ const extractAudioFromVideo = async (videoPath: string, videoId: string): Promis
             console.log(`\u2705 [AUDIO_EXTRACT] Audio uploaded to S3: ${audioS3Key}`);
             console.log(`\ud83d\udcbe [AUDIO_EXTRACT] Local audio file retained for transcription: ${audioPath}`);
             
-            // Clean up video temp file only (keep audio for transcription)
             if (localVideoPath && existsSync(localVideoPath)) {
               unlinkSync(localVideoPath);
               console.log(`\ud83e\uddf9 [AUDIO_EXTRACT] Cleaned up video temp file: ${localVideoPath}`);
             }
             
-            // Return both local path and S3 key - local file will be cleaned up after transcription
             resolve({ audioPath: audioPath!, s3Key: audioS3Key });
           } catch (uploadError: any) {
-            // Clean up on error
             if (audioPath && existsSync(audioPath)) {
               unlinkSync(audioPath);
             }
@@ -491,7 +465,6 @@ const extractAudioFromVideo = async (videoPath: string, videoId: string): Promis
         })
         .on('error', (err) => {
           console.error(`\u274c [AUDIO_EXTRACT] FFmpeg error:`, err);
-          // Clean up on error
           if (audioPath && existsSync(audioPath)) {
             unlinkSync(audioPath);
           }
@@ -503,7 +476,6 @@ const extractAudioFromVideo = async (videoPath: string, videoId: string): Promis
         .save(audioPath);
     });
   } catch (error: any) {
-    // Clean up on error
     if (audioPath && existsSync(audioPath)) {
       unlinkSync(audioPath);
     }
@@ -535,7 +507,7 @@ const splitAudioIntoChunks = (audioPath: string, chunkDurationSeconds: number = 
         return;
       }
 
-      console.log(`🔪 Splitting ${duration.toFixed(2)}s audio into ${Math.ceil(duration / chunkDurationSeconds)} chunks`);
+      console.log(`Splitting ${duration.toFixed(2)}s audio into ${Math.ceil(duration / chunkDurationSeconds)} chunks`);
       
       const processChunk = (startTime: number) => {
         if (startTime >= duration) {
@@ -553,7 +525,7 @@ const splitAudioIntoChunks = (audioPath: string, chunkDurationSeconds: number = 
           .audioChannels(1)
           .audioFrequency(16000)
           .on('end', () => {
-            console.log(`✂️ Chunk ${chunkIndex} created: ${chunkPath}`);
+            console.log(`Chunk ${chunkIndex} created: ${chunkPath}`);
             chunkIndex++;
             processChunk(startTime + chunkDurationSeconds);
           })
@@ -579,14 +551,13 @@ const transcribeAudioChunk = async (audioPath: string, config: any, timeOffset: 
     const [response] = await speechClient.recognize(request);
     const results = response.results || [];
     
-    // Debug: Log response structure if no results
     if (!results || results.length === 0) {
-      console.warn('⚠️ No results in response:', JSON.stringify(response, null, 2).substring(0, 500));
+      console.warn('No results in response:', JSON.stringify(response, null, 2).substring(0, 500));
     }
     
     return processChunkResults(results, timeOffset);
   } catch (error: any) {
-    console.error('❌ Speech API Error:', error.message);
+    console.error('Speech API Error:', error.message);
     if (error.code) {
       console.error('   Error Code:', error.code);
     }
@@ -600,7 +571,6 @@ const transcribeAudioChunk = async (audioPath: string, config: any, timeOffset: 
 const processChunkResults = (results: any[], timeOffset: number): any[] => {
   const processedResults = results || [];
   
-  // Adjust timestamps based on chunk offset for ALL chunks
   if (processedResults.length > 0) {
     processedResults.forEach((result: any) => {
       if (result.alternatives?.[0]?.words) {
@@ -635,7 +605,7 @@ const transcribeAudio = async (audioPath: string, options?: SubtitleOptions, aud
   const audioSizeInBytes = statSync(audioPath).size;
   const audioDurationEstimate = audioSizeInBytes / (16000 * 2);
   
-  console.log(`🎵 Audio file size: ${(audioSizeInBytes / 1024 / 1024).toFixed(2)}MB, estimated duration: ${audioDurationEstimate.toFixed(2)}s`);
+  console.log(`Audio file size: ${(audioSizeInBytes / 1024 / 1024).toFixed(2)}MB, estimated duration: ${audioDurationEstimate.toFixed(2)}s`);
   
   const languageConfigs = [
     {
@@ -735,24 +705,22 @@ const transcribeAudio = async (audioPath: string, options?: SubtitleOptions, aud
   let bestResult = null;
   let bestConfidence = 0;
 
-  // Split audio into chunks if needed (reduced to 30s for better parallelization)
   const chunkDurationSeconds = 30;
   const chunkPaths = await splitAudioIntoChunks(audioPath, chunkDurationSeconds);
   const isChunked = chunkPaths.length > 1;
   
   if (isChunked) {
-    console.log(`📦 Processing ${chunkPaths.length} audio chunks`);
+    console.log(`Processing ${chunkPaths.length} audio chunks`);
   }
 
-  // Filter and sort configs based on options
   const configsToTest = options?.language 
     ? languageConfigs.filter(c => c.languageCode === options.language)
     : languageConfigs.sort((a, b) => (a.priority || 999) - (b.priority || 999));
 
   if (options?.language) {
-    console.log(`🎯 Using specified language: ${options.language} (skipping detection for 10-30s speed boost)`);
+    console.log(`Using specified language: ${options.language} (skipping detection for 10-30s speed boost)`);
   } else {
-    console.log(`🔍 Auto-detecting language (will stop at first good match)...`);
+    console.log(`Auto-detecting language (will stop at first good match)...`);
   }
 
   try {
@@ -773,12 +741,11 @@ const transcribeAudio = async (audioPath: string, options?: SubtitleOptions, aud
           alternativeLanguageCodes: config.alternativeLanguageCodes
         };
 
-        console.log(`🎤 Testing ${config.languageCode}...`);
+        console.log(`Testing ${config.languageCode}...`);
         
         const allChunkResults: any[] = [];
         let successfulChunks = 0;
         
-        // Process all chunks in parallel for 3-5x speed improvement
         const chunkPromises = chunkPaths.map((chunkPath, i) => 
           transcribeAudioChunk(chunkPath, requestConfig, i * chunkDurationSeconds)
             .then(results => ({ success: true, results, index: i }))
@@ -787,27 +754,25 @@ const transcribeAudio = async (audioPath: string, options?: SubtitleOptions, aud
         
         const chunkResults = await Promise.all(chunkPromises);
         
-        // Process results from all chunks
         for (const result of chunkResults) {
           if (result.success) {
             const successResult = result as { success: true; results: any[]; index: number };
             if (successResult.results.length > 0) {
               allChunkResults.push(...successResult.results);
               successfulChunks++;
-              console.log(`   ✓ Chunk ${successResult.index + 1}/${chunkPaths.length}: ${successResult.results.length} segments`);
+              console.log(`   Chunk ${successResult.index + 1}/${chunkPaths.length}: ${successResult.results.length} segments`);
             } else {
-              console.warn(`   ⚠️ Chunk ${successResult.index + 1}/${chunkPaths.length}: No results`);
+              console.warn(`   Chunk ${successResult.index + 1}/${chunkPaths.length}: No results`);
             }
           } else {
             const errorResult = result as { success: false; error: any; index: number };
-            console.warn(`   ❌ Chunk ${errorResult.index + 1}/${chunkPaths.length} failed: ${errorResult.error.message}`);
+            console.warn(`   Chunk ${errorResult.index + 1}/${chunkPaths.length} failed: ${errorResult.error.message}`);
           }
         }
         
         const results = allChunkResults;
         
         if (results.length > 0) {
-          // Calculate average confidence across ALL result segments
           let totalConfidence = 0;
           let confidenceCount = 0;
           results.forEach((result: any) => {
@@ -820,7 +785,7 @@ const transcribeAudio = async (audioPath: string, options?: SubtitleOptions, aud
           const confidence = confidenceCount > 0 ? totalConfidence / confidenceCount : 0;
           
           const transcriptPreview = results[0].alternatives?.[0]?.transcript?.substring(0, 50) || '';
-          console.log(`✅ ${config.languageCode}: ${results.length} segments (${successfulChunks}/${chunkPaths.length} chunks), ${(confidence * 100).toFixed(0)}% avg confidence - "${transcriptPreview}..."`);
+          console.log(`${config.languageCode}: ${results.length} segments (${successfulChunks}/${chunkPaths.length} chunks), ${(confidence * 100).toFixed(0)}% avg confidence - "${transcriptPreview}..."`);
           
           
           if (confidence > 0.3) {
@@ -846,20 +811,18 @@ const transcribeAudio = async (audioPath: string, options?: SubtitleOptions, aud
             };
           }
 
-          // 🚀 EARLY STOP: If we found a great match and not detecting all languages, stop here
           if (confidence > 0.7 && !options?.detectAllLanguages && !options?.language) {
-            console.log(`🎯 High confidence (${(confidence * 100).toFixed(0)}%) - stopping search`);
+            console.log(`High confidence (${(confidence * 100).toFixed(0)}%) - stopping search`);
             break;
           }
         } else {
-          console.log(`❌ ${config.languageCode}: No transcription`);
+          console.log(`${config.languageCode}: No transcription`);
         }
       } catch (error: any) {
-        console.warn(`❌ ${config.languageCode}: ${error.message}`);
+        console.warn(`${config.languageCode}: ${error.message}`);
       }
     }
   } finally {
-    // Clean up all chunk files in parallel (excluding the original audio file)
     const cleanupPromises = chunkPaths
       .filter(chunkPath => chunkPath !== audioPath && existsSync(chunkPath))
       .map(chunkPath => unlink(chunkPath).catch(() => {}));
@@ -867,14 +830,14 @@ const transcribeAudio = async (audioPath: string, options?: SubtitleOptions, aud
     await Promise.all(cleanupPromises);
     
     if (cleanupPromises.length > 0) {
-      console.log(`🧹 Cleaned up ${cleanupPromises.length} temporary chunk files`);
+      console.log(`Cleaned up ${cleanupPromises.length} temporary chunk files`);
     }
   }
 
   if (bestResult) {
-    console.log(`\n🏆 Selected: ${bestResult.languageUsed} (${(bestResult.confidence * 100).toFixed(0)}% confidence)`);
+    console.log(`\nSelected: ${bestResult.languageUsed} (${(bestResult.confidence * 100).toFixed(0)}% confidence)`);
   } else {
-    console.error('❌ Failed to generate subtitles: No transcription results from any language');
+    console.error('Failed to generate subtitles: No transcription results from any language');
     throw new Error('Failed to generate subtitles: Audio could not be transcribed in any supported language. Please ensure the audio is clear and contains speech.');
   }
 
@@ -905,7 +868,6 @@ const processTranscriptionToSegments = (results: any[], options?: SubtitleOption
         let startTime = 0;
         let wordCount = 0;
         
-        // Use maxWordsPerLine from style options (default: 8, TikTok/Shorts style: 3)
         const maxWords = options?.style?.maxWordsPerLine || 8;
         
         words.forEach((word: any, index: number) => {
@@ -928,7 +890,6 @@ const processTranscriptionToSegments = (results: any[], options?: SubtitleOption
           });
           wordCount++;
           
-          // Use dynamic maxWords instead of hardcoded 8
           if (wordCount >= maxWords || index === words.length - 1) {
             const endTime = parseFloat(String(word.endTime?.seconds || '0')) + 
                            parseFloat(String(word.endTime?.nanos || '0')) / 1000000000;
@@ -969,7 +930,7 @@ const saveSubtitlesToDatabase = async (videoId: string, segments: SubtitleSegmen
       where: { videoId }
     });
     
-    const subtitleData = segments.map(segment => ({
+    const subtitleData = segments.map((segment: any) => ({
       videoId,
       text: segment.text,
       startTime: segment.startTime,
@@ -997,17 +958,13 @@ export const generateVideoWithSubtitles = async (videoId: string, s3Key: string,
       throw new Error('FFmpeg is not properly installed or configured');
     }
     
-    // Download video to get duration
     videoPath = await downloadVideoFromS3(s3Key, videoId);
     
-    // Get video duration for credit calculation
     const videoDuration = await getVideoDuration(videoPath);
-    console.log(`📹 [AUTO-SUBTITLES] Video duration: ${videoDuration}s`);
+    console.log(`[AUTO-SUBTITLES] Video duration: ${videoDuration}s`);
     
-    // Import credit service
     const { CreditService } = await import('./credit.service');
     
-    // Validate credits before processing
     const validation = await CreditService.validateAndPrepareProcessing(
       userId,
       videoDuration,
@@ -1018,8 +975,8 @@ export const generateVideoWithSubtitles = async (videoId: string, s3Key: string,
       throw new Error(validation.message || 'Insufficient credits');
     }
     
-    console.log(`✅ [CREDITS] User has sufficient credits (${validation.currentCredits}/${validation.creditsRequired})`);
-    console.log(`🎨 [WATERMARK] Will apply watermark: ${validation.shouldWatermark ? 'Yes' : 'No'}`);
+    console.log(`[CREDITS] User has sufficient credits (${validation.currentCredits}/${validation.creditsRequired})`);
+    console.log(`[WATERMARK] Will apply watermark: ${validation.shouldWatermark ? 'Yes' : 'No'}`);
     
     const audioResult = await extractAudioFromVideo(videoPath, videoId);
     audioPath = audioResult.audioPath;
@@ -1033,7 +990,6 @@ export const generateVideoWithSubtitles = async (videoId: string, s3Key: string,
     
     await saveSubtitlesToDatabase(videoId, segments);
     
-    // Clean up audio file after transcription is complete
     if (audioPath && existsSync(audioPath)) {
       unlinkSync(audioPath);
       console.log(`\ud83e\uddf9 [AUTO-SUBTITLES] Cleaned up audio temp file: ${audioPath}`);
@@ -1044,7 +1000,6 @@ export const generateVideoWithSubtitles = async (videoId: string, s3Key: string,
     
     const subtitledVideoUrl = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${burnResult.videoS3Key}`;
     
-    // Deduct credits after successful processing
     try {
       await CreditService.deductCredits(
         userId,
@@ -1057,10 +1012,9 @@ export const generateVideoWithSubtitles = async (videoId: string, s3Key: string,
           creditsUsed: validation.creditsRequired,
         }
       );
-      console.log(`✅ [CREDITS] Successfully deducted ${validation.creditsRequired} credits`);
+      console.log(`[CREDITS] Successfully deducted ${validation.creditsRequired} credits`);
     } catch (creditError) {
-      console.error('❌ [CREDITS] Failed to deduct credits:', creditError);
-      // Continue even if credit deduction fails (video already processed)
+      console.error('[CREDITS] Failed to deduct credits:', creditError);
     }
     
     return {
@@ -1105,7 +1059,6 @@ export const generateVideoWithSubtitles = async (videoId: string, s3Key: string,
         try {
           const stats = statSync(filePath);
           if (stats.isDirectory()) {
-            // Skip directories - only clean up files
             return;
           }
           unlinkSync(filePath);
@@ -1131,23 +1084,20 @@ async function renderGradientTextOverlay(
   videoWidth: number,
   videoHeight: number
 ): Promise<string> {
-  console.log('🎨 [SVG_GRADIENT] Starting true gradient text rendering pipeline');
+  console.log('[SVG_GRADIENT] Starting true gradient text rendering pipeline');
   
-  // Check for SVG rasterizer
   const rasterizer = await getSVGRasterizer();
   if (!rasterizer) {
-    console.warn('⚠️ [SVG_GRADIENT] No SVG rasterizer found (Inkscape/rsvg-convert). Falling back to ASS rendering.');
+    console.warn('[SVG_GRADIENT] No SVG rasterizer found (Inkscape/rsvg-convert). Falling back to ASS rendering.');
     throw new Error('No SVG rasterizer available - will use ASS fallback');
   }
   
-  console.log(`✅ [SVG_GRADIENT] Using ${rasterizer} for rasterization`);
+  console.log(`[SVG_GRADIENT] Using ${rasterizer} for rasterization`);
   
-  // Use 2x resolution for better antialiasing
   const renderWidth = videoWidth * 2;
   const renderHeight = videoHeight * 2;
   const scaledFontSize = Math.round((style.fontSize * 2.5) * 2); // Scale for high-res
   
-  // Prepare gradient image (red-storm.svg or generated)
   const gradientPath = await prepareGradientImage(
     videoId,
     style.gradientColors || ['#FFFFFF', '#FF6B6B', '#C41E3A'],
@@ -1155,9 +1105,8 @@ async function renderGradientTextOverlay(
     renderHeight
   );
   
-  console.log(`✅ [SVG_GRADIENT] Gradient image ready: ${gradientPath}`);
+  console.log(`[SVG_GRADIENT] Gradient image ready: ${gradientPath}`);
   
-  // Generate mask for each subtitle segment
   const textMasks: Array<{ start: number; end: number; maskPath: string }> = [];
   
   for (let i = 0; i < segments.length; i++) {
@@ -1165,7 +1114,6 @@ async function renderGradientTextOverlay(
     const maskSvgPath = join(tempDir, `${videoId}_mask_${i}.svg`);
     const maskPngPath = join(tempDir, `${videoId}_mask_${i}.png`);
     
-    // Generate SVG mask
     const maskSvg = generateTextMaskSVG(
       segment.text,
       style.fontFamily,
@@ -1178,7 +1126,6 @@ async function renderGradientTextOverlay(
     
     writeFileSync(maskSvgPath, maskSvg, 'utf8');
     
-    // Rasterize mask
     await rasterizeSVG(maskSvgPath, maskPngPath, renderWidth, renderHeight, rasterizer);
     
     textMasks.push({
@@ -1190,12 +1137,10 @@ async function renderGradientTextOverlay(
     unlinkSync(maskSvgPath); // Clean up SVG
   }
   
-  console.log(`✅ [SVG_GRADIENT] Generated ${textMasks.length} text masks`);
+  console.log(`[SVG_GRADIENT] Generated ${textMasks.length} text masks`);
   
-  // Build FFmpeg filter complex for all segments
   const outputPath = join(tempDir, `${videoId}_gradient_out.mp4`);
   
-  // For each mask, create gradient text using alphamerge and overlay at the right time
   const filterParts: string[] = [];
   const inputs: string[] = ['-i', videoPath, '-i', gradientPath];
   
@@ -1203,7 +1148,6 @@ async function renderGradientTextOverlay(
     inputs.push('-i', mask.maskPath);
     const maskInput = idx + 2; // mask inputs start at index 2 (0=video, 1=gradient)
     
-    // alphamerge: combine gradient RGB + mask alpha
     filterParts.push(
       `[1]format=rgba,scale=${videoWidth}:${videoHeight}[grad${idx}];` +
       `[${maskInput}]format=gray,scale=${videoWidth}:${videoHeight}[mask${idx}];` +
@@ -1211,7 +1155,6 @@ async function renderGradientTextOverlay(
     );
   });
   
-  // Chain overlays with enable conditions for timing
   let overlayChain = '[0:v]';
   textMasks.forEach((mask, idx) => {
     const enable = `enable='between(t,${mask.start},${mask.end})'`;
@@ -1229,16 +1172,13 @@ async function renderGradientTextOverlay(
   
   const filterComplex = filterParts.join(';');
   
-  console.log('🎬 [SVG_GRADIENT] Running FFmpeg alphamerge + overlay pipeline...');
+  console.log('[SVG_GRADIENT] Running FFmpeg alphamerge + overlay pipeline...');
   
-  // Execute FFmpeg
   await new Promise<void>((resolve, reject) => {
     const ffmpegCmd = ffmpeg(videoPath);
     
-    // Add gradient input
     ffmpegCmd.input(gradientPath);
     
-    // Add all mask inputs
     textMasks.forEach(mask => {
       ffmpegCmd.input(mask.maskPath);
     });
@@ -1256,17 +1196,16 @@ async function renderGradientTextOverlay(
       ])
       .output(outputPath)
       .on('end', () => {
-        console.log('✅ [SVG_GRADIENT] Gradient text rendering complete');
+        console.log('[SVG_GRADIENT] Gradient text rendering complete');
         resolve();
       })
       .on('error', (err) => {
-        console.error('❌ [SVG_GRADIENT] FFmpeg error:', err);
+        console.error('[SVG_GRADIENT] FFmpeg error:', err);
         reject(err);
       })
       .run();
   });
   
-  // Clean up masks and gradient
   textMasks.forEach(mask => {
     if (existsSync(mask.maskPath)) unlinkSync(mask.maskPath);
   });
@@ -1283,11 +1222,10 @@ const burnSubtitlesIntoVideo = async (
   options?: SubtitleOptions
 ): Promise<{ videoPath: string; srtS3Key: string; videoS3Key: string }> => {
   return new Promise(async (resolve, reject) => {
-    // 🔍 DEBUG: Log the options parameter to see if gradient properties are present
-    console.log('🔍 [BURN_SUBTITLES] Options received:', JSON.stringify(options, null, 2));
-    console.log('🔍 [BURN_SUBTITLES] Style object:', JSON.stringify(options?.style, null, 2));
-    console.log('🔍 [BURN_SUBTITLES] useGradient:', options?.style?.useGradient);
-    console.log('🔍 [BURN_SUBTITLES] gradientColors:', options?.style?.gradientColors);
+    console.log('[BURN_SUBTITLES] Options received:', JSON.stringify(options, null, 2));
+    console.log('[BURN_SUBTITLES] Style object:', JSON.stringify(options?.style, null, 2));
+    console.log('[BURN_SUBTITLES] useGradient:', options?.style?.useGradient);
+    console.log('[BURN_SUBTITLES] gradientColors:', options?.style?.gradientColors);
     
     const outputFilename = `${videoId}_out.mp4`;
     const srtFilename = `${videoId}_sub.srt`;
@@ -1296,17 +1234,16 @@ const burnSubtitlesIntoVideo = async (
     const srtPath = join(tempDir, srtFilename);
 
     try {
-      // Set up fontconfig to use custom font directory
       const fontsDir = join(process.cwd(), 'fonts');
       const fontConfigPath = join(fontsDir, 'fonts.conf');
       
       if (existsSync(fontConfigPath)) {
         process.env.FONTCONFIG_FILE = fontConfigPath;
         process.env.FONTCONFIG_PATH = fontsDir;
-        console.log(`🎨 [FONT CONFIG] Set FONTCONFIG_FILE: ${fontConfigPath}`);
-        console.log(`🎨 [FONT CONFIG] Set FONTCONFIG_PATH: ${fontsDir}`);
+        console.log(`[FONT CONFIG] Set FONTCONFIG_FILE: ${fontConfigPath}`);
+        console.log(`[FONT CONFIG] Set FONTCONFIG_PATH: ${fontsDir}`);
       } else {
-        console.warn(`⚠️ [FONT CONFIG] fonts.conf not found at ${fontConfigPath}`);
+        console.warn(`[FONT CONFIG] fonts.conf not found at ${fontConfigPath}`);
       }
       
       [outputPath, srtPath].forEach((filePath) => {
@@ -1325,7 +1262,6 @@ const burnSubtitlesIntoVideo = async (
         throw new Error("No subtitle content generated - transcription may have failed");
       }
 
-      // Get video dimensions for proper ASS scaling
       let videoWidth = 1920;
       let videoHeight = 1080;
       
@@ -1333,7 +1269,7 @@ const burnSubtitlesIntoVideo = async (
         await new Promise<void>((resolveProbe, rejectProbe) => {
           ffmpeg.ffprobe(videoPath, (err, metadata) => {
             if (err) {
-              console.warn('⚠️ Could not probe video dimensions, using defaults');
+              console.warn('Could not probe video dimensions, using defaults');
               resolveProbe();
               return;
             }
@@ -1341,13 +1277,13 @@ const burnSubtitlesIntoVideo = async (
             if (videoStream) {
               videoWidth = videoStream.width || 1920;
               videoHeight = videoStream.height || 1080;
-              console.log(`📐 Video dimensions: ${videoWidth}x${videoHeight}`);
+              console.log(`Video dimensions: ${videoWidth}x${videoHeight}`);
             }
             resolveProbe();
           });
         });
       } catch (probeError) {
-        console.warn('⚠️ Error probing video:', probeError);
+        console.warn('Error probing video:', probeError);
       }
 
       // ===== CHECK IF WE SHOULD USE SVG GRADIENT RENDERING =====
@@ -1356,12 +1292,11 @@ const burnSubtitlesIntoVideo = async (
                                   options?.style?.gradientColors.length >= 2;
       
       let finalVideoPath = outputPath;
-      let srtS3Key: string;
+      let srtS3Key: string = '';
       
       if (useGradientPipeline) {
-        console.log('🎨 [RENDER_MODE] Using SVG + FFmpeg alphamerge for TRUE gradient rendering');
+        console.log('[RENDER_MODE] Using SVG + FFmpeg alphamerge for TRUE gradient rendering');
         
-        // Parse SRT to get segments for SVG rendering
         const segments = parseSRTContent(srtContent);
         
         try {
@@ -1369,28 +1304,26 @@ const burnSubtitlesIntoVideo = async (
             videoPath,
             segments,
             videoId,
-            options.style,
+            options?.style!,
             videoWidth,
             videoHeight
           );
           
-          console.log('✅ [SVG_GRADIENT] Gradient rendering successful');
+          console.log('[SVG_GRADIENT] Gradient rendering successful');
           
-          // Upload SRT for gradient path too
           const srtBuffer = Buffer.from(srtContent, "utf8");
           srtS3Key = `subtitles/${videoId}.srt`;
           await uploadFile(srtS3Key, srtBuffer, "text/plain");
           
         } catch (gradientError) {
-          console.error('❌ [SVG_GRADIENT] Error, falling back to ASS:', gradientError);
-          // Fall through to ASS rendering below by setting flag to false
+          console.error('[SVG_GRADIENT] Error, falling back to ASS:', gradientError);
           useGradientPipeline = false;
         }
       }
       
       // ===== FALLBACK: ASS RENDERING (for non-gradient or if SVG failed) =====
       if (!useGradientPipeline) {
-        console.log('📝 [RENDER_MODE] Using ASS subtitle rendering');
+        console.log('[RENDER_MODE] Using ASS subtitle rendering');
 
         const assContent = convertSRTToASS(srtContent, options?.style, videoWidth, videoHeight);
         const assPath = join(tempDir, `${videoId}.ass`);
@@ -1412,32 +1345,27 @@ const burnSubtitlesIntoVideo = async (
         
         const assPathForFFmpeg = `./${shortAssFilename}`;
 
-        // Build subtitles filter with font configuration
         const fontFile = options?.style ? getFontFilePath(options.style.fontFamily, options.style.bold) : 'Arial';
         
-        console.log(`\n🎬 [FFMPEG DEBUG] Path Information:`);
+        console.log(`\n[FFMPEG DEBUG] Path Information:`);
         console.log(`   Current working directory: ${process.cwd()}`);
         console.log(`   Short ASS filename: ${shortAssFilename}`);
         console.log(`   Short ASS full path: ${shortAssPath}`);
         console.log(`   ASS file exists: ${existsSync(shortAssPath)}`);
         console.log(`   Font file: ${fontFile}`);
         
-        // SOLUTION: Install font to Windows system or user fonts directory
         const fontsTempDir = join(process.cwd(), 'fonts');
         if (!existsSync(fontsTempDir)) {
           mkdirSync(fontsTempDir, { recursive: true });
         }
         
-        // Install the required font to Windows
         if (fontFile !== 'Arial' && fontFile !== options?.style?.fontFamily && existsSync(fontFile)) {
           try {
             const fontFileName = fontFile.split(/[\\\/]/).pop() || 'font.ttf';
             
-            // Try to install to Windows user fonts directory (no admin required)
             const userFontsDir = join(process.env.LOCALAPPDATA || '', 'Microsoft', 'Windows', 'Fonts');
             const systemFontsDir = 'C:\\Windows\\Fonts';
             
-            // First, try user fonts directory
             if (existsSync(userFontsDir)) {
               const userFontPath = join(userFontsDir, fontFileName);
               if (!existsSync(userFontPath)) {
@@ -1445,7 +1373,6 @@ const burnSubtitlesIntoVideo = async (
                   const fontBuffer = readFileSync(fontFile);
                   writeFileSync(userFontPath, fontBuffer);
                   
-                  // Register font in Windows registry (user scope)
                   const { execSync } = await import('child_process');
                   const fontNameBase = fontFileName.replace(/\.[^.]+$/, '');
                   try {
@@ -1453,79 +1380,70 @@ const burnSubtitlesIntoVideo = async (
                       stdio: 'pipe',
                       windowsHide: true 
                     });
-                    console.log(`   ✅ Installed font to Windows (user): ${fontFileName}`);
+                    console.log(`   Installed font to Windows (user): ${fontFileName}`);
                   } catch (regError) {
-                    console.log(`   ⚠️ Font copied but registry update failed (font may still work)`);
+                    console.log(`   Font copied but registry update failed (font may still work)`);
                   }
                 } catch (userInstallError) {
-                  console.error(`   ⚠️ Failed to install to user fonts:`, userInstallError);
+                  console.error(`   Failed to install to user fonts:`, userInstallError);
                 }
               } else {
-                console.log(`   ✅ Font already installed in Windows: ${fontFileName}`);
+                console.log(`   Font already installed in Windows: ${fontFileName}`);
               }
             }
             
-            // Copy to local directory as fallback
             const tempFontPath = join(fontsTempDir, fontFileName);
             if (!existsSync(tempFontPath)) {
               const fontBuffer = readFileSync(fontFile);
               writeFileSync(tempFontPath, fontBuffer);
-              console.log(`   ✅ Copied font to: ${tempFontPath}`);
+              console.log(`   Copied font to: ${tempFontPath}`);
             }
             
             const assDirFontPath = join(process.cwd(), fontFileName);
             if (!existsSync(assDirFontPath)) {
               writeFileSync(assDirFontPath, readFileSync(fontFile));
-              console.log(`   ✅ Copied font to ASS directory: ${assDirFontPath}`);
+              console.log(`   Copied font to ASS directory: ${assDirFontPath}`);
             }
           } catch (fontInstallError) {
-            console.error(`   ⚠️ Failed to install font:`, fontInstallError);
+            console.error(`   Failed to install font:`, fontInstallError);
           }
         }
         
-        // Try using relative path from current working directory
         const relativeAssPath = shortAssFilename;
         
         console.log(`   Relative ASS path for FFmpeg: ${relativeAssPath}`);
         console.log(`   Fonts directory: ${fontsTempDir}`);
-        console.log(`\n🎬 [FFMPEG] Using ASS filter\n`);
+        console.log(`\n[FFMPEG] Using ASS filter\n`);
         
-        // Read ASS content to verify it's valid
         const assContentCheck = readFileSync(shortAssPath, 'utf8');
         console.log(`   ASS file size: ${assContentCheck.length} bytes`);
         console.log(`   ASS first 200 chars: ${assContentCheck.substring(0, 200)}`);
-        console.log(`\n🎬 [FFMPEG] Starting video processing...`);
+        console.log(`\n[FFMPEG] Starting video processing...`);
         console.log(`   Input: ${videoPath}`);
         console.log(`   Output: ${outputPath}\n`);
         
-        // Check if we need professional glow effect (split-blur-blend approach)
         const needsProGlow = options?.style?.shadowOffsetX === 0 && options?.style?.shadowOffsetY === 0 && options?.style?.showShadow;
         
-        // Extract glow parameters BEFORE the Promise scope
         const glowIntensity = options?.style?.shadowIntensity || 5;
         const glowSigma = Math.min(glowIntensity * 2.5, 25); // Blur size: 2.5–25
         const glowColorHex = options?.style?.shadowColor?.replace('#', '') || 'FFFFFF';
         
-        // Wrap ASS rendering in a Promise
         await new Promise<void>((resolveASS, rejectASS) => {
           const command = ffmpeg(videoPath)
             .videoCodec("libx264")
             .audioCodec("copy");
           
           if (needsProGlow) {
-            // Professional glow: split → blur → color → blend → overlay
             const glowColor = glowColorHex;
             
-            // Extract RGB values from hex
             const r = parseInt(glowColor.substring(0, 2), 16) / 255;
             const g = parseInt(glowColor.substring(2, 4), 16) / 255;
             const b = parseInt(glowColor.substring(4, 6), 16) / 255;
             
-            console.log(`✨ [PRO GLOW] Applying professional glow effect`);
+            console.log(`[PRO GLOW] Applying professional glow effect`);
             console.log(`   Glow sigma: ${glowSigma}`);
             console.log(`   Glow color: #${glowColor} (RGB: ${r.toFixed(2)}, ${g.toFixed(2)}, ${b.toFixed(2)})`);
             
-            // Filter complex: split → glow layer (blur + color) → blend → overlay sharp text
             const filterComplex = [
               `[0:v]split=2[base][glow]`,
               `[glow]subtitles=${relativeAssPath}:alpha=1,format=rgba,gblur=sigma=${glowSigma},colorchannelmixer=rr=${r}:rg=0:rb=0:gr=0:gg=${g}:gb=0:br=0:bg=0:bb=${b}:ar=1:ag=1:ab=1,eq=contrast=1.2:brightness=0.05[glowlayer]`,
@@ -1542,7 +1460,6 @@ const burnSubtitlesIntoVideo = async (
                 "-movflags", "+faststart"
               ]);
           } else {
-            // Standard ASS rendering (no glow)
             command.outputOptions([
               "-vf", `ass=${relativeAssPath}`,
               "-preset", "ultrafast",
@@ -1555,15 +1472,15 @@ const burnSubtitlesIntoVideo = async (
 
           command
             .on("start", (commandLine) => {
-              console.log(`🎬 [FFMPEG] Command: ${commandLine}`);
+              console.log(`[FFMPEG] Command: ${commandLine}`);
             })
             .on("progress", (progress) => {
               if (progress.percent) {
-                console.log(`🎬 [FFMPEG] Progress: ${Math.round(progress.percent)}%`);
+                console.log(`[FFMPEG] Progress: ${Math.round(progress.percent)}%`);
               }
             })
             .on("stderr", (stderrLine) => {
-              console.log(`🎬 [FFMPEG] ${stderrLine}`);
+              console.log(`[FFMPEG] ${stderrLine}`);
             })
             .on("end", async () => {
               try {
@@ -1576,7 +1493,7 @@ const burnSubtitlesIntoVideo = async (
                   throw new Error("Output file is empty");
                 }
                 
-                console.log('✅ [ASS] ASS subtitle rendering complete');
+                console.log('[ASS] ASS subtitle rendering complete');
                 finalVideoPath = outputPath;
                 resolveASS();
               } catch (err: any) {
@@ -1584,22 +1501,22 @@ const burnSubtitlesIntoVideo = async (
               }
             })
             .on("error", (err, stdout, stderr) => {
-              console.error('\n❌ [FFMPEG ERROR] Video processing failed');
+              console.error('\n[FFMPEG ERROR] Video processing failed');
               console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-              console.error('📋 Error Message:', err.message);
-              console.error('📋 Error Code:', (err as any).code);
-              console.error('\n📝 STDOUT:');
+              console.error('Error Message:', err.message);
+              console.error('Error Code:', (err as any).code);
+              console.error('\nSTDOUT:');
               console.error(stdout || '(empty)');
-              console.error('\n📝 STDERR:');
+              console.error('\nSTDERR:');
               console.error(stderr || '(empty)');
-              console.error('\n🎯 Configuration:');
+              console.error('\nConfiguration:');
               console.error('   - Video Path:', videoPath);
               console.error('   - Output Path:', outputPath);
               console.error('   - ASS Path (relative):', relativeAssPath);
               console.error('   - ASS Path (full):', shortAssPath);
               console.error('   - Font Family:', options?.style?.fontFamily);
               console.error('   - Font File:', fontFile);
-              console.error('\n📂 File Checks:');
+              console.error('\nFile Checks:');
               console.error('   - ASS file exists:', existsSync(shortAssPath));
               console.error('   - Video file exists:', existsSync(videoPath));
               console.error('   - Fonts dir exists:', existsSync(fontsTempDir));
@@ -1613,7 +1530,6 @@ const burnSubtitlesIntoVideo = async (
             .save(outputPath);
         });
         
-        // Clean up ASS files after rendering
         try {
           if (existsSync(assPath)) unlinkSync(assPath);
           if (existsSync(shortAssPath)) unlinkSync(shortAssPath);
@@ -1623,7 +1539,7 @@ const burnSubtitlesIntoVideo = async (
       }
       
       // ===== COMMON: Apply watermark and upload to S3 (works for both SVG and ASS) =====
-      console.log('\n📍 [AUTO-SUBTITLES] Applying watermark to subtitled video...');
+      console.log('\n[AUTO-SUBTITLES] Applying watermark to subtitled video...');
       console.log('   Video ID:', videoId);
       console.log('   Render mode:', useGradientPipeline ? 'SVG Gradient' : 'ASS');
       console.log('   Current video path:', finalVideoPath);
@@ -1646,15 +1562,14 @@ const burnSubtitlesIntoVideo = async (
         console.log('   Watermark options:', JSON.stringify(watermarkOptions, null, 2));
         
         await watermarkService.addWatermark(finalVideoPath, watermarkedPath, watermarkOptions);
-        console.log('✅ [AUTO-SUBTITLES] Watermark applied successfully');
+        console.log('[AUTO-SUBTITLES] Watermark applied successfully');
         
         finalVideoPath = watermarkedPath;
       } catch (watermarkError) {
-        console.error('❌ [AUTO-SUBTITLES] Watermark application failed:', watermarkError);
+        console.error('[AUTO-SUBTITLES] Watermark application failed:', watermarkError);
         console.error('   Error message:', watermarkError instanceof Error ? watermarkError.message : String(watermarkError));
         console.error('   Error stack:', watermarkError instanceof Error ? watermarkError.stack : 'N/A');
-        console.warn('⚠️ [AUTO-SUBTITLES] Continuing without watermark...');
-        // Continue without watermark if it fails
+        console.warn('[AUTO-SUBTITLES] Continuing without watermark...');
       }
 
       console.log('   Reading final video buffer from:', finalVideoPath);
@@ -1664,7 +1579,7 @@ const burnSubtitlesIntoVideo = async (
       const videoS3Key = `videos/${videoId}_with_subtitles.mp4`;
       console.log('   Uploading to S3:', videoS3Key);
       await uploadFile(videoS3Key, finalVideoBuffer, "video/mp4");
-      console.log('✅ [AUTO-SUBTITLES] Video uploaded to S3 successfully');
+      console.log('[AUTO-SUBTITLES] Video uploaded to S3 successfully');
 
       const filesToCleanup = [srtPath, outputPath, videoPath];
       if (watermarkedPath) filesToCleanup.push(watermarkedPath);
@@ -1680,7 +1595,6 @@ const burnSubtitlesIntoVideo = async (
 
       resolve({ videoPath: finalVideoPath, srtS3Key, videoS3Key });
     } catch (setupError: any) {
-      // Clean up files on error
       try {
         if (existsSync(srtPath)) unlinkSync(srtPath);
         if (existsSync(outputPath)) unlinkSync(outputPath);
@@ -1697,7 +1611,7 @@ const burnSubtitlesIntoVideo = async (
 export { extractAudioFromVideo };
 
 /**
- * 🎙️ Extract transcript from video for podcast/interview analysis
+ * Extract transcript from video for podcast/interview analysis
  * Returns segments with timestamps for Gemini analysis
  */
 export interface TranscriptResult {
@@ -1714,24 +1628,22 @@ export const extractTranscriptFromVideo = async (
   videoPath: string,
   projectId: string
 ): Promise<TranscriptResult> => {
-  console.log(`[${projectId}] 🎙️ Extracting transcript from video: ${videoPath}`);
+  console.log(`[${projectId}] Extracting transcript from video: ${videoPath}`);
   
   let localVideoPath: string | null = null;
   let audioPath: string | null = null;
   
   try {
-    // Download video if it's an S3 key
     if (videoPath.startsWith('videos/')) {
-      console.log(`[${projectId}] 📥 Downloading video from S3...`);
+      console.log(`[${projectId}] Downloading video from S3...`);
       const videoExtension = videoPath.split('.').pop() || 'mp4';
       localVideoPath = join(tempDir, `${randomUUID()}_transcript_input.${videoExtension}`);
       await downloadFileToPath(videoPath, localVideoPath);
       videoPath = localVideoPath;
-      console.log(`[${projectId}] ✅ Video downloaded to: ${localVideoPath}`);
+      console.log(`[${projectId}] Video downloaded to: ${localVideoPath}`);
     }
     
-    // Extract audio from video
-    console.log(`[${projectId}] 🎵 Extracting audio...`);
+    console.log(`[${projectId}] Extracting audio...`);
     audioPath = join(tempDir, `${randomUUID()}_transcript_audio.wav`);
     
     await new Promise<void>((resolve, reject) => {
@@ -1740,28 +1652,25 @@ export const extractTranscriptFromVideo = async (
         .audioFrequency(16000)
         .audioChannels(1)
         .on('end', () => {
-          console.log(`[${projectId}] ✅ Audio extracted`);
+          console.log(`[${projectId}] Audio extracted`);
           resolve();
         })
         .on('error', (err) => {
-          console.error(`[${projectId}] ❌ Audio extraction failed:`, err);
+          console.error(`[${projectId}] Audio extraction failed:`, err);
           reject(err);
         })
         .save(audioPath!);
     });
     
-    // Get audio duration
     const duration = await getVideoDuration(videoPath);
-    console.log(`[${projectId}] ⏱️ Video duration: ${duration}s`);
+    console.log(`[${projectId}] Video duration: ${duration}s`);
     
-    // Transcribe using Google Speech-to-Text
-    console.log(`[${projectId}] 🎤 Transcribing audio...`);
+    console.log(`[${projectId}] Transcribing audio...`);
     const segments = await transcribeAudioForPodcast(audioPath, projectId, duration);
     
-    // Build full text
     const fullText = segments.map(s => s.text).join(' ');
     
-    console.log(`[${projectId}] ✅ Transcript extracted: ${segments.length} segments, ${fullText.split(' ').length} words`);
+    console.log(`[${projectId}] Transcript extracted: ${segments.length} segments, ${fullText.split(' ').length} words`);
     
     return {
       segments,
@@ -1770,7 +1679,6 @@ export const extractTranscriptFromVideo = async (
     };
     
   } finally {
-    // Cleanup temp files
     if (localVideoPath && existsSync(localVideoPath)) {
       try { unlinkSync(localVideoPath); } catch (e) {}
     }
@@ -1791,9 +1699,8 @@ const transcribeAudioForPodcast = async (
 ): Promise<Array<{ startTime: number; endTime: number; text: string }>> => {
   const CHUNK_DURATION = 55; // seconds per chunk (under 60s limit for sync API)
   
-  // For short audio, use direct recognition
   if (duration <= 60) {
-    console.log(`[${projectId}] 📤 Using sync recognition for ${duration}s audio...`);
+    console.log(`[${projectId}] Using sync recognition for ${duration}s audio...`);
     const audioBuffer = readFileSync(audioPath);
     
     const [response] = await speechClient.recognize({
@@ -1813,9 +1720,8 @@ const transcribeAudioForPodcast = async (
     return extractSegmentsFromSpeechResponse(response as any, projectId, 0);
   }
   
-  // For long audio, split into chunks
   const numChunks = Math.ceil(duration / CHUNK_DURATION);
-  console.log(`[${projectId}] 🔪 Splitting ${duration.toFixed(0)}s audio into ${numChunks} chunks...`);
+  console.log(`[${projectId}] Splitting ${duration.toFixed(0)}s audio into ${numChunks} chunks...`);
   
   const allSegments: Array<{ startTime: number; endTime: number; text: string }> = [];
   
@@ -1823,9 +1729,8 @@ const transcribeAudioForPodcast = async (
     const startTime = i * CHUNK_DURATION;
     const chunkPath = join(tempDir, `${randomUUID()}_chunk_${i}.wav`);
     
-    console.log(`[${projectId}] ✂️ Processing chunk ${i + 1}/${numChunks} (${startTime}s - ${Math.min(startTime + CHUNK_DURATION, duration)}s)...`);
+    console.log(`[${projectId}] Processing chunk ${i + 1}/${numChunks} (${startTime}s - ${Math.min(startTime + CHUNK_DURATION, duration)}s)...`);
     
-    // Extract chunk with ffmpeg
     await new Promise<void>((resolve, reject) => {
       ffmpeg(audioPath)
         .setStartTime(startTime)
@@ -1839,7 +1744,6 @@ const transcribeAudioForPodcast = async (
     });
     
     try {
-      // Transcribe chunk
       const chunkBuffer = readFileSync(chunkPath);
       
       const [response] = await speechClient.recognize({
@@ -1857,21 +1761,19 @@ const transcribeAudioForPodcast = async (
         },
       });
       
-      // Extract segments with time offset
       const chunkSegments = extractSegmentsFromSpeechResponse(response as any, projectId, startTime);
       allSegments.push(...chunkSegments);
       
-      console.log(`[${projectId}] ✅ Chunk ${i + 1} transcribed: ${chunkSegments.length} segments`);
+      console.log(`[${projectId}] Chunk ${i + 1} transcribed: ${chunkSegments.length} segments`);
       
     } finally {
-      // Cleanup chunk file
       if (existsSync(chunkPath)) {
         try { unlinkSync(chunkPath); } catch (e) {}
       }
     }
   }
   
-  console.log(`[${projectId}] ✅ Total segments extracted: ${allSegments.length}`);
+  console.log(`[${projectId}] Total segments extracted: ${allSegments.length}`);
   return allSegments;
 };
 
@@ -1897,7 +1799,6 @@ const extractSegmentsFromSpeechResponse = (
     const words = alternative.words || [];
     
     if (words.length === 0 && alternative.transcript) {
-      // No word timings, create a single segment
       segments.push({
         startTime: timeOffset,
         endTime: timeOffset,
@@ -1906,7 +1807,6 @@ const extractSegmentsFromSpeechResponse = (
       continue;
     }
     
-    // Group words into sentences (roughly 10-15 words per segment)
     const WORDS_PER_SEGMENT = 12;
     
     for (let i = 0; i < words.length; i += WORDS_PER_SEGMENT) {
@@ -1925,7 +1825,7 @@ const extractSegmentsFromSpeechResponse = (
     }
   }
   
-  console.log(`[${projectId}] ✅ Extracted ${segments.length} transcript segments`);
+  console.log(`[${projectId}] Extracted ${segments.length} transcript segments`);
   return segments;
 };
 
@@ -1980,7 +1880,6 @@ const formatASSTime = (seconds: number): string => {
   return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${centiseconds.toString().padStart(2, '0')}`;
 };
 
-// Helper function to interpolate colors for gradient effect
 const interpolateColor = (color1: string, color2: string, factor: number): string => {
   const hex1 = color1.replace('#', '');
   const hex2 = color2.replace('#', '');
@@ -2014,7 +1913,6 @@ export const convertSRTToASS = (srtContent: string, style?: SubtitleStyle, video
     italic: false
   };
   
-  // Map alignment to ASS alignment values (1=left, 2=center, 3=right)
   const getAlignment = (alignment?: string) => {
     switch (alignment) {
       case 'left': return 1;
@@ -2023,7 +1921,6 @@ export const convertSRTToASS = (srtContent: string, style?: SubtitleStyle, video
     }
   };
   
-  // Convert hex color to ASS BGR format
   const hexToAssBgr = (hexColor: string, alpha: string = '00'): string => {
     const hex = hexColor.replace('#', '').toUpperCase();
     if (hex.length === 6) {
@@ -2037,39 +1934,30 @@ export const convertSRTToASS = (srtContent: string, style?: SubtitleStyle, video
 
   const fontFilePath = style ? getFontFilePath(style.fontFamily, style.bold) : 'Arial';
   
-  // Font size scaling
-  // Apply user's scale multiplier if provided, then apply video resolution scaling and ASS multiplier
   const scaleFontSize = (baseFontSize: number): number => {
     const referenceHeight = 1080; // Reference resolution height (1080p)
     const videoScaleFactor = videoHeight / referenceHeight;
     
-    // Apply user's scale multiplier (from drag/slider in UI)
     const userScale = style?.scale || 1;
     const userScaledSize = baseFontSize * userScale;
     
-    // Apply video resolution scaling
     const scaledSize = Math.round(userScaledSize * videoScaleFactor);
     
-    // ASS subtitle system requires a multiplier for proper visual size
-    // This ensures the font appears at the expected size relative to video dimensions
     const finalSize = Math.round(scaledSize * 2.5);
     
-    console.log(`📏 [FONT SCALE] Base: ${baseFontSize}px, User Scale: ${userScale}x, Video: ${videoHeight}p (${videoScaleFactor.toFixed(2)}x), Final: ${finalSize}px`);
+    console.log(`[FONT SCALE] Base: ${baseFontSize}px, User Scale: ${userScale}x, Video: ${videoHeight}p (${videoScaleFactor.toFixed(2)}x), Final: ${finalSize}px`);
     return finalSize;
   };
   
-  // Handle transparent outline (no border)
-  // For gradient styles, we need a border to show the outline color gradient effect
   const hasTransparentOutline = style?.outlineColor === 'transparent' || style?.outlineColor?.toLowerCase() === 'transparent';
   const isGradientStyle = style?.useGradient && style?.gradientColors && style?.gradientColors.length >= 2;
   const outlineBorderWidth = isGradientStyle ? 4 : (hasTransparentOutline ? 0 : 3); // Force border for gradients
   
-  // Determine shadow depth based on glow effect
   const isGlowEffect = style?.shadowOffsetX === 0 && style?.shadowOffsetY === 0 && style?.showShadow;
   const shadowDepth = isGlowEffect ? 0 : (style?.showShadow ? 3 : 0);
   
-  console.log(`🎨 [ASS STYLE] Gradient: ${isGradientStyle}, Outline: ${hasTransparentOutline ? 'TRANSPARENT' : style?.outlineColor}, Border Width: ${outlineBorderWidth}`);
-  console.log(`✨ [ASS STYLE] Glow Effect: ${isGlowEffect}, Shadow Depth: ${shadowDepth}`);
+  console.log(`[ASS STYLE] Gradient: ${isGradientStyle}, Outline: ${hasTransparentOutline ? 'TRANSPARENT' : style?.outlineColor}, Border Width: ${outlineBorderWidth}`);
+  console.log(`[ASS STYLE] Glow Effect: ${isGlowEffect}, Shadow Depth: ${shadowDepth}`);
   
   const finalStyle = style ? {
     fontFamily: style.fontFamily,
@@ -2086,9 +1974,6 @@ export const convertSRTToASS = (srtContent: string, style?: SubtitleStyle, video
     shadow: shadowDepth // Shadow depth
   } : {...defaultStyle, fontFile: 'Arial', alignment: 2, border: 3, shadow: scaleFontSize(20)};
   
-  // Calculate margins from position offset (x, y from center)
-  // Position values are pixel offsets from center of the video
-  // ASS uses margins from edges: MarginL (left), MarginR (right), MarginV (bottom for alignment 2)
   
   const baseMarginV = 120; // Default bottom margin (in pixels)
   let marginL = 10;
@@ -2096,37 +1981,28 @@ export const convertSRTToASS = (srtContent: string, style?: SubtitleStyle, video
   let customMarginV = baseMarginV;
   
   if (style?.position) {
-    // Y: positive = move UP (increase margin from bottom), negative = move DOWN (decrease margin from bottom)
     customMarginV = Math.max(10, Math.round(baseMarginV - style.position.y));
     
-    // X: Calculate horizontal position
-    // For center alignment (alignment=2), we use MarginL and MarginR to shift left/right
-    // Positive X = move RIGHT (decrease left margin, increase right margin)
-    // Negative X = move LEFT (increase left margin, decrease right margin)
     marginL = Math.max(0, Math.round(style.position.x));
     marginR = Math.max(0, Math.round(-style.position.x));
   }
   
-  console.log(`📝 [ASS] Using font: ${finalStyle.fontFamily} (${finalStyle.fontSize}px, bold: ${!!finalStyle.bold})`);
-  console.log(`📝 [ASS] Font file path: ${finalStyle.fontFile}`);
-  console.log(`📐 [ASS] Video resolution: ${videoWidth}x${videoHeight}`);
-  console.log(`📍 [ASS] Position: X=${style?.position?.x || 0}, Y=${style?.position?.y || 0} → Margins: L=${marginL}, R=${marginR}, V=${customMarginV}`);
+  console.log(`[ASS] Using font: ${finalStyle.fontFamily} (${finalStyle.fontSize}px, bold: ${!!finalStyle.bold})`);
+  console.log(`[ASS] Font file path: ${finalStyle.fontFile}`);
+  console.log(`[ASS] Video resolution: ${videoWidth}x${videoHeight}`);
+  console.log(`[ASS] Position: X=${style?.position?.x || 0}, Y=${style?.position?.y || 0} → Margins: L=${marginL}, R=${marginR}, V=${customMarginV}`);
   
-  // Build ASS header with actual video dimensions for proper font scaling
   let assContent = `[Script Info]\nTitle: SmartClip Subtitles\nScriptType: v4.00+\nPlayResX: ${videoWidth}\nPlayResY: ${videoHeight}\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Default,${finalStyle.fontFamily},${finalStyle.fontSize},${finalStyle.primaryColor},&H000000FF,${finalStyle.outlineColor},${finalStyle.backgroundColor},${finalStyle.bold},${finalStyle.italic},0,0,100,100,0,0,1,${finalStyle.border},${finalStyle.shadow},${finalStyle.alignment},${marginL},${marginR},${customMarginV},1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`;
   
   let i = 0;
   while (i < lines.length) {
-    // Skip subtitle number
     if (lines[i] && /^\d+$/.test(lines[i].trim())) {
       i++;
       
-      // Parse time range
       if (lines[i] && lines[i].includes(' --> ')) {
         const timeRange = lines[i].trim();
         const [startSRT, endSRT] = timeRange.split(' --> ');
         
-        // Convert SRT time to seconds
         const parseTime = (srtTime: string): number => {
           const [time, ms] = srtTime.split(',');
           const [h, m, s] = time.split(':').map(Number);
@@ -2141,7 +2017,6 @@ export const convertSRTToASS = (srtContent: string, style?: SubtitleStyle, video
         
         i++;
         
-        // Collect text lines until empty line or end
         let text = '';
         while (i < lines.length && lines[i].trim() !== '') {
           if (text) text += '\\N'; // ASS line break
@@ -2150,14 +2025,11 @@ export const convertSRTToASS = (srtContent: string, style?: SubtitleStyle, video
         }
         
         if (text) {
-          // Escape special ASS characters
           text = text.replace(/\{/g, '\\{').replace(/\}/g, '\\}');
           
-          // 🔥 Apply gradient effects using ASS override tags if gradient is enabled
           if (style?.useGradient && style.gradientColors && style.gradientColors.length >= 2) {
-            console.log(`🎨 [ASS GRADIENT] Applying gradient effect with ${style.gradientColors.length} colors`);
+            console.log(`[ASS GRADIENT] Applying gradient effect with ${style.gradientColors.length} colors`);
             
-            // ASS doesn't support true CSS gradients, but we can simulate a gradient-like appearance using:
             // 1. Primary color (text fill) - USE MIDDLE GRADIENT COLOR for better gradient illusion
             // 2. Outline color (\3c) - Use last gradient color (darker) - VISIBLE with thick border
             // 3. Secondary color (\2c) - Use first gradient color (lighter) for edge highlight
@@ -2167,7 +2039,6 @@ export const convertSRTToASS = (srtContent: string, style?: SubtitleStyle, video
             const gradientStart = hexToAssBgr(style.gradientColors[0]);
             const gradientEnd = hexToAssBgr(style.gradientColors[style.gradientColors.length - 1]);
             
-            // Use middle color for text fill (creates better gradient illusion than pure white)
             const gradientMid = style.gradientColors.length > 2 
               ? hexToAssBgr(style.gradientColors[Math.floor(style.gradientColors.length / 2)]) 
               : hexToAssBgr(style.gradientColors[0]);
@@ -2175,7 +2046,6 @@ export const convertSRTToASS = (srtContent: string, style?: SubtitleStyle, video
             const shadowDepth = Math.min(style.shadowIntensity || 3, 5);
             const blurStrength = 3; // Stronger blur for smoother gradient blend
             
-            // Enhanced gradient simulation:
             // - \c: Primary text color = MIDDLE gradient color (not white!)
             // - \2c: Secondary color = FIRST gradient color (lightest)
             // - \3c: Outline/border color = LAST gradient color (darkest)
@@ -2184,16 +2054,12 @@ export const convertSRTToASS = (srtContent: string, style?: SubtitleStyle, video
             // - \blur: Strong blur for smooth blending
             // - \shad: Shadow depth
             
-            // Use middle color for text, last color for thick outline
             text = `{\\c${gradientMid}\\3c${gradientEnd}\\4c&H00000000\\bord6\\blur${blurStrength}\\shad${shadowDepth}}${text}`;
             
-            console.log(`✨ [ASS GRADIENT] Applied gradient: Text=${style.gradientColors[Math.floor(style.gradientColors.length / 2)] || style.gradientColors[0]}, Outline=${style.gradientColors[style.gradientColors.length - 1]}, Border=6, Blur=${blurStrength}, Shadow=${shadowDepth}`);
+            console.log(`[ASS GRADIENT] Applied gradient: Text=${style.gradientColors[Math.floor(style.gradientColors.length / 2)] || style.gradientColors[0]}, Outline=${style.gradientColors[style.gradientColors.length - 1]}, Border=6, Blur=${blurStrength}, Shadow=${shadowDepth}`);
           } else if (style?.shadowOffsetX === 0 && style?.shadowOffsetY === 0 && style?.showShadow) {
-            // Glow effect - handled by FFmpeg filter_complex (split-blur-blend)
-            // Don't apply any ASS tags here - let FFmpeg do the professional glow
-            console.log(`✨ [ASS GLOW] Glow will be applied via FFmpeg filter_complex (professional split-blur-blend)`);
+            console.log(`[ASS GLOW] Glow will be applied via FFmpeg filter_complex (professional split-blur-blend)`);
           } else if (style?.shadowIntensity && style.shadowIntensity > 3) {
-            // Simple shadow for non-gradient text (reduced intensity)
             text = `{\\shad3}${text}`;
           }
           

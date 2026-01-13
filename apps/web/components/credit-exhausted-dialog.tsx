@@ -43,10 +43,10 @@ export function CreditExhaustedDialog({ open, onOpenChange, message }: CreditExh
                   Upgrade Benefits
                 </p>
                 <ul className="text-sm text-yellow-800 dark:text-yellow-200 space-y-1">
-                  <li>✓ Remove watermarks from all videos</li>
-                  <li>✓ Generate unlimited high-quality content</li>
-                  <li>✓ Access to all premium features</li>
-                  <li>✓ Priority processing & support</li>
+                  <li>Remove watermarks from all videos</li>
+                  <li>Generate unlimited high-quality content</li>
+                  <li>Access to all premium features</li>
+                  <li>Priority processing & support</li>
                 </ul>
               </div>
             </div>

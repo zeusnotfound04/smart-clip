@@ -33,17 +33,16 @@ export const analyzeVideo = async (req: AuthRequest, res: Response) => {
   
   try {
     console.log(`[${requestId}] Starting Smart Clipper video analysis`);
-    console.log('👤 User ID:', req.userId);
-    console.log('📋 Request body:', req.body);
+    console.log('User ID:', req.userId);
+    console.log('Request body:', req.body);
     
-    // Test queue connection first
     try {
-      console.log(`[${requestId}] 🔍 Testing queue connection...`);
+      console.log(`[${requestId}] Testing queue connection...`);
       const queueCounts = await smartClipperQueue.getJobCounts();
-      console.log(`[${requestId}] 📈 Current queue stats:`, queueCounts);
-      console.log(`[${requestId}] ✅ Queue connection successful`);
+      console.log(`[${requestId}] Current queue stats:`, queueCounts);
+      console.log(`[${requestId}] Queue connection successful`);
     } catch (queueTestError) {
-      console.error(`[${requestId}] ❌ Queue connection test failed:`, queueTestError);
+      console.error(`[${requestId}] Queue connection test failed:`, queueTestError);
       return res.status(500).json({ error: 'Queue service unavailable' });
     }
     
@@ -55,7 +54,6 @@ export const analyzeVideo = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Validate video exists and belongs to user
     const video = await prisma.video.findFirst({
       where: { 
         id: videoId, 
@@ -67,16 +65,13 @@ export const analyzeVideo = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Video not found or access denied' });
     }
 
-    // Get content type configuration
     const contentConfig = await getContentTypeConfig(contentType);
     if (!contentConfig) {
       return res.status(400).json({ error: `Unsupported content type: ${contentType}` });
     }
 
-    // Merge default config with user overrides
     const analysisConfig = mergeAnalysisConfig(contentConfig, config);
 
-    // Create Smart Clipper project
     const project = await prisma.smartClipperProject.create({
       data: {
         userId: req.userId,
@@ -90,8 +85,8 @@ export const analyzeVideo = async (req: AuthRequest, res: Response) => {
     });
 
     console.log(`[${requestId}] Created Smart Clipper project ${project.id} for video ${video.originalName}`);
-    console.log(`[${requestId}] 🔄 About to queue job for background processing...`);
-    console.log(`[${requestId}] 📋 Queue job data:`, {
+    console.log(`[${requestId}] About to queue job for background processing...`);
+    console.log(`[${requestId}] Queue job data:`, {
       projectId: project.id,
       videoPath: video.filePath,
       videoDuration: video.duration,
@@ -100,14 +95,12 @@ export const analyzeVideo = async (req: AuthRequest, res: Response) => {
     });
 
     try {
-      // Queue for background processing
-      console.log(`[${requestId}] 🚀 Adding job to smartClipperQueue...`);
+      console.log(`[${requestId}] Adding job to smartClipperQueue...`);
       
-      // 🎙️ Use simplified transcript-based workflow for podcast/interview
       const isPodcastOrInterview = ['podcast', 'interview'].includes(contentType);
       const jobType = isPodcastOrInterview ? 'analyze-podcast-transcript' : 'analyze-video-complete';
       
-      console.log(`[${requestId}] 📋 Job type: ${jobType} (${isPodcastOrInterview ? 'transcript-based' : 'full analysis'})`);
+      console.log(`[${requestId}] Job type: ${jobType} (${isPodcastOrInterview ? 'transcript-based' : 'full analysis'})`);
       
       const job = await smartClipperQueue.add(jobType, {
         projectId: project.id,
@@ -117,14 +110,14 @@ export const analyzeVideo = async (req: AuthRequest, res: Response) => {
         config: analysisConfig,
         requestId
       });
-      console.log(`[${requestId}] ✅ Job added successfully with ID: ${job.id}`);
-      console.log(`[${requestId}] 📊 Queue stats after adding job:`, await smartClipperQueue.getJobCounts());
+      console.log(`[${requestId}] Job added successfully with ID: ${job.id}`);
+      console.log(`[${requestId}] Queue stats after adding job:`, await smartClipperQueue.getJobCounts());
     } catch (queueError) {
-      console.error(`[${requestId}] ❌ Failed to add job to queue:`, queueError);
+      console.error(`[${requestId}] Failed to add job to queue:`, queueError);
       throw queueError;
     }
 
-    console.log(`[${requestId}] 📤 Sending response to client...`);
+    console.log(`[${requestId}] Sending response to client...`);
     const response = {
       projectId: project.id,
       status: 'analyzing',
@@ -132,9 +125,9 @@ export const analyzeVideo = async (req: AuthRequest, res: Response) => {
       estimatedDuration: Math.ceil((video.duration || 0) / 60) * 2, // ~2 minutes per video minute
       message: 'Video analysis started. Check status for updates.'
     };
-    console.log(`[${requestId}] 📝 Response data:`, response);
+    console.log(`[${requestId}] Response data:`, response);
     res.json(response);
-    console.log(`[${requestId}] ✅ Response sent successfully`);
+    console.log(`[${requestId}] Response sent successfully`);
 
   } catch (error) {
     console.error(`[${requestId}] Error starting video analysis:`, error);
@@ -169,7 +162,6 @@ export const getProjectStatus = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Project not found or access denied' });
     }
 
-    // Calculate progress percentage
     const progress = calculateProgress(project.status, project.processingStage);
 
     res.json({
@@ -188,7 +180,7 @@ export const getProjectStatus = async (req: AuthRequest, res: Response) => {
         createdAt: project.createdAt,
         updatedAt: project.updatedAt
       },
-      segments: project.highlightSegments.map(segment => ({
+      segments: project.highlightSegments.map((segment: any) => ({
         id: segment.id,
         startTime: segment.startTime,
         endTime: segment.endTime,
@@ -232,7 +224,6 @@ export const getProjectSegments = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Project not found or access denied' });
     }
 
-    // Build filter conditions
     const whereConditions: any = { projectId };
     
     if (status) whereConditions.status = status;
@@ -251,7 +242,7 @@ export const getProjectSegments = async (req: AuthRequest, res: Response) => {
     });
 
     res.json({
-      segments: segments.map(segment => ({
+      segments: segments.map((segment: any) => ({
         id: segment.id,
         startTime: segment.startTime,
         endTime: segment.endTime,
@@ -297,7 +288,6 @@ export const updateSegment = async (req: AuthRequest, res: Response) => {
       feedback
     } = req.body;
 
-    // Verify segment belongs to user's project
     const segment = await prisma.highlightSegment.findFirst({
       where: { 
         id: segmentId,
@@ -309,7 +299,6 @@ export const updateSegment = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Segment not found or access denied' });
     }
 
-    // Update segment
     const updatedSegment = await prisma.highlightSegment.update({
       where: { id: segmentId },
       data: {
@@ -320,7 +309,6 @@ export const updateSegment = async (req: AuthRequest, res: Response) => {
       }
     });
 
-    // Add feedback if provided
     if (feedback) {
       await prisma.segmentFeedback.create({
         data: {
@@ -380,8 +368,7 @@ export const generateClips = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'No segments selected or approved for generation' });
     }
 
-    // Queue clip generation jobs
-    const jobs = project.highlightSegments.map(segment => 
+    const jobs = project.highlightSegments.map((segment: any) => 
       smartClipperQueue.add('generate-clip', {
         segmentId: segment.id,
         videoPath: project.video.filePath,
@@ -407,14 +394,13 @@ export const generateClips = async (req: AuthRequest, res: Response) => {
 };
 
 export const getContentTypes = async (req: Request, res: Response) => {
-  console.log('🔵 [SMART_CLIPPER] getContentTypes called');
+  console.log('[SMART_CLIPPER] getContentTypes called');
   
   try {
-    // First, let's check if any content types exist at all
     const totalCount = await prisma.contentTypeConfig.count();
-    console.log(`📊 Total content types in database: ${totalCount}`);
+    console.log(`Total content types in database: ${totalCount}`);
     
-    console.log('💾 Fetching active content types from database...');
+    console.log('Fetching active content types from database...');
     const contentTypes = await prisma.contentTypeConfig.findMany({
       where: { isActive: true },
       select: {
@@ -440,19 +426,18 @@ export const getContentTypes = async (req: Request, res: Response) => {
       }
     });
 
-    console.log(`✅ Found ${contentTypes.length} content types`);
-    console.log('📋 Content types details:', JSON.stringify(contentTypes, null, 2));
+    console.log(`Found ${contentTypes.length} content types`);
+    console.log('Content types details:', JSON.stringify(contentTypes, null, 2));
     
-    // If no content types exist, create some basic ones
     if (contentTypes.length === 0) {
-      console.log('⚠️ No content types found, creating default ones...');
+      console.log('No content types found, creating default ones...');
       
       const defaultContentType = await prisma.contentTypeConfig.create({
         data: {
           type: 'general',
           name: 'General Content',
           description: 'General purpose content analysis for all video types',
-          icon: '🎬',
+          icon: '',
           audioEnergyWeight: 0.5,
           visualMotionWeight: 0.5,
           speechPatternWeight: 0.5,
@@ -494,14 +479,14 @@ export const getContentTypes = async (req: Request, res: Response) => {
         }
       });
       
-      console.log('✅ Created default content type:', defaultContentType);
+      console.log('Created default content type:', defaultContentType);
       return res.json({ contentTypes: [defaultContentType] });
     }
     
     res.json({ contentTypes });
   } catch (error) {
-    console.error('❌ [SMART_CLIPPER] Error getting content types:', error);
-    console.error('🔍 Error details:', error);
+    console.error('[SMART_CLIPPER] Error getting content types:', error);
+    console.error('Error details:', error);
     res.status(500).json({ error: 'Failed to get content types' });
   }
 };
@@ -522,7 +507,7 @@ export const getUserProjects = async (req: AuthRequest, res: Response) => {
     });
 
     res.json({
-      projects: projects.map(project => ({
+      projects: projects.map((project: any) => ({
         id: project.id,
         contentType: project.contentType,
         status: project.status,
@@ -539,15 +524,15 @@ export const getUserProjects = async (req: AuthRequest, res: Response) => {
 
 
   } catch (error) {
-    console.error('❌ [SMART_CLIPPER] Error getting user projects:', error);
+    console.error('[SMART_CLIPPER] Error getting user projects:', error);
     res.status(500).json({ error: 'Failed to get user projects' });
   }
 };
 
 export const getProject = async (req: AuthRequest, res: Response) => {
-  console.log('🟡 [SMART_CLIPPER] getProject called');
-  console.log('👤 User ID:', req.userId);
-  console.log('📋 Project ID:', req.params.projectId);
+  console.log('[SMART_CLIPPER] getProject called');
+  console.log('User ID:', req.userId);
+  console.log('Project ID:', req.params.projectId);
   
   try {
     const { projectId } = req.params;
@@ -581,20 +566,18 @@ export const getProject = async (req: AuthRequest, res: Response) => {
             s3Url: true,
             generatedAt: true
           },
-          // Temporarily remove the filter to debug - return ALL segments
           orderBy: { finalScore: 'desc' }
         }
       }
     });
 
     if (!project) {
-      console.log('❌ Project not found');
+      console.log('Project not found');
       return res.status(404).json({ error: 'Project not found' });
     }
 
 
 
-    // Debug log the full response before sending
     const responseData = {
       success: true,
       project: {
@@ -616,7 +599,7 @@ export const getProject = async (req: AuthRequest, res: Response) => {
           duration: project.video.duration,
           filePath: project.video.filePath
         },
-        highlightSegments: project.highlightSegments.map(segment => ({
+        highlightSegments: project.highlightSegments.map((segment: any) => ({
           id: segment.id,
           startTime: segment.startTime,
           endTime: segment.endTime,
@@ -630,7 +613,7 @@ export const getProject = async (req: AuthRequest, res: Response) => {
           s3Url: segment.s3Url, // Include S3 URL for generated clips
           clipReady: !!segment.s3Url // Boolean flag for frontend
         })),
-        segments: project.highlightSegments.map(segment => ({
+        segments: project.highlightSegments.map((segment: any) => ({
           id: segment.id,
           startTime: segment.startTime,
           endTime: segment.endTime,
@@ -650,12 +633,11 @@ export const getProject = async (req: AuthRequest, res: Response) => {
     res.json(responseData);
 
   } catch (error) {
-    console.error('❌ [SMART_CLIPPER] Error getting project:', error);
+    console.error('[SMART_CLIPPER] Error getting project:', error);
     res.status(500).json({ error: 'Failed to get project' });
   }
 };
 
-// Helper functions
 async function getContentTypeConfig(contentType: string) {
   return await prisma.contentTypeConfig.findUnique({
     where: { type: contentType }
@@ -719,7 +701,6 @@ function calculateProgress(status: string, stage: string | null): number {
   return progressMap[stage || 'analyzing'] || 10;
 }
 
-// Get segment analytics for a project
 smartClipperRouter.get('/analytics/:projectId', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { projectId } = req.params;
@@ -753,7 +734,6 @@ smartClipperRouter.get('/analytics/:projectId', authenticateToken, async (req: A
   }
 });
 
-// Submit user feedback and trigger score rebalancing
 smartClipperRouter.post('/feedback/:projectId', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { projectId } = req.params;
@@ -777,7 +757,6 @@ smartClipperRouter.post('/feedback/:projectId', authenticateToken, async (req: A
       });
     }
     
-    // Store feedback in database
     for (const item of feedback) {
       await prisma.segmentFeedback.create({
         data: {
@@ -790,7 +769,6 @@ smartClipperRouter.post('/feedback/:projectId', authenticateToken, async (req: A
       });
     }
     
-    // Trigger score rebalancing job
     const requestId = `rebalance-${Date.now()}`;
     await smartClipperQueue.add('rebalance-scores', {
       projectId,
@@ -814,7 +792,6 @@ smartClipperRouter.post('/feedback/:projectId', authenticateToken, async (req: A
   }
 });
 
-// Manually trigger segment rescoring
 smartClipperRouter.post('/rescore/:projectId', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { projectId } = req.params;
@@ -859,13 +836,11 @@ smartClipperRouter.post('/rescore/:projectId', authenticateToken, async (req: Au
   }
 });
 
-// Generate single clip from a segment
 smartClipperRouter.post('/generate-clip/:segmentId', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { segmentId } = req.params;
     const { exportSettings } = req.body;
     
-    // Validate segment ownership
     const segment = await prisma.highlightSegment.findFirst({
       where: { 
         id: segmentId,
@@ -890,7 +865,6 @@ smartClipperRouter.post('/generate-clip/:segmentId', authenticateToken, async (r
       });
     }
     
-    // Add default export settings
     const settings = {
       format: 'mp4',
       quality: 'medium',
@@ -898,7 +872,6 @@ smartClipperRouter.post('/generate-clip/:segmentId', authenticateToken, async (r
       ...exportSettings
     };
     
-    // Queue clip generation
     await smartClipperQueue.add('generate-clip', {
       segmentId,
       videoPath: segment.project.video.filePath,
@@ -925,7 +898,6 @@ smartClipperRouter.post('/generate-clip/:segmentId', authenticateToken, async (r
   }
 });
 
-// Generate multiple clips (batch export)
 smartClipperRouter.post('/generate-clips/:projectId', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { projectId } = req.params;
@@ -976,7 +948,6 @@ smartClipperRouter.post('/generate-clips/:projectId', authenticateToken, async (
       compilationTitle: compilationTitle || `${project.video.originalName} Highlights`
     };
     
-    // Start batch generation (runs in background)
     clipGeneration.generateBatchClips(projectId, segmentIds, batchOptions)
       .then(progress => {
         console.log(`Batch export completed for project ${projectId}:`, progress);
@@ -1003,7 +974,6 @@ smartClipperRouter.post('/generate-clips/:projectId', authenticateToken, async (
   }
 });
 
-// Get export format and quality options
 smartClipperRouter.get('/export-options', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { clipGeneration } = await import('../services/clip-generation.service');
@@ -1040,7 +1010,6 @@ smartClipperRouter.get('/export-options', authenticateToken, async (req: AuthReq
   }
 });
 
-// Estimate clip generation details
 smartClipperRouter.post('/estimate-clip', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { duration, quality, resolution } = req.body;

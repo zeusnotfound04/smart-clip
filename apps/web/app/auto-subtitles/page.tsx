@@ -3,7 +3,7 @@
 import { useAuth } from "@/lib/auth-context";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Suspense } from "react";
 import { apiClient } from "@/lib/api-client";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CreditExhaustedDialog } from "@/components/credit-exhausted-dialog";
@@ -14,7 +14,7 @@ import { Settings, Upload, Loader2 } from "lucide-react";
 import { VideoSelectorModal } from "@/components/video-selector-modal";
 import { VideoUrlUpload } from "@/components/video-url-upload";
 
-export default function AutoSubtitlesPage() {
+function AutoSubtitlesContent() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -560,7 +560,7 @@ export default function AutoSubtitlesPage() {
                           onClick={() => openDebugAnalysis(videoId)}
                           className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-blue-600 text-white hover:bg-blue-700 h-9 px-4 py-2"
                         >
-                          🔍 Debug Subtitle Accuracy
+                          Debug Subtitle Accuracy
                         </button>
                       </div>
                     </div>
@@ -579,7 +579,7 @@ export default function AutoSubtitlesPage() {
             {/* Modal Header */}
             <div className="border-b p-4 flex justify-between items-center">
               <div>
-                <h2 className="text-xl font-bold">🔍 Subtitle Debug Analysis</h2>
+                <h2 className="text-xl font-bold">Subtitle Debug Analysis</h2>
                 <p className="text-sm text-gray-600">
                   {debugData[currentDebugVideoId]?.video?.originalName || 'Unknown Video'}
                 </p>
@@ -596,7 +596,7 @@ export default function AutoSubtitlesPage() {
             <div className="flex-1 overflow-hidden flex">
               {/* Video Section */}
               <div className="w-1/2 p-4 border-r">
-                <h3 className="font-semibold mb-3">📺 Video with Subtitles</h3>
+                <h3 className="font-semibold mb-3">Video with Subtitles</h3>
                 {subtitleResults[currentDebugVideoId]?.videoWithSubtitles && (
                   <video 
                     controls 
@@ -610,7 +610,7 @@ export default function AutoSubtitlesPage() {
                 {/* Statistics */}
                 {debugData[currentDebugVideoId]?.statistics && (
                   <div className="bg-blue-50 p-3 rounded-lg">
-                    <h4 className="font-medium mb-2">📊 Statistics</h4>
+                    <h4 className="font-medium mb-2">Statistics</h4>
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div>Total Segments: {debugData[currentDebugVideoId].statistics.totalSegments}</div>
                       <div>Total Words: {debugData[currentDebugVideoId].statistics.totalWords}</div>
@@ -623,7 +623,7 @@ export default function AutoSubtitlesPage() {
 
               {/* Subtitle Analysis Section */}
               <div className="w-1/2 p-4 flex flex-col">
-                <h3 className="font-semibold mb-3">📝 Detailed Subtitle Analysis</h3>
+                <h3 className="font-semibold mb-3">Detailed Subtitle Analysis</h3>
                 
                 <div className="flex-1 overflow-y-auto space-y-2">
                   {debugData[currentDebugVideoId]?.subtitles?.map((subtitle: any, index: number) => (
@@ -667,14 +667,14 @@ export default function AutoSubtitlesPage() {
                       {/* Low Confidence Warning */}
                       {subtitle.confidence < 0.6 && (
                         <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded text-xs text-red-700">
-                          ⚠️ Low confidence - may be inaccurate
+                          Low confidence - may be inaccurate
                         </div>
                       )}
 
                       {/* Unusual Speed Warning */}
                       {(subtitle.wordsPerMinute > 200 || subtitle.wordsPerMinute < 50) && subtitle.wordCount > 2 && (
                         <div className="mt-2 p-2 bg-yellow-100 border border-yellow-300 rounded text-xs text-yellow-700">
-                          ⚡ Unusual speech rate: {subtitle.wordsPerMinute} WPM
+                          Unusual speech rate: {subtitle.wordsPerMinute} WPM
                         </div>
                       )}
                     </div>
@@ -716,7 +716,7 @@ ${data.subtitles?.map((sub: any, i: number) =>
                       }}
                       className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
                     >
-                      📄 Export Report
+                      Export Report
                     </button>
                     <button
                       onClick={() => {
@@ -727,7 +727,7 @@ ${data.subtitles?.map((sub: any, i: number) =>
                       }}
                       className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700"
                     >
-                      🔄 Regenerate
+                      Regenerate
                     </button>
                   </div>
                 </div>
@@ -773,5 +773,13 @@ ${data.subtitles?.map((sub: any, i: number) =>
         maxFileSize={500}
       />
     </SidebarProvider>
+  );
+}
+
+export default function AutoSubtitlesPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <AutoSubtitlesContent />
+    </Suspense>
   );
 }

@@ -56,7 +56,7 @@ export default function SettingsPage() {
   const [sendingOtp, setSendingOtp] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   
-  // 🔥 Tanstack Query hooks with automatic caching
+  // Tanstack Query hooks with automatic caching
   const { data: profileData, isLoading: profileLoading } = useUserProfile();
   const { data: stats, isLoading: statsLoading } = useUserStats();
   const updateProfileMutation = useUpdateProfile();

@@ -50,11 +50,6 @@ export async function apiDocs(req: Request, res: Response): Promise<void> {
         "GET /script-generator/templates": "Get available script templates",
         "POST /script-generator/refine": "Refine existing script"
       },
-      "Fake Conversations": {
-        "POST /fake-conversations/create": "Create animated conversation video",
-        "GET /fake-conversations/themes": "Get available UI themes",
-        "GET /fake-conversations/voices": "Get available AI voices"
-      },
       "Video Processing": {
         "POST /video-processing/compress": "Compress video for web delivery",
         "POST /video-processing/convert": "Convert video format",

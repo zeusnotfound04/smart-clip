@@ -247,8 +247,8 @@ export function DashboardSidebar() {
           <Link href="/credits">
             <div className="rounded-lg bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 p-3 cursor-pointer hover:shadow-lg transition-shadow">
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-base">🚀</span>
-                <h3 className="text-white font-bold text-xs">Go Premium</h3>
+                <span className="text-base"></span>
+                <h3 className="text-white font-bold text-xs">🚀 Go Premium</h3>
               </div>
               <p className="text-white/90 text-[10px] leading-tight">
                 Unlock unlimited clips and advanced AI features

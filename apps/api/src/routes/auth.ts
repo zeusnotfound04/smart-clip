@@ -7,7 +7,6 @@ import { EmailService } from '../services/email.service';
 
 const router: Router = Router();
 
-// Validation schemas
 const requestOTPSchema = z.object({
   email: z.string().email('Invalid email address'),
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -30,12 +29,10 @@ const signInSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
-// Request OTP for email verification
 router.post('/request-otp', async (req: Request, res: Response) => {
   try {
     const { email, name } = requestOTPSchema.parse(req.body);
 
-    // Check if user already exists
     const existingUser = await prisma.user.findUnique({
       where: { email }
     });
@@ -44,16 +41,13 @@ router.post('/request-otp', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'User with this email already exists' });
     }
 
-    // Generate OTP
     const otp = EmailService.generateOTP();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-    // Delete any existing OTP for this email
     await prisma.emailVerification.deleteMany({
       where: { email }
     });
 
-    // Save OTP to database
     await prisma.emailVerification.create({
       data: {
         email,
@@ -62,7 +56,6 @@ router.post('/request-otp', async (req: Request, res: Response) => {
       }
     });
 
-    // Send OTP email
     await EmailService.sendOTPEmail({ to: email, otp, name });
 
     res.status(200).json({ 
@@ -75,18 +68,15 @@ router.post('/request-otp', async (req: Request, res: Response) => {
     }
     console.error('Request OTP error:', error);
     
-    // Provide user-friendly error messages
     const errorMessage = error instanceof Error ? error.message : 'Failed to send verification code';
     res.status(500).json({ error: errorMessage });
   }
 });
 
-// Verify OTP
 router.post('/verify-otp', async (req: Request, res: Response) => {
   try {
     const { email, otp } = verifyOTPSchema.parse(req.body);
 
-    // Find the OTP record
     const verification = await prisma.emailVerification.findFirst({
       where: {
         email,
@@ -102,12 +92,10 @@ router.post('/verify-otp', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid verification code' });
     }
 
-    // Check if OTP is expired
     if (verification.expiresAt < new Date()) {
       return res.status(400).json({ error: 'Verification code has expired' });
     }
 
-    // Mark as verified
     await prisma.emailVerification.update({
       where: { id: verification.id },
       data: { verified: true }
@@ -130,7 +118,6 @@ router.post('/signup', async (req: Request, res: Response) => {
   try {
     const { name, email, password, otp } = signUpSchema.parse(req.body);
 
-    // Verify OTP first
     const verification = await prisma.emailVerification.findFirst({
       where: {
         email,
@@ -146,7 +133,6 @@ router.post('/signup', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Email not verified. Please verify your email first.' });
     }
 
-    // Check if OTP is expired
     if (verification.expiresAt < new Date()) {
       return res.status(400).json({ error: 'Verification code has expired. Please request a new one.' });
     }
@@ -170,17 +156,14 @@ router.post('/signup', async (req: Request, res: Response) => {
       }
     });
 
-    // Clean up verification record
     await prisma.emailVerification.deleteMany({
       where: { email }
     });
 
-    // Send welcome email
     try {
       await EmailService.sendWelcomeEmail({ to: email, name });
     } catch (emailError) {
       console.error('Failed to send welcome email:', emailError);
-      // Don't fail signup if welcome email fails
     }
 
     const token = generateToken({ userId: user.id, email: user.email });
@@ -277,7 +260,6 @@ router.get('/me', async (req: Request, res: Response) => {
   }
 });
 
-// Google OAuth routes
 router.get('/google', passport.authenticate('google', {
   scope: ['profile', 'email'],
   accessType: 'offline',

@@ -108,8 +108,8 @@ export function VideoUploadPanel({
         
         // Extract the direct video URL from yt-dlp (e.g., video.twimg.com for Twitter)
         const directVideoUrl = result.videoInfo.url; // This is the direct .mp4 URL
-        console.log('🎯 Direct video URL from yt-dlp:', directVideoUrl);
-        console.log('📋 Full videoInfo:', result.videoInfo);
+        console.log('Direct video URL from yt-dlp:', directVideoUrl);
+        console.log('Full videoInfo:', result.videoInfo);
         
         // For Twitter videos, use backend proxy to bypass CORS
         const isTwitterVideo = directVideoUrl?.includes('video.twimg.com');
@@ -117,8 +117,8 @@ export function VideoUploadPanel({
           ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/video-url-upload/proxy?url=${encodeURIComponent(directVideoUrl)}`
           : directVideoUrl;
         
-        console.log('🔄 Using proxy for Twitter:', isTwitterVideo);
-        console.log('🎬 Final preview URL:', proxyUrl);
+        console.log('Using proxy for Twitter:', isTwitterVideo);
+        console.log('Final preview URL:', proxyUrl);
         
         // Immediately pass video info to parent for preview
         if (onVideoSelect) {
@@ -141,11 +141,11 @@ export function VideoUploadPanel({
               duration: result.videoInfo.duration
             }
           };
-          console.log('🚀 Preview data with proxy URL:', previewData);
-          console.log('🎬 Video will preview from:', previewData.videoUrl);
-          console.log('📤 Calling onVideoSelect with previewData');
+          console.log('Preview data with proxy URL:', previewData);
+          console.log('Video will preview from:', previewData.videoUrl);
+          console.log('Calling onVideoSelect with previewData');
           onVideoSelect(previewData);
-          console.log('✅ onVideoSelect called successfully');
+          console.log('onVideoSelect called successfully');
           
           // Clear the URL input and state after successfully adding
           setUrl("");

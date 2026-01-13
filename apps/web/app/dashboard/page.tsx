@@ -23,12 +23,12 @@ import { CreditsDisplay } from '@/components/credits-display';
 // Helper functions
 const getFeatureIcon = (type: string) => {
   switch (type) {
-    case 'auto-subtitles': return '🎬';
-    case 'smart-clipper': return '✂️';
-    case 'split-streamer': return '🎞️';
-    case 'ai-script-generator': return '📝';
-    case 'fake-conversations': return '💬';
-    default: return '🎯';
+    case 'auto-subtitles': return '';
+    case 'smart-clipper': return '';
+    case 'split-streamer': return '';
+    case 'ai-script-generator': return '';
+    case 'fake-conversations': return '';
+    default: return '';
   }
 };
 
@@ -299,7 +299,7 @@ export default function DashboardPage() {
                         transition={{ duration: 4, repeat: Infinity }}
                         className="text-8xl mb-6"
                       >
-                        📁
+                        
                       </motion.div>
                       <motion.h3 
                         className="text-2xl font-bold mb-2"

@@ -70,7 +70,7 @@ function ChooseFeaturePageContent() {
       router.push(feature.href);
       
     } catch (error: any) {
-      console.error('❌ Failed to navigate to feature:', error);
+      console.error('Failed to navigate to feature:', error);
     } finally {
       setCreateProjectLoading(false);
     }
@@ -164,7 +164,7 @@ function ChooseFeaturePageContent() {
                             animate={{ scale: [1, 1.1, 1], rotate: [0, 5, -5, 0] }}
                             transition={{ duration: 2, repeat: Infinity }}
                           >
-                            ✨ NEW
+                            NEW
                           </motion.div>
                         )} */}
                         <motion.div 

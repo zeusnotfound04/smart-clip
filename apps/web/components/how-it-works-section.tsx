@@ -193,7 +193,7 @@ export default function HowItWorksSection() {
           </div>
 
           <p className="text-sm text-muted-foreground">
-            ⚡ Average processing time: 2-5 minutes • 🎯 90% accuracy in finding viral moments
+            Average processing time: 2-5 minutes • 90% accuracy in finding viral moments
           </p>
         </motion.div>
       </div>

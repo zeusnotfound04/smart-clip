@@ -4,7 +4,6 @@ import { authenticateToken } from '../middleware/auth.js';
 
 const router: Router = express.Router();
 
-// TEMPORARY TEST ROUTE - Remove in production
 router.post('/simulate-checkout-success', authenticateToken, testController.simulateCheckoutSuccess);
 
 export default router;

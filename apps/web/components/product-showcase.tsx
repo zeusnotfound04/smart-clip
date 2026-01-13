@@ -19,13 +19,13 @@ const features = [
   {
     title: "Smart Clipper",
     description: "Extract the best moments automatically",
-    icon: "✂",
+    icon: "",
     color: "from-blue-500 to-indigo-600",
   },
   {
     title: "Script Generator",
     description: "Create engaging narration scripts instantly",
-    icon: "📝",
+    icon: "",
     color: "from-indigo-400 to-blue-500",
   },
 ]

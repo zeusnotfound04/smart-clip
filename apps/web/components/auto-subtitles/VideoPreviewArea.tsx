@@ -207,7 +207,7 @@ export function VideoPreviewArea({
                   const isTwitter = isTwitterUrl(videoPreviewUrl);
                   const shouldUseIframe = (isYouTube || isTwitter) && !subtitledVideoUrl;
                   
-                  console.log('🎥 VideoPreviewArea rendering decision:');
+                  console.log('VideoPreviewArea rendering decision:');
                   console.log('   - videoPreviewUrl:', videoPreviewUrl);
                   console.log('   - subtitledVideoUrl:', subtitledVideoUrl);
                   console.log('   - isYouTube:', isYouTube);
@@ -220,7 +220,7 @@ export function VideoPreviewArea({
                     const embedUrl = isYouTube 
                       ? getYouTubeEmbedUrl(videoPreviewUrl!)
                       : getTwitterEmbedUrl(videoPreviewUrl!);
-                    console.log('📺 Using iframe with URL:', embedUrl);
+                    console.log('Using iframe with URL:', embedUrl);
                     return (
                       <div className="w-full h-full relative">
                         {isTwitter && (
@@ -238,7 +238,7 @@ export function VideoPreviewArea({
                       </div>
                     );
                   } else {
-                    console.log('📹 Using video element');
+                    console.log('Using video element');
                     return (
                       <video
                         ref={videoRef}
@@ -404,7 +404,7 @@ export function VideoPreviewArea({
                             const newScale = Math.min(2, subtitleScale + 0.1);
                             setSubtitleScale(newScale);
                             onScaleChange?.(newScale);
-                            console.log('📈 Increased scale to:', newScale);
+                            console.log('Increased scale to:', newScale);
                           }}
                           className="text-white hover:text-blue-400 transition-colors"
                         >
@@ -419,7 +419,7 @@ export function VideoPreviewArea({
                 {subtitledVideoUrl && (
                   <div className="absolute top-4 left-4 z-10">
                     <div className="bg-blue-600/90 backdrop-blur-sm rounded-lg px-3 py-2 flex items-center gap-2">
-                      <span className="text-white text-sm font-medium">✨ Video with Applied Subtitles</span>
+                      <span className="text-white text-sm font-medium">Video with Applied Subtitles</span>
                     </div>
                   </div>
                 )}

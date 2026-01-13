@@ -390,7 +390,7 @@ Examples:
                   {/* Hook */}
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-semibold text-purple-700">🎣 Hook</h4>
+                      <h4 className="font-semibold text-purple-700">Hook</h4>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -409,7 +409,7 @@ Examples:
                   {/* Key Points */}
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-semibold text-blue-700">📋 Key Points</h4>
+                      <h4 className="font-semibold text-blue-700">Key Points</h4>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -433,7 +433,7 @@ Examples:
                   {/* Conclusion */}
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-semibold text-green-700">🎯 Conclusion</h4>
+                      <h4 className="font-semibold text-green-700">Conclusion</h4>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -452,7 +452,7 @@ Examples:
                   {/* Full Script */}
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-semibold text-gray-700">📝 Complete Script</h4>
+                      <h4 className="font-semibold text-gray-700">Complete Script</h4>
                       <Button
                         onClick={() => copyToClipboard(generatedScript.fullScript, "Full Script")}
                         className="gap-2"
@@ -529,7 +529,7 @@ Examples:
             {/* Tips */}
             <Card>
               <CardHeader>
-                <CardTitle>💡 Pro Tips</CardTitle>
+                <CardTitle>Pro Tips</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
                 <div>

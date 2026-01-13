@@ -41,7 +41,6 @@ export const creditsService = {
       throw new Error('User not found');
     }
 
-    // Premium tier has unlimited credits
     if (user.subscriptionTier === 'premium') {
       return true;
     }
@@ -80,9 +79,7 @@ export const creditsService = {
       throw new Error('User not found');
     }
 
-    // Premium tier has unlimited credits - no deduction needed
     if (user.subscriptionTier === 'premium') {
-      // Still log the transaction for analytics
       await prisma.creditTransaction.create({
         data: {
           userId,
@@ -90,7 +87,7 @@ export const creditsService = {
           type: 'usage',
           description,
           balanceBefore: user.credits,
-          balanceAfter: user.credits, // No change
+          balanceAfter: user.credits,
           projectId,
           projectType,
           videoDuration,
@@ -100,14 +97,12 @@ export const creditsService = {
       return { success: true, newBalance: user.credits };
     }
 
-    // Check if user has enough credits
     if (user.credits < amount) {
       throw new Error(`Insufficient credits. Required: ${amount}, Available: ${user.credits}`);
     }
 
     const newBalance = user.credits - amount;
 
-    // Update user credits and create transaction
     await prisma.$transaction([
       prisma.user.update({
         where: { id: userId },
@@ -151,7 +146,6 @@ export const creditsService = {
 
     const newBalance = user.credits + amount;
 
-    // Update user credits and create transaction
     await prisma.$transaction([
       prisma.user.update({
         where: { id: userId },
@@ -194,7 +188,6 @@ export const creditsService = {
    * Calculate credits needed based on video duration (in minutes)
    */
   calculateCreditsNeeded(durationInMinutes: number): number {
-    // 1 credit = 1 minute of footage
     return Math.ceil(durationInMinutes);
   },
 
@@ -246,5 +239,4 @@ export const creditsService = {
   },
 };
 
-// Re-export new CreditService for convenience
 export { CreditService } from './credit.service';

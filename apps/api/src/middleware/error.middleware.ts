@@ -24,11 +24,9 @@ export const errorHandler = (
     ip: req.ip
   });
 
-  // Default to 500 server error
   let status = err.status || 500;
   let message = err.message || 'Internal Server Error';
 
-  // Handle specific error types
   if (err.name === 'ValidationError') {
     status = 400;
     message = 'Invalid input data';
@@ -49,7 +47,6 @@ export const errorHandler = (
     message = 'File upload error';
   }
 
-  // Don't expose internal error details in production
   if (process.env.NODE_ENV === 'production' && status === 500) {
     message = 'Something went wrong';
   }
@@ -106,14 +103,12 @@ export const rateLimiter = (maxRequests: number = 100, windowMs: number = 15 * 6
     const ip = req.ip || 'unknown';
     const now = Date.now();
     
-    // Clean up expired entries
     for (const [key, data] of requestCounts.entries()) {
       if (now > data.resetTime) {
         requestCounts.delete(key);
       }
     }
     
-    // Check rate limit
     const requestData = requestCounts.get(ip);
     if (!requestData) {
       requestCounts.set(ip, { count: 1, resetTime: now + windowMs });
@@ -147,7 +142,6 @@ export const securityHeaders = (req: Request, res: Response, next: NextFunction)
   res.setHeader('X-XSS-Protection', '1; mode=block');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   
-  // Don't cache sensitive endpoints
   if (req.url.includes('/auth') || req.url.includes('/api')) {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
   }

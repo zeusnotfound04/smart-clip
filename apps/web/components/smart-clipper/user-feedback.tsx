@@ -118,7 +118,7 @@ const RatingComponent: React.FC<RatingComponentProps> = ({
               readonly && "cursor-default"
             )}
           >
-            ★
+            
           </button>
         ))}
       </div>
@@ -335,7 +335,7 @@ const FeedbackSummaryDisplay: React.FC<FeedbackSummaryDisplayProps> = ({
                 <div key={rating} className="flex items-center space-x-3">
                   <div className="flex items-center space-x-1 min-w-0 w-20">
                     <span className="text-sm">{rating}</span>
-                    <div className="text-yellow-400">★</div>
+                    <div className="text-yellow-400"></div>
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center space-x-2">

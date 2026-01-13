@@ -20,7 +20,6 @@ export const combine = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Both webcam and gameplay video IDs are required' });
     }
 
-    // Get video details from database
     console.log(`[${requestId}] Fetching video details...`);
     const dbStart = Date.now();
     
@@ -65,7 +64,6 @@ export const combine = async (req: AuthRequest, res: Response) => {
     
     console.log(`[${requestId}] Project created (${Date.now() - projectStart}ms), ID: ${project.id}`);
 
-    // Add job to queue for async processing
     console.log(`[${requestId}] Adding job to video processing queue...`);
     
     const job = await videoProcessingQueue.add('combine-videos', {
@@ -95,7 +93,6 @@ export const combine = async (req: AuthRequest, res: Response) => {
 
     console.log(`[${requestId}] Job added to queue with ID: ${job.id}`);
 
-    // Return immediately with job info
     res.json({
       message: 'Video combination started',
       projectId: project.id,
@@ -135,7 +132,6 @@ export const updateLayout = async (req: AuthRequest, res: Response) => {
     const config = JSON.parse(String(project.config || '{}'));
     const updatedConfig = { ...config, layoutConfig };
 
-    // Get original videos
     const [webcamVideo, gameplayVideo] = await Promise.all([
       prisma.video.findUnique({ where: { id: config.webcamVideoId } }),
       prisma.video.findUnique({ where: { id: config.gameplayVideoId } })
@@ -145,10 +141,8 @@ export const updateLayout = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Original videos not found' });
     }
 
-    // Regenerate video with new layout
     const outputBuffer = await combineVideos(webcamVideo.filePath, gameplayVideo.filePath, layoutConfig);
     
-    // Upload updated video to S3
     const { uploadFile, generateKey } = await import('../lib/s3');
     const outputKey = generateKey(req.userId!, `${project.id}_combined_updated.mp4`, 'video');
     const outputUrl = await uploadFile(outputKey, outputBuffer, 'video/mp4');
@@ -192,13 +186,11 @@ export const downloadCombined = async (req: AuthRequest, res: Response) => {
     }
 
     try {
-      // Extract S3 key from the output path URL
       const s3Url = new URL(project.outputPath);
       const s3Key = s3Url.pathname.substring(1); // Remove leading slash
       
       console.log(`Downloading video from S3 key: ${s3Key}`);
       
-      // For large files (>100MB), use streaming instead of loading into memory
       const { GetObjectCommand } = await import('@aws-sdk/client-s3');
       const { S3Client } = await import('@aws-sdk/client-s3');
       
@@ -221,7 +213,6 @@ export const downloadCombined = async (req: AuthRequest, res: Response) => {
         throw new Error('File not found in S3');
       }
       
-      // Set headers for video download
       res.setHeader('Content-Type', response.ContentType || 'video/mp4');
       res.setHeader('Content-Disposition', `attachment; filename=\"combined_video_${projectId}.mp4\"`);
       if (response.ContentLength) {
@@ -229,10 +220,8 @@ export const downloadCombined = async (req: AuthRequest, res: Response) => {
       }
       res.setHeader('Cache-Control', 'no-cache');
       
-      // Stream the file directly from S3 to client (memory efficient)
       const stream = response.Body as NodeJS.ReadableStream;
       
-      // Add error handling for the stream
       stream.on('error', (error) => {
         console.error('S3 stream error:', error);
         if (!res.headersSent) {
@@ -240,22 +229,18 @@ export const downloadCombined = async (req: AuthRequest, res: Response) => {
         }
       });
       
-      // Handle client disconnect
       res.on('close', () => {
         console.log('Client disconnected during download');
-        // Stream cleanup is handled automatically
       });
       
-      // Pipe the stream and handle completion
       stream.pipe(res);
       
       stream.on('end', () => {
-        console.log(`✅ Download completed for project ${projectId}`);
+        console.log(`Download completed for project ${projectId}`);
       });
       
     } catch (s3Error) {
       console.error('S3 download error:', s3Error);
-      // Fallback: redirect to S3 URL if direct download fails
       res.redirect(project.outputPath);
     }
   } catch (error) {

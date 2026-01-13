@@ -57,7 +57,6 @@ export class GeminiVideoAnalysisService {
     this.genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
     this.flashModel = this.genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
     this.proModel = this.genAI.getGenerativeModel({ model: 'gemini-2.0-pro-exp' });
-    // Enable mock data for development/testing - set to false when Gemini API is working
     this.useMockData = process.env.USE_MOCK_GEMINI === 'true' || true; // Default to true for now
   }
 
@@ -71,7 +70,6 @@ export class GeminiVideoAnalysisService {
 
     try {
       if (this.useMockData) {
-        // Use mock segments for development/testing
         console.log(`[${projectId}] Using mock analysis for development testing`);
         
         const mockSegments = this.generateMockSegments(config);
@@ -94,7 +92,6 @@ export class GeminiVideoAnalysisService {
         };
       }
 
-      // Real Gemini analysis code
       console.log(`[${projectId}] Using real Gemini analysis`);
       
       const prompt = this.buildFlashPrompt(config);
@@ -163,7 +160,6 @@ export class GeminiVideoAnalysisService {
   }> {
     const segments = [];
     
-    // Generate segments that fit within config constraints
     const segmentCount = Math.min(config.maxSegments + 2, 5); // Generate a few extra for Pro to choose from
     const videoDuration = config.chunkDuration || 300; // Assume 5 minutes if not specified
     
@@ -203,12 +199,10 @@ export class GeminiVideoAnalysisService {
     for (let i = 0; i < Math.min(segmentCount, templates.length); i++) {
       const template = templates[i];
       
-      // Calculate appropriate duration within constraints
       const minDuration = Math.max(config.minClipLength, 10); // At least 10 seconds
       const maxDuration = Math.min(config.maxClipLength, 60); // At most 60 seconds
       const duration = Math.floor(Math.random() * (maxDuration - minDuration + 1)) + minDuration;
       
-      // Calculate start time ensuring we don't exceed video duration
       const maxStartTime = Math.max(0, videoDuration - duration - 10); // Leave some buffer
       const startTime = Math.floor(Math.random() * maxStartTime);
       const endTime = startTime + duration;
@@ -223,7 +217,6 @@ export class GeminiVideoAnalysisService {
       });
     }
 
-    // Sort by start time for logical order
     return segments.sort((a, b) => a.startTime - b.startTime);
   }
 
@@ -238,7 +231,6 @@ export class GeminiVideoAnalysisService {
 
     try {
       if (this.useMockData) {
-        // Use mock refinement for development/testing
         console.log(`[${projectId}] Using mock Pro refinement for development testing`);
         
         const refinedSegments = this.generateMockRefinedSegments(flashSegments, config);
@@ -260,10 +252,8 @@ export class GeminiVideoAnalysisService {
         };
       }
 
-      // Real Gemini Pro analysis
       console.log(`[${projectId}] Using real Gemini Pro analysis`);
       
-      // Select top candidates based on flash scores
       const topCandidates = flashSegments
         .sort((a, b) => b.score - a.score)
         .slice(0, config.maxSegments * 1.5); // Allow some extras for Pro to choose from
@@ -447,7 +437,6 @@ export class GeminiVideoAnalysisService {
   }
 
   private generateMockRefinedSegments(flashSegments: any[], config: VideoAnalysisConfig): any[] {
-    // Select the best segments from flash analysis
     const topSegments = flashSegments
       .sort((a, b) => b.score - a.score)
       .slice(0, config.maxSegments);
@@ -507,7 +496,6 @@ export class GeminiVideoAnalysisService {
     
     const tags = baseTags[highlightType] || ['entertainment'];
     
-    // Add content type specific tags
     if (contentType === 'gaming') tags.push('gaming');
     else if (contentType === 'tutorial') tags.push('tutorial');
     else if (contentType === 'podcast') tags.push('podcast');
@@ -528,8 +516,6 @@ export class GeminiVideoAnalysisService {
 
   private async createVideoChunks(videoPath: string, chunkDuration: number): Promise<any[]> {
     try {
-      // For now, just send the entire video as one chunk since it's experimental model
-      // In production, we would split videos into smaller chunks using FFmpeg
       const videoData = await this.getVideoData(videoPath);
       
       return [
@@ -550,12 +536,9 @@ export class GeminiVideoAnalysisService {
     try {
       let videoBuffer: Buffer;
       
-      // Check if it's an S3 path or local file
       if (videoPath.startsWith('videos/')) {
-        // S3 path - download the file
         videoBuffer = await downloadFile(videoPath);
       } else {
-        // Local file path - read directly
         videoBuffer = await fs.readFile(videoPath);
       }
       
@@ -575,12 +558,10 @@ export class GeminiVideoAnalysisService {
   }
 
   private calculateFlashCost(tokensUsed: number, chunkCount: number): number {
-    // Gemini 2.0 Flash pricing estimate: $0.001 per 1K tokens
     return (tokensUsed / 1000) * 0.001;
   }
 
   private calculateProCost(tokensUsed: number): number {
-    // Gemini 2.0 Pro pricing estimate: $0.01 per 1K tokens  
     return (tokensUsed / 1000) * 0.01;
   }
 

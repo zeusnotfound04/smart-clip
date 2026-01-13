@@ -37,7 +37,7 @@ export interface UpdateProfileData {
   email?: string;
 }
 
-// 🔥 Hook: Fetch User Profile (with video/project counts)
+// Hook: Fetch User Profile (with video/project counts)
 export function useUserProfile() {
   const { session } = useAuth();
 
@@ -62,7 +62,7 @@ export function useUserProfile() {
   });
 }
 
-// 🔥 Hook: Fetch User Stats (credits, videos, projects)
+// Hook: Fetch User Stats (credits, videos, projects)
 export function useUserStats() {
   const { session } = useAuth();
 
@@ -88,7 +88,7 @@ export function useUserStats() {
   });
 }
 
-// 🔥 Hook: Update User Profile
+// Hook: Update User Profile
 export function useUpdateProfile() {
   const { session } = useAuth();
   const queryClient = useQueryClient();
@@ -122,7 +122,7 @@ export function useUpdateProfile() {
   });
 }
 
-// 🔥 Hook: Upload Profile Picture
+// Hook: Upload Profile Picture
 export function useUploadProfilePicture() {
   const { session } = useAuth();
   const queryClient = useQueryClient();

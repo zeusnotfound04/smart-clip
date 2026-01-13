@@ -54,7 +54,7 @@ export function SignUpForm() {
     setError(null);
 
     try {
-      await signUp(data.name, data.email, data.password);
+      await signUp(data.name, data.email, data.password, '');
       router.push('/dashboard');
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Something went wrong');

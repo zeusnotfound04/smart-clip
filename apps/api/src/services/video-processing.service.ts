@@ -1,17 +1,9 @@
-/**
- * Video Processing Service
- * Handles video manipulation operations using FFmpeg
- */
-
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile } from '@ffmpeg/util';
 import { uploadFile } from '../lib/s3';
 
 let ffmpeg: FFmpeg;
 
-/**
- * Initialize FFmpeg instance
- */
 async function initFFmpeg(): Promise<void> {
   if (!ffmpeg) {
     ffmpeg = new FFmpeg();
@@ -19,9 +11,6 @@ async function initFFmpeg(): Promise<void> {
   }
 }
 
-/**
- * Extract clip from video between start and end times
- */
 export async function extractClip(
   videoUrl: string,
   startTime: number,
@@ -31,18 +20,14 @@ export async function extractClip(
   try {
     await initFFmpeg();
     
-    // Fetch video file
     const videoData = await fetchFile(videoUrl);
     const inputName = 'input.mp4';
     const outputName = 'clip.mp4';
     
-    // Write input file
     await ffmpeg.writeFile(inputName, videoData);
     
-    // Calculate duration
     const duration = endTime - startTime;
     
-    // Extract clip
     await ffmpeg.exec([
       '-i', inputName,
       '-ss', startTime.toString(),
@@ -52,14 +37,11 @@ export async function extractClip(
       outputName
     ]);
     
-    // Read output file
     const clipData = await ffmpeg.readFile(outputName);
     
-    // Upload to S3
     const s3Key = `clips/${projectId}_${Date.now()}.mp4`;
     const clipUrl = await uploadFile(s3Key, Buffer.from(clipData as Uint8Array), 'video/mp4');
     
-    // Cleanup
     await ffmpeg.deleteFile(inputName);
     await ffmpeg.deleteFile(outputName);
     
@@ -70,9 +52,6 @@ export async function extractClip(
   }
 }
 
-/**
- * Compress video for web delivery
- */
 export async function compressVideo(
   videoUrl: string,
   quality: 'low' | 'medium' | 'high' = 'medium'
@@ -86,14 +65,12 @@ export async function compressVideo(
     
     await ffmpeg.writeFile(inputName, videoData);
     
-    // Quality settings
     const qualitySettings = {
       low: ['-crf', '28', '-preset', 'fast'],
       medium: ['-crf', '23', '-preset', 'medium'],
       high: ['-crf', '18', '-preset', 'slow']
     };
     
-    // Compress video
     await ffmpeg.exec([
       '-i', inputName,
       '-c:v', 'libx264',
@@ -103,14 +80,11 @@ export async function compressVideo(
       outputName
     ]);
     
-    // Read output file
     const compressedData = await ffmpeg.readFile(outputName);
     
-    // Upload to S3
     const s3Key = `compressed/${Date.now()}_compressed.mp4`;
     const compressedUrl = await uploadFile(s3Key, Buffer.from(compressedData as Uint8Array), 'video/mp4');
     
-    // Cleanup
     await ffmpeg.deleteFile(inputName);
     await ffmpeg.deleteFile(outputName);
     
@@ -121,9 +95,6 @@ export async function compressVideo(
   }
 }
 
-/**
- * Add watermark to video
- */
 export async function addWatermark(
   videoUrl: string,
   watermarkText: string,
@@ -138,7 +109,6 @@ export async function addWatermark(
     
     await ffmpeg.writeFile(inputName, videoData);
     
-    // Position settings
     const positions = {
       'top-left': 'x=10:y=10',
       'top-right': 'x=w-text_w-10:y=10',
@@ -146,7 +116,6 @@ export async function addWatermark(
       'bottom-right': 'x=w-text_w-10:y=h-text_h-10'
     };
     
-    // Add watermark
     await ffmpeg.exec([
       '-i', inputName,
       '-vf', `drawtext=text='${watermarkText}':fontcolor=white:fontsize=24:${positions[position]}`,
@@ -154,14 +123,11 @@ export async function addWatermark(
       outputName
     ]);
     
-    // Read output file
     const watermarkedData = await ffmpeg.readFile(outputName);
     
-    // Upload to S3
     const s3Key = `watermarked/${Date.now()}_watermarked.mp4`;
     const watermarkedUrl = await uploadFile(s3Key, Buffer.from(watermarkedData as Uint8Array), 'video/mp4');
     
-    // Cleanup
     await ffmpeg.deleteFile(inputName);
     await ffmpeg.deleteFile(outputName);
     
@@ -172,9 +138,6 @@ export async function addWatermark(
   }
 }
 
-/**
- * Convert video format
- */
 export async function convertVideoFormat(
   videoUrl: string,
   targetFormat: 'mp4' | 'webm' | 'mov' | 'avi'
@@ -188,7 +151,6 @@ export async function convertVideoFormat(
     
     await ffmpeg.writeFile(inputName, videoData);
     
-    // Convert format
     await ffmpeg.exec([
       '-i', inputName,
       '-c:v', targetFormat === 'webm' ? 'libvpx-vp9' : 'libx264',
@@ -196,14 +158,11 @@ export async function convertVideoFormat(
       outputName
     ]);
     
-    // Read output file
     const convertedData = await ffmpeg.readFile(outputName);
     
-    // Upload to S3
     const s3Key = `converted/${Date.now()}_converted.${targetFormat}`;
     const convertedUrl = await uploadFile(s3Key, Buffer.from(convertedData as Uint8Array), `video/${targetFormat}`);
     
-    // Cleanup
     await ffmpeg.deleteFile(inputName);
     await ffmpeg.deleteFile(outputName);
     
@@ -214,9 +173,6 @@ export async function convertVideoFormat(
   }
 }
 
-/**
- * Extract audio from video
- */
 export async function extractAudio(
   videoUrl: string,
   format: 'mp3' | 'wav' | 'aac' = 'mp3'
@@ -230,7 +186,6 @@ export async function extractAudio(
     
     await ffmpeg.writeFile(inputName, videoData);
     
-    // Extract audio
     await ffmpeg.exec([
       '-i', inputName,
       '-vn',
@@ -238,14 +193,11 @@ export async function extractAudio(
       outputName
     ]);
     
-    // Read output file
     const audioData = await ffmpeg.readFile(outputName);
     
-    // Upload to S3
     const s3Key = `audio/${Date.now()}_audio.${format}`;
     const audioUrl = await uploadFile(s3Key, Buffer.from(audioData as Uint8Array), `audio/${format}`);
     
-    // Cleanup
     await ffmpeg.deleteFile(inputName);
     await ffmpeg.deleteFile(outputName);
     
@@ -256,9 +208,6 @@ export async function extractAudio(
   }
 }
 
-/**
- * Get actual video metadata using FFmpeg
- */
 export async function getVideoInfo(videoUrl: string): Promise<{
   duration: number;
   width: number;
@@ -275,17 +224,14 @@ export async function getVideoInfo(videoUrl: string): Promise<{
     
     await ffmpeg.writeFile(inputName, videoData);
     
-    // Run ffprobe to get video info
     await ffmpeg.exec(['-i', inputName, '-f', 'null', '-']);
     
-    // In a real implementation, you'd parse the ffmpeg output
-    // For now, return reasonable defaults
     const info = {
-      duration: 120, // 2 minutes default
+      duration: 120,
       width: 1920,
       height: 1080,
       fps: 30,
-      bitrate: 5000000, // 5 Mbps
+      bitrate: 5000000,
       format: 'mp4'
     };
     

@@ -1,41 +1,127 @@
-version: '3.8'
-
 services:
   postgres:
-    image: postgres:15
+    image: postgres:16-alpine
     container_name: smartclip-postgres
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: smartclip
-      POSTGRES_USER: smartclip_user
-      POSTGRES_PASSWORD: smartclip_password123
-      POSTGRES_HOST_AUTH_METHOD: trust
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: ${POSTGRES_USER:-smartclip}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-smartclip_password}
+      POSTGRES_DB: ${POSTGRES_DB:-smartclip_db}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-    restart: unless-stopped
+    ports:
+      - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U smartclip_user -d smartclip"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-smartclip}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - smartclip-network
 
   redis:
-    image: redis:7.2-alpine
-    container_name: smart-clip-redis
+    image: redis:7-alpine
+    container_name: smartclip-redis
     restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
     ports:
       - "6379:6379"
-    volumes:
-      - redis-data:/data
-    command: redis-server --appendonly yes
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
-      timeout: 3s
+      timeout: 5s
+      retries: 5
+    networks:
+      - smartclip-network
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: smartclip-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-smartclip}:${POSTGRES_PASSWORD:-smartclip_password}@postgres:5432/${POSTGRES_DB:-smartclip_db}?schema=public
+      - REDIS_URL=redis://redis:6379
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - PORT=3001
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - api_temp:/app/temp
+      - api_uploads:/app/uploads
+    networks:
+      - smartclip-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
       retries: 3
+      start_period: 40s
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: smartclip-web
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://api:3001
+      - PORT=3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    networks:
+      - smartclip-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: smartclip-migrate
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-smartclip}:${POSTGRES_PASSWORD:-smartclip_password}@postgres:5432/${POSTGRES_DB:-smartclip_db}?schema=public
+    command: npx prisma migrate deploy
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - smartclip-network
+    restart: "no"
+
+networks:
+  smartclip-network:
+    driver: bridge
 
 volumes:
   postgres_data:
-  redis-data:
+    driver: local
+  redis_data:
+    driver: local
+  api_temp:
+    driver: local
+  api_uploads:
+    driver: local

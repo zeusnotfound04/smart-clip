@@ -52,18 +52,18 @@ export default function DashboardSmartClipperPage() {
   }, []);
 
   const loadContentTypes = async () => {
-    console.log('🔄 [SMART_CLIPPER] Loading content types...');
+    console.log('[SMART_CLIPPER] Loading content types...');
     try {
       const response = await apiClient.get('/api/smart-clipper/content-types');
-      console.log('📦 Content types response:', response);
-      console.log('📋 Content types data:', response.data);
-      console.log('📝 Content types array:', response.data.contentTypes);
+      console.log('Content types response:', response);
+      console.log('Content types data:', response.data);
+      console.log('Content types array:', response.data.contentTypes);
       
       const types = response.data.contentTypes || [];
-      console.log(`✅ Setting ${types.length} content types`);
+      console.log(`Setting ${types.length} content types`);
       setContentTypes(types);
     } catch (error) {
-      console.error('❌ Failed to load content types:', error);
+      console.error('Failed to load content types:', error);
       setError('Failed to load content types. Please refresh the page.');
     }
   };
@@ -78,10 +78,10 @@ export default function DashboardSmartClipperPage() {
   };
 
   const handleVideoUpload = async (uploadedFiles: any[]) => {
-    console.log('🟦 [SMART_CLIPPER] handleVideoUpload called with files:', uploadedFiles.length);
+    console.log('[SMART_CLIPPER] handleVideoUpload called with files:', uploadedFiles.length);
     
     if (uploadedFiles.length === 0) {
-      console.log('⚠️ No files to upload');
+      console.log('No files to upload');
       return;
     }
     
@@ -90,7 +90,7 @@ export default function DashboardSmartClipperPage() {
     
     try {
       const file = uploadedFiles[0].file;
-      console.log('📁 Uploading file:', {
+      console.log('Uploading file:', {
         name: file.name,
         size: file.size,
         type: file.type
@@ -98,10 +98,10 @@ export default function DashboardSmartClipperPage() {
       
       // Use the correct uploadVideo method from apiClient
       const video = await apiClient.uploadVideo(file, (progress) => {
-        console.log(`📊 Upload progress: ${progress}%`);
+        console.log(`Upload progress: ${progress}%`);
       });
       
-      console.log('✅ Video uploaded successfully:', video);
+      console.log('Video uploaded successfully:', video);
       
       // Store the uploaded video in current project
       setCurrentProject({
@@ -124,7 +124,7 @@ export default function DashboardSmartClipperPage() {
       setCurrentView('configure');
       
     } catch (error) {
-      console.error('❌ [SMART_CLIPPER] Upload failed:', error);
+      console.error('[SMART_CLIPPER] Upload failed:', error);
       setError(`Failed to upload video: ${error instanceof Error ? error.message : 'Please try again.'}`);
     } finally {
       setLoading(false);
@@ -132,7 +132,7 @@ export default function DashboardSmartClipperPage() {
   };
 
   const handleAnalyzeVideo = async (videoId: string, contentType: string, config: any) => {
-    console.log('🚀 [SMART_CLIPPER] Starting video analysis...', { videoId, contentType, config });
+    console.log('[SMART_CLIPPER] Starting video analysis...', { videoId, contentType, config });
     setLoading(true);
     setError(null);
     
@@ -143,7 +143,7 @@ export default function DashboardSmartClipperPage() {
         config
       });
       
-      console.log('📊 Analysis response:', response.data);
+      console.log('Analysis response:', response.data);
       
       if (response.data.projectId) {
         // Create a project object for the state
@@ -168,12 +168,12 @@ export default function DashboardSmartClipperPage() {
         setCurrentProject(project);
         setCurrentView('timeline');
         
-        console.log('⏱️ Starting analysis progress polling...');
+        console.log('Starting analysis progress polling...');
         // Start polling for analysis completion
         pollAnalysisProgress(response.data.projectId);
       }
     } catch (error) {
-      console.error('❌ Analysis failed:', error);
+      console.error('Analysis failed:', error);
       setError(`Failed to start video analysis: ${error instanceof Error ? error.message : 'Please try again.'}`);
     } finally {
       setLoading(false);
@@ -186,7 +186,7 @@ export default function DashboardSmartClipperPage() {
         const response = await apiClient.get(`/api/smart-clipper/projects/${projectId}`);
         const apiResponse = response.data;
         
-        console.log('📊 Project status update:', apiResponse);
+        console.log('Project status update:', apiResponse);
         
         if (apiResponse && apiResponse.project) {
           const projectData = apiResponse.project;
@@ -207,7 +207,7 @@ export default function DashboardSmartClipperPage() {
             clipReady: segment.clipReady || !!segment.s3Url // Include clip ready status
           }));
           
-          console.log('🎬 Transformed segments:', transformedSegments.length, 'clips ready:', transformedSegments.filter((s: HighlightSegment) => s.clipReady).length);
+          console.log('Transformed segments:', transformedSegments.length, 'clips ready:', transformedSegments.filter((s: HighlightSegment) => s.clipReady).length);
           
           // Update current project with the latest data
           setCurrentProject(prevProject => ({
@@ -219,7 +219,7 @@ export default function DashboardSmartClipperPage() {
           }));
           
           if (projectData.status === 'ready' || projectData.status === 'completed') {
-            console.log('✅ Analysis complete! Found segments:', transformedSegments.length, 'with clips:', transformedSegments.filter((s: HighlightSegment) => s.clipReady).length);
+            console.log('Analysis complete! Found segments:', transformedSegments.length, 'with clips:', transformedSegments.filter((s: HighlightSegment) => s.clipReady).length);
             // Analysis complete, segments are loaded
             return;
           } else if (projectData.status === 'failed' || projectData.status === 'error') {
@@ -231,7 +231,7 @@ export default function DashboardSmartClipperPage() {
         // Continue polling every 25 seconds to reduce server load
         setTimeout(poll, 25000);
       } catch (error) {
-        console.error('❌ Failed to check analysis progress:', error);
+        console.error('Failed to check analysis progress:', error);
         // Continue polling even on error (might be temporary network issue)
         setTimeout(poll, 25000);
       }
@@ -253,7 +253,7 @@ export default function DashboardSmartClipperPage() {
 
       // Use S3 URL if available, otherwise generate clip
       if (segment.s3Url && segment.clipReady) {
-        console.log('🎬 Playing clip from S3:', segment.s3Url);
+        console.log('Playing clip from S3:', segment.s3Url);
         setVideoModal({
           isOpen: true,
           videoUrl: segment.s3Url,

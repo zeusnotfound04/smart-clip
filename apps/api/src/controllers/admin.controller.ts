@@ -9,7 +9,6 @@ export const getAllUsers = async (req: AuthRequest, res: Response) => {
     const { page = 1, limit = 20, search } = req.query;
     const skip = (Number(page) - 1) * Number(limit);
 
-    // Build where clause for search
     const where: any = {};
     if (search && typeof search === 'string') {
       where.OR = [
@@ -18,7 +17,6 @@ export const getAllUsers = async (req: AuthRequest, res: Response) => {
       ];
     }
 
-    // Get users with pagination
     const [users, total] = await Promise.all([
       prisma.user.findMany({
         where,
@@ -132,7 +130,6 @@ export const topUpCredits = async (req: AuthRequest, res: Response) => {
   try {
     const { email, credits, reason } = req.body;
 
-    // Validation
     if (!email || credits === undefined) {
       return res.status(400).json({
         success: false,
@@ -147,7 +144,6 @@ export const topUpCredits = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Find user
     const user = await prisma.user.findUnique({
       where: { email }
     });
@@ -160,7 +156,6 @@ export const topUpCredits = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Update user credits and create transaction record
     const [updatedUser, transaction] = await Promise.all([
       prisma.user.update({
         where: { email },
@@ -189,7 +184,7 @@ export const topUpCredits = async (req: AuthRequest, res: Response) => {
       })
     ]);
 
-    console.log(`✅ Admin ${req.userId} added ${credits} credits to ${email}`);
+    console.log(`Admin ${req.userId} added ${credits} credits to ${email}`);
 
     res.json({
       success: true,

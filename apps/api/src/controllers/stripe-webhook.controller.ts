@@ -36,7 +36,6 @@ export const stripeWebhookController = {
       });
     }
 
-    // Handle the event
     try {
       switch (event.type) {
         case 'checkout.session.completed':
@@ -104,10 +103,8 @@ async function handleCheckoutSessionCompleted(session: any) {
     return;
   }
 
-  // Get the subscription ID from the session
   const subscriptionId = session.subscription;
 
-  // Update user with subscription info
   await prisma.user.update({
     where: { id: userId },
     data: {
@@ -120,7 +117,6 @@ async function handleCheckoutSessionCompleted(session: any) {
     },
   });
 
-  // Add credits if not unlimited
   if (credits > 0) {
     await creditsService.addCredits({
       userId,
@@ -178,7 +174,6 @@ async function handleSubscriptionUpdated(subscription: any) {
     },
   });
 
-  // Update subscription history
   await prisma.subscriptionHistory.updateMany({
     where: {
       stripeSubscriptionId: subscription.id,
@@ -249,12 +244,10 @@ async function handleInvoicePaid(invoice: any) {
     return;
   }
 
-  // Renew credits for the billing cycle
   if (user.subscriptionTier !== 'free') {
     await subscriptionService.renewSubscriptionCredits(user.id, user.subscriptionTier);
   }
 
-  // Mark subscription as active
   await prisma.user.update({
     where: { id: user.id },
     data: {
@@ -300,6 +293,5 @@ async function handleInvoicePaymentFailed(invoice: any) {
     },
   });
 
-  // TODO: Send email notification to user
   console.log(`Payment failed for user ${user.email}`);
 }

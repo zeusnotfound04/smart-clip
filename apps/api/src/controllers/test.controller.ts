@@ -15,7 +15,7 @@ export const testController = {
    * This simulates what the webhook would do
    */
   async simulateCheckoutSuccess(req: AuthRequest & any, res: Response) {
-    console.log('🧪 [TEST] Simulating successful checkout');
+    console.log('[TEST] Simulating successful checkout');
     
     try {
       const userId = req.userId;
@@ -35,9 +35,9 @@ export const testController = {
         });
       }
 
-      console.log('🧪 [TEST] User:', userId);
-      console.log('🧪 [TEST] Tier:', tier);
-      console.log('🧪 [TEST] Billing:', billingPeriod);
+      console.log('[TEST] User:', userId);
+      console.log('[TEST] Tier:', tier);
+      console.log('[TEST] Billing:', billingPeriod);
 
       const plan = SUBSCRIPTION_PLANS[tier as keyof typeof SUBSCRIPTION_PLANS];
       if (!plan) {
@@ -47,7 +47,6 @@ export const testController = {
         });
       }
 
-      // Update user subscription
       await prisma.user.update({
         where: { id: userId },
         data: {
@@ -59,9 +58,8 @@ export const testController = {
         },
       });
 
-      console.log('🧪 [TEST] User subscription updated');
+      console.log('[TEST] User subscription updated');
 
-      // Add credits if not unlimited
       if (plan.credits > 0) {
         await creditsService.addCredits({
           userId,
@@ -69,7 +67,7 @@ export const testController = {
           type: 'subscription',
           description: `${plan.name} subscription - ${billingPeriod} billing (TEST)`,
         });
-        console.log(`🧪 [TEST] Added ${plan.credits} credits`);
+        console.log(`[TEST] Added ${plan.credits} credits`);
       }
 
       res.json({
@@ -82,7 +80,7 @@ export const testController = {
         },
       });
     } catch (error: any) {
-      console.error('❌ [TEST] Error:', error);
+      console.error('[TEST] Error:', error);
       res.status(500).json({
         success: false,
         message: 'Error simulating checkout',

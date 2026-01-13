@@ -14,7 +14,6 @@ export const isAdmin = async (req: AuthRequest, res: Response, next: NextFunctio
       });
     }
 
-    // Get user from database
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
       select: { isAdmin: true, email: true }
@@ -35,7 +34,6 @@ export const isAdmin = async (req: AuthRequest, res: Response, next: NextFunctio
       });
     }
 
-    // User is admin, proceed
     next();
   } catch (error) {
     console.error('Admin middleware error:', error);

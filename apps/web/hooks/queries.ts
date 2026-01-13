@@ -1,5 +1,5 @@
 /**
- * 🚀 Tanstack Query Hooks - Centralized Export
+ * Tanstack Query Hooks - Centralized Export
  * 
  * Import all query hooks from a single location:
  * import { useUserProfile, useVideos, useClips } from '@/hooks/queries';

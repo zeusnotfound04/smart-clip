@@ -248,22 +248,22 @@ class APIClient {
   }
 
   async createCheckoutSession(tier: string): Promise<ApiResponse<{ sessionId: string; url: string }>> {
-    console.log('💳 [API CLIENT] Creating checkout session');
-    console.log('💳 [API CLIENT] Tier:', tier);
+    console.log('[API CLIENT] Creating checkout session');
+    console.log('[API CLIENT] Tier:', tier);
     
     const token = typeof window !== 'undefined' ? localStorage.getItem('smartclips_token') : null;
-    console.log('💳 [API CLIENT] Token present:', !!token);
+    console.log('[API CLIENT] Token present:', !!token);
     if (token) {
-      console.log('💳 [API CLIENT] Token preview:', token.substring(0, 20) + '...');
+      console.log('[API CLIENT] Token preview:', token.substring(0, 20) + '...');
     }
     
-    console.log('💳 [API CLIENT] Sending request to:', `${API_BASE_URL}/api/subscriptions/create-checkout-session`);
+    console.log('[API CLIENT] Sending request to:', `${API_BASE_URL}/api/subscriptions/create-checkout-session`);
     
     const response = await axiosInstance.post('/api/subscriptions/create-checkout-session', {
       tier
     });
     
-    console.log('✅ [API CLIENT] Checkout session response:', response.data);
+    console.log('[API CLIENT] Checkout session response:', response.data);
     
     return {
       success: true,
@@ -285,13 +285,13 @@ class APIClient {
 
   // Video methods
   async getUploadUrl(fileName: string, fileType: string): Promise<ApiResponse<{ uploadUrl: string; key: string }>> {
-    console.log('🔗 [API_CLIENT] getUploadUrl called:', { fileName, fileType });
+    console.log('[API_CLIENT] getUploadUrl called:', { fileName, fileType });
     const requestData = { filename: fileName, fileType };
     
     try {
-      console.log('📤 Sending request to /api/videos/upload-url...');
+      console.log('Sending request to /api/videos/upload-url...');
       const response = await axiosInstance.post('/api/videos/upload-url', requestData);
-      console.log('📥 Upload URL response:', response.status, response.statusText);
+      console.log('Upload URL response:', response.status, response.statusText);
       
       const result = {
         success: true,
@@ -300,7 +300,7 @@ class APIClient {
           key: response.data.s3Key || ''
         }
       };
-      console.log('✅ Upload URL generated successfully');
+      console.log('Upload URL generated successfully');
       return result;
     } catch (error: any) {
       throw error;
@@ -308,19 +308,19 @@ class APIClient {
   }
 
   async confirmUpload(key: string, originalName: string, size?: number, mimeType?: string, language?: string): Promise<ApiResponse<Video>> {
-    console.log('💾 [API_CLIENT] confirmUpload called:', { key, originalName, size, mimeType, language });
+    console.log('[API_CLIENT] confirmUpload called:', { key, originalName, size, mimeType, language });
     const requestData = { s3Key: key, originalName, size, mimeType, language };
     
     try {
-      console.log('📤 Sending request to /api/videos/confirm-upload...');
+      console.log('Sending request to /api/videos/confirm-upload...');
       const response = await axiosInstance.post('/api/videos/confirm-upload', requestData);
-      console.log('📥 Confirmation response:', response.status, response.statusText);
+      console.log('Confirmation response:', response.status, response.statusText);
       
       const result = {
         success: true,
         data: response.data.video
       };
-      console.log('✅ Upload confirmed successfully:', result.data?.id);
+      console.log('Upload confirmed successfully:', result.data?.id);
       return result;
     } catch (error: any) {
       throw error;
@@ -364,39 +364,39 @@ class APIClient {
   }
 
   async uploadVideo(file: File, onProgress?: (progress: number) => void, language?: string): Promise<Video> {
-    console.log('🟢 [API_CLIENT] uploadVideo started', { language });
-    console.log('📁 File details:', { name: file.name, size: file.size, type: file.type });
+    console.log('[API_CLIENT] uploadVideo started', { language });
+    console.log('File details:', { name: file.name, size: file.size, type: file.type });
     
     // Use multipart upload for files larger than 50MB
     const USE_MULTIPART_THRESHOLD = 50 * 1024 * 1024; // 50MB
     
     if (file.size > USE_MULTIPART_THRESHOLD) {
-      console.log(`🚀 Large file detected (${Math.round(file.size / 1024 / 1024)}MB), using multipart upload`);
+      console.log(`Large file detected (${Math.round(file.size / 1024 / 1024)}MB), using multipart upload`);
       return this.uploadVideoMultipart(file, onProgress, language);
     }
     
     try {
-      console.log('🔗 Step 1: Getting upload URL...');
+      console.log('Step 1: Getting upload URL...');
       const uploadUrlResponse = await this.getUploadUrl(file.name, file.type);
-      console.log('📡 Upload URL response:', { success: uploadUrlResponse.success, hasData: !!uploadUrlResponse.data });
+      console.log('Upload URL response:', { success: uploadUrlResponse.success, hasData: !!uploadUrlResponse.data });
       
       if (!uploadUrlResponse.success || !uploadUrlResponse.data) {
         throw new Error('Failed to get upload URL');
       }
 
       const { uploadUrl, key } = uploadUrlResponse.data;
-      console.log('🔑 Received S3 key:', key);
+      console.log('Received S3 key:', key);
       
       // Validate the URL format
       try {
         new URL(uploadUrl);
-        console.log('✅ Upload URL format is valid');
+        console.log('Upload URL format is valid');
       } catch (urlError) {
-        console.error('❌ Invalid upload URL format:', uploadUrl);
+        console.error('Invalid upload URL format:', uploadUrl);
         throw new Error('Invalid presigned URL format');
       }
 
-      console.log('📤 Step 2: Uploading to S3...');
+      console.log('Step 2: Uploading to S3...');
       const response = await fetch(uploadUrl, {
         method: 'PUT',
         body: file,
@@ -405,7 +405,7 @@ class APIClient {
         },
       });
       
-      console.log('📥 S3 upload response:', { status: response.status, ok: response.ok });
+      console.log('S3 upload response:', { status: response.status, ok: response.ok });
       
       if (!response.ok) {
         let errorText = '';
@@ -414,36 +414,36 @@ class APIClient {
         } catch (readError) {
           // Ignore read error
         }
-        console.error('❌ S3 upload failed:', { status: response.status, statusText: response.statusText, errorText });
+        console.error('S3 upload failed:', { status: response.status, statusText: response.statusText, errorText });
         throw new Error(`S3 upload failed with status ${response.status}: ${errorText || response.statusText}`);
       }
       
-      console.log('✅ S3 upload successful, confirming upload...');
-      console.log('💾 Step 3: Confirming upload in database...');
+      console.log('S3 upload successful, confirming upload...');
+      console.log('Step 3: Confirming upload in database...');
       
       const confirmResponse = await this.confirmUpload(key, file.name, file.size, file.type, language);
-      console.log('📋 Confirmation response:', { success: confirmResponse.success, hasData: !!confirmResponse.data });
+      console.log('Confirmation response:', { success: confirmResponse.success, hasData: !!confirmResponse.data });
       
       if (!confirmResponse.success || !confirmResponse.data) {
         throw new Error('Failed to confirm upload');
       }
 
-      console.log('🎉 Upload complete!', confirmResponse.data);
+      console.log('Upload complete!', confirmResponse.data);
       return confirmResponse.data;
     } catch (error: any) {
-      console.error('❌ [API_CLIENT] Upload failed:', error);
+      console.error('[API_CLIENT] Upload failed:', error);
       throw new Error('Failed to upload video: ' + (error.response?.data?.message || error.message));
     }
   }
 
   async uploadVideoMultipart(file: File, onProgress?: (progress: number) => void, language?: string): Promise<Video> {
-    console.log('🔵 [API_CLIENT] uploadVideoMultipart started');
+    console.log('[API_CLIENT] uploadVideoMultipart started');
     const fileSizeMB = Math.round(file.size / 1024 / 1024);
     const startTime = Date.now();
     
     try {
       // Step 1: Initiate multipart upload
-      console.log('🚀 Initiating multipart upload...');
+      console.log('Initiating multipart upload...');
       const initResponse = await axiosInstance.post('/api/videos/multipart/initiate', {
         filename: file.name,
         fileType: file.type,
@@ -452,16 +452,16 @@ class APIClient {
       
       const { uploadId, s3Key, chunkSize } = initResponse.data;
       const chunkSizeMB = Math.round(chunkSize / 1024 / 1024);
-      console.log(`✅ Upload initiated: ID=${uploadId}, chunk=${chunkSizeMB}MB`);
+      console.log(`Upload initiated: ID=${uploadId}, chunk=${chunkSizeMB}MB`);
       
       // Step 2: Upload chunks in parallel
       const totalChunks = Math.ceil(file.size / chunkSize);
-      console.log(`📦 Total chunks: ${totalChunks}`);
+      console.log(`Total chunks: ${totalChunks}`);
       
       const uploadedParts: Array<{ ETag: string; PartNumber: number }> = [];
       let uploadedBytes = 0;
       
-      // 🚀 OPTIMIZED: Dynamic concurrency based on file size for maximum speed
+      // OPTIMIZED: Dynamic concurrency based on file size for maximum speed
       let MAX_CONCURRENT: number;
       if (file.size > 2 * 1024 * 1024 * 1024) { // >2GB
         MAX_CONCURRENT = 16; // 16 parallel uploads for huge files
@@ -472,10 +472,10 @@ class APIClient {
       } else {
         MAX_CONCURRENT = 8; // 8 parallel uploads (default)
       }
-      console.log(`⚡ Concurrency: ${MAX_CONCURRENT} parallel uploads`);
+      console.log(`Concurrency: ${MAX_CONCURRENT} parallel uploads`);
       
-      // 🔥 OPTIMIZED: Pre-fetch all presigned URLs for faster uploads
-      console.log('📥 Pre-fetching presigned URLs...');
+      // OPTIMIZED: Pre-fetch all presigned URLs for faster uploads
+      console.log('Pre-fetching presigned URLs...');
       const presignedUrlPromises = Array.from({ length: totalChunks }, (_, i) => 
         axiosInstance.post('/api/videos/multipart/part-url', {
           s3Key,
@@ -491,7 +491,7 @@ class APIClient {
         const urls = await Promise.all(batch);
         presignedUrls.push(...urls);
       }
-      console.log(`✅ Got ${presignedUrls.length} presigned URLs`);
+      console.log(`Got ${presignedUrls.length} presigned URLs`);
       
       const uploadChunk = async (chunkIndex: number, retryCount = 0): Promise<{ ETag: string; PartNumber: number }> => {
         const start = chunkIndex * chunkSize;
@@ -528,7 +528,7 @@ class APIClient {
           
           // Log every 10% or at completion
           if (progress % 10 === 0 || progress === 100) {
-            console.log(`✅ Part ${partNumber}/${totalChunks} (${progress}%) @ ${speedMBps.toFixed(1)}MB/s | ETA: ${Math.round(eta)}s`);
+            console.log(`Part ${partNumber}/${totalChunks} (${progress}%) @ ${speedMBps.toFixed(1)}MB/s | ETA: ${Math.round(eta)}s`);
           }
           
           if (onProgress) {
@@ -537,9 +537,9 @@ class APIClient {
           
           return { ETag: etag, PartNumber: partNumber };
         } catch (error: any) {
-          // 🔄 Auto-retry on failure (up to 3 times)
+          // Auto-retry on failure (up to 3 times)
           if (retryCount < 3) {
-            console.warn(`⚠️ Part ${partNumber} failed, retrying... (${retryCount + 1}/3)`);
+            console.warn(`Part ${partNumber} failed, retrying... (${retryCount + 1}/3)`);
             await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))); // Exponential backoff
             return uploadChunk(chunkIndex, retryCount + 1);
           }
@@ -561,7 +561,7 @@ class APIClient {
       uploadedParts.sort((a, b) => a.PartNumber - b.PartNumber);
       
       // Step 3: Complete multipart upload
-      console.log('🏁 Completing multipart upload...');
+      console.log('Completing multipart upload...');
       const completeResponse = await axiosInstance.post('/api/videos/multipart/complete', {
         s3Key,
         uploadId,
@@ -573,11 +573,11 @@ class APIClient {
       
       const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
       const avgSpeed = (fileSizeMB / parseFloat(totalTime)).toFixed(1);
-      console.log(`🎉 Multipart upload completed in ${totalTime}s (avg ${avgSpeed}MB/s)`);
+      console.log(`Multipart upload completed in ${totalTime}s (avg ${avgSpeed}MB/s)`);
       
       return completeResponse.data.video;
     } catch (error: any) {
-      console.error('❌ Multipart upload failed:', error);
+      console.error('Multipart upload failed:', error);
       
       // Attempt to abort the multipart upload on error
       try {
@@ -586,10 +586,10 @@ class APIClient {
             s3Key: error.s3Key,
             uploadId: error.uploadId,
           });
-          console.log('🔴 Multipart upload aborted');
+          console.log('Multipart upload aborted');
         }
       } catch (abortError) {
-        console.error('❌ Failed to abort multipart upload:', abortError);
+        console.error('Failed to abort multipart upload:', abortError);
       }
       
       throw new Error('Failed to upload video: ' + (error.response?.data?.message || error.message));
@@ -977,7 +977,7 @@ class APIClient {
     error?: string;
   }> {
     const response = await axiosInstance.post('/api/video-url-upload/info', { url });
-    console.log('📡 API Response from getVideoInfoFromUrl:', response.data);
+    console.log('API Response from getVideoInfoFromUrl:', response.data);
     return response.data;
   }
 

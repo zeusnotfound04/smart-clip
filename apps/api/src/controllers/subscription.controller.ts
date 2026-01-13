@@ -34,18 +34,17 @@ export const subscriptionController = {
    * Create Stripe Checkout session (monthly billing only)
    */
   async createCheckoutSession(req: AuthRequest, res: Response) {
-    console.log('💳 [CHECKOUT] Starting checkout session creation');
-    console.log('💳 [CHECKOUT] Request body:', JSON.stringify(req.body));
-    console.log('💳 [CHECKOUT] req.user:', req.user);
-    console.log('💳 [CHECKOUT] req.userId:', (req as any).userId);
+    console.log('[CHECKOUT] Starting checkout session creation');
+    console.log('[CHECKOUT] Request body:', JSON.stringify(req.body));
+    console.log('[CHECKOUT] req.user:', req.user);
+    console.log('[CHECKOUT] req.userId:', (req as any).userId);
     
     try {
-      // Check if we have userId from middleware
       const userId = (req as any).userId || req.userId;
-      console.log('💳 [CHECKOUT] Resolved userId:', userId);
+      console.log('[CHECKOUT] Resolved userId:', userId);
       
       if (!userId) {
-        console.error('❌ [CHECKOUT] No user ID found in request');
+        console.error('[CHECKOUT] No user ID found in request');
         return res.status(401).json({
           success: false,
           message: 'Unauthorized - No user ID',
@@ -62,30 +61,29 @@ export const subscriptionController = {
       }
 
       if (!['basic', 'premium', 'enterprise'].includes(tier)) {
-        console.error('❌ [CHECKOUT] Invalid tier:', tier);
+        console.error('[CHECKOUT] Invalid tier:', tier);
         return res.status(400).json({
           success: false,
           message: 'Invalid tier. Must be: basic, premium, or enterprise',
         });
       }
 
-      // Fetch user from database to get email
-      console.log('💳 [CHECKOUT] Fetching user from database...');
+      console.log('[CHECKOUT] Fetching user from database...');
       const user = await prisma.user.findUnique({
         where: { id: userId },
         select: { id: true, email: true }
       });
 
       if (!user || !user.email) {
-        console.error('❌ [CHECKOUT] User not found or missing email:', userId);
+        console.error('[CHECKOUT] User not found or missing email:', userId);
         return res.status(404).json({
           success: false,
           message: 'User not found or missing email',
         });
       }
 
-      console.log('💳 [CHECKOUT] User found:', user.email);
-      console.log('💳 [CHECKOUT] Creating Stripe checkout session...');
+      console.log('[CHECKOUT] User found:', user.email);
+      console.log('[CHECKOUT] Creating Stripe checkout session...');
 
       const session = await subscriptionService.createCheckoutSession({
         userId: user.id,
@@ -94,8 +92,8 @@ export const subscriptionController = {
         billingPeriod: 'monthly',
       });
 
-      console.log('✅ [CHECKOUT] Checkout session created:', session.id);
-      console.log('✅ [CHECKOUT] Checkout URL:', session.url);
+      console.log('[CHECKOUT] Checkout session created:', session.id);
+      console.log('[CHECKOUT] Checkout URL:', session.url);
 
       res.json({
         success: true,

@@ -13,7 +13,7 @@ export const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
-// 🔥 VIRAL SUBTITLE FONTS - Local Fonts with Bold Variants
+// VIRAL SUBTITLE FONTS - Local Fonts with Bold Variants
 
 // Bangers - THE BEST for viral subtitles!
 export const bangers = localFont({

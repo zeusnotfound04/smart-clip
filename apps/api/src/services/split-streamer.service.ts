@@ -42,7 +42,6 @@ const execFFmpeg = (args: string[], estimatedDuration: number = 0): Promise<Buff
       errorChunks.push(chunk);
       const output = chunk.toString();
       
-      // Skip logging common AAC decoder warnings/errors that we're handling with err_detect
       const skipPatterns = [
         '[aac @', 
         'Error submitting packet to decoder',
@@ -187,15 +186,12 @@ export const combineVideos = async (
   console.log('Webcam:', webcamS3Key);
   console.log('Gameplay:', gameplayS3Key);
   
-  // Check FFmpeg availability first
   await checkFFmpegAvailability();
   
-  // Create temporary directory
   const tempDir = join(tmpdir(), `split-streamer-${Date.now()}`);
   await fs.mkdir(tempDir, { recursive: true });
   
   try {
-    // Download video files
     console.log('Starting parallel download and analysis...');
     const downloadStart = Date.now();
     
@@ -203,7 +199,6 @@ export const combineVideos = async (
     const gameplayPath = join(tempDir, 'gameplay.mp4');
     const outputPath = join(tempDir, 'output.mp4');
     
-    // 🔥 Use parallel streaming downloads (much faster)
     const [webcamDuration, gameplayDuration] = await Promise.all([
       (async () => {
         await downloadFileToPath(webcamS3Key, webcamPath);
@@ -221,7 +216,6 @@ export const combineVideos = async (
     console.log(`Final duration: ${Math.floor(outputDuration / 60)}:${Math.floor(outputDuration % 60).toString().padStart(2, '0')}`);
 
     
-    // Default config if none provided
     const config: LayoutConfig = {
       orientation: 'vertical',
       topRatio: 50,
@@ -237,13 +231,11 @@ export const combineVideos = async (
       ...layoutConfig
     };
 
-    // Calculate zoom scales and offsets
     const webcamZoom = config.webcamZoom;
     const gameplayZoom = config.gameplayZoom;
     const webcamOffsetX = config.webcamOffsetX || 0;
     const gameplayOffsetX = config.gameplayOffsetX || 0;
     
-    // Base dimensions for 9:16 portrait output
     const outputWidth = 1080;
     const outputHeight = 1920;
     
@@ -253,7 +245,6 @@ export const combineVideos = async (
       topHeight = Math.floor((outputHeight * config.topRatio) / 100) - Math.floor(config.gap / 2);
       bottomHeight = Math.floor((outputHeight * config.bottomRatio) / 100) - Math.floor(config.gap / 2);
     } else {
-      // Horizontal layout (16:9 output)
       topHeight = 1080; // For horizontal, both videos are full height
       bottomHeight = 1080;
     }
@@ -267,19 +258,17 @@ export const combineVideos = async (
     
     let filterComplex: string;
     if (config.orientation === 'vertical') {
-      // Calculate viewport dimensions (what we'll cut from the zoomed videos)
       const topViewportWidth = outputWidth;
       const topViewportHeight = topHeight;
       const bottomViewportWidth = outputWidth;
       const bottomViewportHeight = bottomHeight;
       
-      // Calculate scaled dimensions (zoomed size)
       const topScaledWidth = Math.floor(outputWidth * topZoom);
       const topScaledHeight = Math.floor(topHeight * topZoom);
       const bottomScaledWidth = Math.floor(outputWidth * bottomZoom);
       const bottomScaledHeight = Math.floor(bottomHeight * bottomZoom);
       
-      console.log('📀 Vertical layout dimensions:', {
+      console.log('Vertical layout dimensions:', {
         topScaled: `${topScaledWidth}x${topScaledHeight}`,
         bottomScaled: `${bottomScaledWidth}x${bottomScaledHeight}`,
         topViewport: `${topViewportWidth}x${topViewportHeight}`,
@@ -288,47 +277,40 @@ export const combineVideos = async (
         gameplayOffset: gameplayOffsetX
       });
       
-      // Calculate crop offsets (center crop with offset)
       const topOffsetX = config.swapVideos ? gameplayOffsetX : webcamOffsetX;
       const bottomOffsetX = config.swapVideos ? webcamOffsetX : gameplayOffsetX;
       
       const topCropX = Math.max(0, Math.floor((topScaledWidth - topViewportWidth) / 2) + topOffsetX);
       const bottomCropX = Math.max(0, Math.floor((bottomScaledWidth - bottomViewportWidth) / 2) + bottomOffsetX);
       
-      // Apply zoom and crop to webcam: scale up, then crop to viewport size with offset
       const webcamFilter = topZoom > 1 
         ? `[0:v]scale=${topScaledWidth}:${topScaledHeight}:flags=lanczos,crop=${topViewportWidth}:${topViewportHeight}:${topCropX}:0[webcam_scaled]`
         : `[0:v]scale=${topViewportWidth}:${topViewportHeight}:flags=lanczos[webcam_scaled]`;
       
-      // Apply zoom and crop to gameplay: scale up, then crop to viewport size with offset  
       const gameplayFilter = bottomZoom > 1
         ? `[1:v]scale=${bottomScaledWidth}:${bottomScaledHeight}:flags=lanczos,crop=${bottomViewportWidth}:${bottomViewportHeight}:${bottomCropX}:0[gameplay_scaled]`
         : `[1:v]scale=${bottomViewportWidth}:${bottomViewportHeight}:flags=lanczos[gameplay_scaled]`;
       
-      // Create background that lasts for the full output duration
       const backgroundFilter = `color=c=${config.backgroundColor}:s=${outputWidth}x${outputHeight}:d=${outputDuration.toFixed(2)}[bg]`;
       
       const topStream = topVideo === 'webcam' ? 'webcam_scaled' : 'gameplay_scaled';
       const bottomStream = bottomVideo === 'webcam' ? 'webcam_scaled' : 'gameplay_scaled';
       
-      // Overlay videos on background at correct positions
       const topOverlay = `[bg][${topStream}]overlay=0:0:enable='between(t,0,${topVideo === 'webcam' ? webcamDuration.toFixed(2) : gameplayDuration.toFixed(2)})'[with_top]`;
       const bottomOverlay = `[with_top][${bottomStream}]overlay=0:${topHeight + config.gap}:enable='between(t,0,${bottomVideo === 'webcam' ? webcamDuration.toFixed(2) : gameplayDuration.toFixed(2)})'[final]`;
       
       filterComplex = `${webcamFilter};${gameplayFilter};${backgroundFilter};${topOverlay};${bottomOverlay}`;
     } else {
-      // Horizontal layout
       const leftWidth = Math.floor((outputWidth * config.topRatio) / 100) - Math.floor(config.gap / 2);
       const rightWidth = Math.floor((outputWidth * config.bottomRatio) / 100) - Math.floor(config.gap / 2);
       const videoHeight = outputHeight;
       
-      // Calculate scaled dimensions for zoom
       const leftScaledWidth = Math.floor(leftWidth * topZoom);
       const leftScaledHeight = Math.floor(videoHeight * topZoom);
       const rightScaledWidth = Math.floor(rightWidth * bottomZoom);
       const rightScaledHeight = Math.floor(videoHeight * bottomZoom);
       
-      console.log('📀 Horizontal layout dimensions:', {
+      console.log('Horizontal layout dimensions:', {
         leftScaled: `${leftScaledWidth}x${leftScaledHeight}`,
         rightScaled: `${rightScaledWidth}x${rightScaledHeight}`,
         leftViewport: `${leftWidth}x${videoHeight}`,
@@ -337,14 +319,12 @@ export const combineVideos = async (
         gameplayOffset: gameplayOffsetX
       });
       
-      // Calculate crop offsets
       const leftOffsetX = config.swapVideos ? gameplayOffsetX : webcamOffsetX;
       const rightOffsetX = config.swapVideos ? webcamOffsetX : gameplayOffsetX;
       
       const leftCropX = Math.max(0, Math.floor((leftScaledWidth - leftWidth) / 2) + leftOffsetX);
       const rightCropX = Math.max(0, Math.floor((rightScaledWidth - rightWidth) / 2) + rightOffsetX);
       
-      // Apply zoom and crop with horizontal offset
       const webcamFilter = topZoom > 1
         ? `[0:v]scale=${leftScaledWidth}:${leftScaledHeight}:flags=lanczos,crop=${leftWidth}:${videoHeight}:${leftCropX}:0[webcam_scaled]`
         : `[0:v]scale=${leftWidth}:${videoHeight}:flags=lanczos[webcam_scaled]`;
@@ -358,7 +338,6 @@ export const combineVideos = async (
       const leftStream = topVideo === 'webcam' ? 'webcam_scaled' : 'gameplay_scaled';
       const rightStream = bottomVideo === 'webcam' ? 'webcam_scaled' : 'gameplay_scaled';
       
-      // Overlay with proper positioning
       const leftOverlay = `[bg][${leftStream}]overlay=0:0:enable='between(t,0,${topVideo === 'webcam' ? webcamDuration.toFixed(2) : gameplayDuration.toFixed(2)})'[with_left]`;
       const rightOverlay = `[with_left][${rightStream}]overlay=${leftWidth + config.gap}:0:enable='between(t,0,${bottomVideo === 'webcam' ? webcamDuration.toFixed(2) : gameplayDuration.toFixed(2)})'[final]`;
       
@@ -366,7 +345,6 @@ export const combineVideos = async (
     }
     
     const getOptimalSettings = (duration: number) => {
-      // More aggressive presets for faster processing with parallel encoding
       if (duration > 7200) { // 2+ hours
         return { preset: 'veryfast', crf: 23, params: 'ref=1:bframes=1:me=dia:subme=4:rc-lookahead=20', threads: '12' };
       } else if (duration > 3600) { // 1-2 hours
@@ -381,7 +359,7 @@ export const combineVideos = async (
     };
     
     const settings = getOptimalSettings(outputDuration);
-    console.log(`⚡ Using ${settings.preset} preset for ${Math.floor(outputDuration/60)}min video (CRF ${settings.crf}, ${settings.threads} threads)`);
+    console.log(`Using ${settings.preset} preset for ${Math.floor(outputDuration/60)}min video (CRF ${settings.crf}, ${settings.threads} threads)`);
     
     const longerVideoIndex = webcamDuration >= gameplayDuration ? 0 : 1;
     console.log(`Using audio from ${longerVideoIndex === 0 ? 'webcam' : 'gameplay'} video`);
@@ -462,7 +440,6 @@ export const combineVideos = async (
     
     return finalBuffer;
   } finally {
-    // Cleanup temp directory
     try {
       await fs.rm(tempDir, { recursive: true, force: true });
     } catch (error) {

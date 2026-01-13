@@ -43,7 +43,7 @@ export interface VideoFilters {
   order?: 'asc' | 'desc';
 }
 
-// 🔥 Hook: Fetch Videos List with filters
+// Hook: Fetch Videos List with filters
 export function useVideos(filters: VideoFilters = {}) {
   const { session } = useAuth();
   
@@ -78,7 +78,7 @@ export function useVideos(filters: VideoFilters = {}) {
   });
 }
 
-// 🔥 Hook: Fetch Single Video Details
+// Hook: Fetch Single Video Details
 export function useVideo(videoId: string | undefined) {
   const { session } = useAuth();
 
@@ -103,7 +103,7 @@ export function useVideo(videoId: string | undefined) {
   });
 }
 
-// 🔥 Hook: Delete Video
+// Hook: Delete Video
 export function useDeleteVideo() {
   const { session } = useAuth();
   const queryClient = useQueryClient();

@@ -103,7 +103,7 @@ export function TimelineView({
                       />
                       <span className="text-sm font-medium text-white">Video Analysis</span>
                     </div>
-                    <span className="text-xs text-green-400">✓ Complete</span>
+                    <span className="text-xs text-green-400">Complete</span>
                   </div>
                   
                   <div className="flex justify-between items-center">

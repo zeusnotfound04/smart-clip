@@ -446,7 +446,7 @@ export function SubtitleConfigurationPanel({
   hasVideo = true,
   hasLanguageSelected = true,
 }: SubtitleConfigurationPanelProps) {
-  console.log('🎨 SubtitleConfigurationPanel render:');
+  console.log('SubtitleConfigurationPanel render:');
   console.log('   - hasVideo:', hasVideo);
   console.log('   - hasLanguageSelected:', hasLanguageSelected);
   console.log('   - Generate button will be disabled:', !hasVideo || !hasLanguageSelected);
@@ -845,7 +845,7 @@ export function SubtitleConfigurationPanel({
                 zIndex: 1
               }}
             >
-              THIS IS A VIRAL CAPTION! 🔥
+              THIS IS A VIRAL CAPTION! 
             </span>
           </div> */}
         </div>
@@ -864,7 +864,7 @@ export function SubtitleConfigurationPanel({
             </Button>
             <Button 
               onClick={() => {
-                console.log('🔴 Generate button clicked');
+                console.log('Generate button clicked');
                 console.log('   - hasVideo:', hasVideo);
                 console.log('   - hasLanguageSelected:', hasLanguageSelected);
                 console.log('   - disabled:', !hasVideo || !hasLanguageSelected);

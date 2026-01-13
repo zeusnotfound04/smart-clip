@@ -293,9 +293,9 @@ export function VideoUrlUpload({
                   </div>
 
                   <p className="text-xs text-muted-foreground">
-                    {processType === 'subtitles' && "🎬 Subtitles will be generated automatically"}
-                    {processType === 'smart-clipper' && "✂️ AI will analyze and create clips"}
-                    {processType === 'none' && "📁 Video will be uploaded without processing"}
+                    {processType === 'subtitles' && "Subtitles will be generated automatically"}
+                    {processType === 'smart-clipper' && "AI will analyze and create clips"}
+                    {processType === 'none' && "Video will be uploaded without processing"}
                   </p>
                 </div>
               </div>

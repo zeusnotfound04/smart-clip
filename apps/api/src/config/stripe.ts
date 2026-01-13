@@ -14,8 +14,6 @@ export const STRIPE_CONFIG = {
   webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
 };
 
-// Subscription plan configuration (new 3-tier pricing)
-// Each credit = 1 minute of video usage
 export const SUBSCRIPTION_PLANS = {
   free: {
     name: 'Free',

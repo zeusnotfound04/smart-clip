@@ -21,27 +21,26 @@ export const subscriptionService = {
     tier: 'basic' | 'premium' | 'enterprise';
     billingPeriod?: 'monthly'; // Optional, defaults to monthly
   }) {
-    console.log('💳 [SERVICE] createCheckoutSession called with params:', JSON.stringify(params, null, 2));
+    console.log('[SERVICE] createCheckoutSession called with params:', JSON.stringify(params, null, 2));
     const { userId, email, tier } = params;
 
     const plan = SUBSCRIPTION_PLANS[tier];
     if (!plan) {
-      console.error('❌ [SERVICE] Invalid subscription tier:', tier);
+      console.error('[SERVICE] Invalid subscription tier:', tier);
       throw new Error('Invalid subscription tier');
     }
 
-    console.log('💳 [SERVICE] Plan found:', plan.name);
+    console.log('[SERVICE] Plan found:', plan.name);
 
     const price = plan.monthlyPrice;
     if (!price || price === 0) {
-      console.error('❌ [SERVICE] Price not available or invalid');
+      console.error('[SERVICE] Price not available or invalid');
       throw new Error('This plan is not available for purchase');
     }
 
-    console.log('💳 [SERVICE] Price:', price, 'USD');
-    console.log('💳 [SERVICE] Creating Stripe checkout session...');
+    console.log('[SERVICE] Price:', price, 'USD');
+    console.log('[SERVICE] Creating Stripe checkout session...');
 
-    // Create Stripe Checkout session
     const session = await stripe.checkout.sessions.create({
       customer_email: email,
       client_reference_id: userId,
@@ -73,9 +72,9 @@ export const subscriptionService = {
       },
     });
 
-    console.log('✅ [SERVICE] Stripe session created successfully');
-    console.log('✅ [SERVICE] Session ID:', session.id);
-    console.log('✅ [SERVICE] Session URL:', session.url);
+    console.log('[SERVICE] Stripe session created successfully');
+    console.log('[SERVICE] Session ID:', session.id);
+    console.log('[SERVICE] Session URL:', session.url);
 
     return session;
   },
@@ -95,7 +94,6 @@ export const subscriptionService = {
       throw new Error('User not found or email missing');
     }
 
-    // Get or create Stripe customer
     let customerId = user.stripeCustomerId;
     if (!customerId) {
       const customer = await stripe.customers.create({
@@ -115,7 +113,6 @@ export const subscriptionService = {
         data: { stripeCustomerId: customerId },
       });
     } else {
-      // Attach payment method to existing customer
       await stripe.paymentMethods.attach(paymentMethodId, {
         customer: customerId,
       });
@@ -127,7 +124,6 @@ export const subscriptionService = {
       });
     }
 
-    // Get plan details
     const plan = SUBSCRIPTION_PLANS[tier];
     if (!plan) {
       throw new Error('Invalid subscription tier');
@@ -138,7 +134,6 @@ export const subscriptionService = {
       throw new Error('This plan is not available for purchase');
     }
 
-    // Create price in Stripe if not exists (in production, create these beforehand)
     const stripePrice = await stripe.prices.create({
       unit_amount: Math.round(price * 100), // Convert to cents
       currency: 'usd',
@@ -154,14 +149,12 @@ export const subscriptionService = {
       },
     });
 
-    // Create subscription
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
       items: [{ price: stripePrice.id }],
       expand: ['latest_invoice.payment_intent'],
     });
 
-    // Update user in database
     const now = new Date();
     const periodEnd = new Date((subscription as any).current_period_end * 1000);
 
@@ -177,7 +170,6 @@ export const subscriptionService = {
       },
     });
 
-    // Create subscription history
     await prisma.subscriptionHistory.create({
       data: {
         userId,
@@ -196,13 +188,12 @@ export const subscriptionService = {
       },
     });
 
-    // Add credits transaction
     if (plan.credits > 0) {
       await creditsService.addCredits({
         userId,
         amount: plan.credits,
         type: 'subscription',
-        description: `${plan.name} subscription - ${billingPeriod} billing`,
+        description: `${plan.name} subscription - monthly billing`,
         stripePaymentId: subscription.id,
       });
     }
@@ -297,12 +288,13 @@ export const subscriptionService = {
       throw new Error('No active subscription found');
     }
 
-    const plan = SUBSCRIPTION_PLANS[newTier];
+    const plan = SUBSCRIPTION_PLANS[newTier as keyof typeof SUBSCRIPTION_PLANS];
     const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
 
-    // Create new price
+    const planPrice = 'monthlyPrice' in plan ? plan.monthlyPrice : plan.price;
+
     const stripePrice = await stripe.prices.create({
-      unit_amount: Math.round(plan.monthlyPrice * 100),
+      unit_amount: Math.round(planPrice * 100),
       currency: 'usd',
       recurring: { interval: 'month' },
       product_data: {
@@ -314,7 +306,6 @@ export const subscriptionService = {
       },
     });
 
-    // Update subscription
     const updatedSubscription = await stripe.subscriptions.update(user.stripeSubscriptionId, {
       items: [
         {

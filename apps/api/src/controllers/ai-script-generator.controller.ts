@@ -32,15 +32,15 @@ const scriptService = new AIScriptGeneratorService();
 const prisma = new PrismaClient();
 
 export const generateScript = async (req: AuthRequest, res: Response) => {
-  console.log('🤖 [SCRIPT_CONTROLLER] generateScript called');
-  console.log('📝 Request body:', JSON.stringify(req.body, null, 2));
-  console.log('👤 User ID:', req.userId);
+  console.log('[SCRIPT_CONTROLLER] generateScript called');
+  console.log('Request body:', JSON.stringify(req.body, null, 2));
+  console.log('User ID:', req.userId);
 
   try {
     const { prompt, targetAudience, scriptLength, tone, format } = req.body;
     
     if (!prompt || !req.userId) {
-      console.error('❌ Missing required fields:', { prompt: !!prompt, userId: !!req.userId });
+      console.error('Missing required fields:', { prompt: !!prompt, userId: !!req.userId });
       return res.status(400).json({ 
         error: 'Missing required fields',
         details: 'Prompt and user authentication are required'
@@ -61,7 +61,7 @@ export const generateScript = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    console.log(`🎬 Generating script for prompt: "${prompt.substring(0, 50)}..."`);
+    console.log(`Generating script for prompt: "${prompt.substring(0, 50)}..."`);
     
     const result = await scriptService.generateScript(
       prompt,
@@ -74,8 +74,8 @@ export const generateScript = async (req: AuthRequest, res: Response) => {
       req.userId
     );
 
-    console.log(`✅ Script generated successfully for project ${result.projectId}`);
-    console.log(`📊 Word count: ${result.script.wordCount}, Duration: ${result.script.estimatedDuration}s`);
+    console.log(`Script generated successfully for project ${result.projectId}`);
+    console.log(`Word count: ${result.script.wordCount}, Duration: ${result.script.estimatedDuration}s`);
 
     const response = {
       success: true,
@@ -87,8 +87,8 @@ export const generateScript = async (req: AuthRequest, res: Response) => {
     res.status(201).json(response);
 
   } catch (error) {
-    console.error('❌ [SCRIPT_CONTROLLER] generateScript error:', error);
-    console.error('🔍 Error details:', {
+    console.error('[SCRIPT_CONTROLLER] generateScript error:', error);
+    console.error('Error details:', {
       message: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined,
       name: error instanceof Error ? error.name : typeof error
@@ -116,8 +116,8 @@ export const generateScript = async (req: AuthRequest, res: Response) => {
 };
 
 export const regenerateScript = async (req: AuthRequest, res: Response) => {
-  console.log('🔄 [SCRIPT_CONTROLLER] regenerateScript called');
-  console.log('📝 Request body:', JSON.stringify(req.body, null, 2));
+  console.log('[SCRIPT_CONTROLLER] regenerateScript called');
+  console.log('Request body:', JSON.stringify(req.body, null, 2));
 
   try {
     const { projectId } = req.params;
@@ -127,7 +127,7 @@ export const regenerateScript = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    console.log(`🔄 Regenerating script for project ${projectId}`);
+    console.log(`Regenerating script for project ${projectId}`);
     
     const script = await scriptService.regenerateScript(projectId, {
       tone,
@@ -135,7 +135,7 @@ export const regenerateScript = async (req: AuthRequest, res: Response) => {
       additionalInstructions
     });
 
-    console.log(`✅ Script regenerated successfully for project ${projectId}`);
+    console.log(`Script regenerated successfully for project ${projectId}`);
 
     res.json({
       success: true,
@@ -144,7 +144,7 @@ export const regenerateScript = async (req: AuthRequest, res: Response) => {
     });
 
   } catch (error) {
-    console.error('❌ [SCRIPT_CONTROLLER] regenerateScript error:', error);
+    console.error('[SCRIPT_CONTROLLER] regenerateScript error:', error);
     
     if (error instanceof Error && error.message.includes('not found')) {
       return res.status(404).json({ error: 'Script project not found' });
@@ -158,8 +158,8 @@ export const regenerateScript = async (req: AuthRequest, res: Response) => {
 };
 
 export const getUserScripts = async (req: AuthRequest, res: Response) => {
-  console.log('📋 [SCRIPT_CONTROLLER] getUserScripts called');
-  console.log('👤 User ID:', req.userId);
+  console.log('[SCRIPT_CONTROLLER] getUserScripts called');
+  console.log('User ID:', req.userId);
 
   try {
     if (!req.userId) {
@@ -168,7 +168,7 @@ export const getUserScripts = async (req: AuthRequest, res: Response) => {
 
     const scripts = await scriptService.getUserScripts(req.userId);
     
-    console.log(`📊 Found ${scripts.length} script projects for user`);
+    console.log(`Found ${scripts.length} script projects for user`);
 
     res.json({
       success: true,
@@ -177,7 +177,7 @@ export const getUserScripts = async (req: AuthRequest, res: Response) => {
     });
 
   } catch (error) {
-    console.error('❌ [SCRIPT_CONTROLLER] getUserScripts error:', error);
+    console.error('[SCRIPT_CONTROLLER] getUserScripts error:', error);
     res.status(500).json({ 
       error: 'Failed to fetch scripts',
       details: error instanceof Error ? error.message : 'An unexpected error occurred'
@@ -186,9 +186,9 @@ export const getUserScripts = async (req: AuthRequest, res: Response) => {
 };
 
 export const getScriptProject = async (req: AuthRequest, res: Response) => {
-  console.log('🔍 [SCRIPT_CONTROLLER] getScriptProject called');
-  console.log('📋 Project ID:', req.params.projectId);
-  console.log('👤 User ID:', req.userId);
+  console.log('[SCRIPT_CONTROLLER] getScriptProject called');
+  console.log('Project ID:', req.params.projectId);
+  console.log('User ID:', req.userId);
 
   try {
     const { projectId } = req.params;
@@ -200,12 +200,12 @@ export const getScriptProject = async (req: AuthRequest, res: Response) => {
     const project = await scriptService.getScriptProject(projectId, req.userId);
     
     if (!project) {
-      console.log('❌ Script project not found');
+      console.log('Script project not found');
       return res.status(404).json({ error: 'Script project not found' });
     }
 
-    console.log(`✅ Script project found: ${project.title}`);
-    console.log(`📊 Versions: ${project.generatedScripts.length}, API calls: ${project.scriptApiUsage.length}`);
+    console.log(`Script project found: ${project.title}`);
+    console.log(`Versions: ${project.generatedScripts.length}, API calls: ${project.scriptApiUsage.length}`);
 
     res.json({
       success: true,
@@ -213,7 +213,7 @@ export const getScriptProject = async (req: AuthRequest, res: Response) => {
     });
 
   } catch (error) {
-    console.error('❌ [SCRIPT_CONTROLLER] getScriptProject error:', error);
+    console.error('[SCRIPT_CONTROLLER] getScriptProject error:', error);
     res.status(500).json({ 
       error: 'Failed to fetch script project',
       details: error instanceof Error ? error.message : 'An unexpected error occurred'
@@ -222,7 +222,7 @@ export const getScriptProject = async (req: AuthRequest, res: Response) => {
 };
 
 export const updateScriptFeedback = async (req: AuthRequest, res: Response) => {
-  console.log('📝 [SCRIPT_CONTROLLER] updateScriptFeedback called');
+  console.log('[SCRIPT_CONTROLLER] updateScriptFeedback called');
   
   try {
     const { scriptId } = req.params;
@@ -232,13 +232,12 @@ export const updateScriptFeedback = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Update the generated script with user feedback
     const updatedScript = await scriptService.updateScriptFeedback(scriptId, {
       userRating: rating,
       userFeedback: feedback
     });
 
-    console.log(`✅ Feedback updated for script ${scriptId}`);
+    console.log(`Feedback updated for script ${scriptId}`);
 
     res.json({
       success: true,
@@ -246,7 +245,7 @@ export const updateScriptFeedback = async (req: AuthRequest, res: Response) => {
     });
 
   } catch (error) {
-    console.error('❌ [SCRIPT_CONTROLLER] updateScriptFeedback error:', error);
+    console.error('[SCRIPT_CONTROLLER] updateScriptFeedback error:', error);
     res.status(500).json({ 
       error: 'Failed to update feedback',
       details: error instanceof Error ? error.message : 'An unexpected error occurred'
@@ -255,7 +254,7 @@ export const updateScriptFeedback = async (req: AuthRequest, res: Response) => {
 };
 
 export const deleteScriptProject = async (req: AuthRequest, res: Response) => {
-  console.log('🗑️ [SCRIPT_CONTROLLER] deleteScriptProject called');
+  console.log('[SCRIPT_CONTROLLER] deleteScriptProject called');
   
   try {
     const { projectId } = req.params;
@@ -266,7 +265,7 @@ export const deleteScriptProject = async (req: AuthRequest, res: Response) => {
 
     await scriptService.deleteScriptProject(projectId, req.userId);
     
-    console.log(`✅ Script project ${projectId} deleted`);
+    console.log(`Script project ${projectId} deleted`);
 
     res.json({
       success: true,
@@ -274,7 +273,7 @@ export const deleteScriptProject = async (req: AuthRequest, res: Response) => {
     });
 
   } catch (error) {
-    console.error('❌ [SCRIPT_CONTROLLER] deleteScriptProject error:', error);
+    console.error('[SCRIPT_CONTROLLER] deleteScriptProject error:', error);
     
     if (error instanceof Error && error.message.includes('not found')) {
       return res.status(404).json({ error: 'Script project not found' });
@@ -288,7 +287,7 @@ export const deleteScriptProject = async (req: AuthRequest, res: Response) => {
 };
 
 export const getScriptTemplates = async (req: AuthRequest, res: Response) => {
-  console.log('📋 [SCRIPT_CONTROLLER] getScriptTemplates called');
+  console.log('[SCRIPT_CONTROLLER] getScriptTemplates called');
   
   try {
     const templates = [
@@ -368,7 +367,7 @@ export const getScriptTemplates = async (req: AuthRequest, res: Response) => {
     });
 
   } catch (error) {
-    console.error('❌ [SCRIPT_CONTROLLER] getScriptTemplates error:', error);
+    console.error('[SCRIPT_CONTROLLER] getScriptTemplates error:', error);
     res.status(500).json({ 
       error: 'Failed to fetch templates',
       details: error instanceof Error ? error.message : 'An unexpected error occurred'
@@ -376,11 +375,10 @@ export const getScriptTemplates = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// New endpoints for video library and narration workflow
 
 export const getVideoLibrary = async (req: AuthRequest, res: Response) => {
-  console.log('📹 [SCRIPT_CONTROLLER] getVideoLibrary called');
-  console.log('👤 User ID:', req.userId);
+  console.log('[SCRIPT_CONTROLLER] getVideoLibrary called');
+  console.log('User ID:', req.userId);
 
   try {
     if (!req.userId) {
@@ -407,11 +405,11 @@ export const getVideoLibrary = async (req: AuthRequest, res: Response) => {
       orderBy: { createdAt: 'desc' }
     });
 
-    console.log(`📊 Found ${libraryItems.length} global library items`);
+    console.log(`Found ${libraryItems.length} global library items`);
 
     res.json({
       success: true,
-      videos: libraryItems.map(item => ({
+      videos: libraryItems.map((item: any) => ({
         id: item.id,
         title: item.title,
         description: item.description,
@@ -428,7 +426,7 @@ export const getVideoLibrary = async (req: AuthRequest, res: Response) => {
     });
 
   } catch (error) {
-    console.error('❌ [SCRIPT_CONTROLLER] getVideoLibrary error:', error);
+    console.error('[SCRIPT_CONTROLLER] getVideoLibrary error:', error);
     res.status(500).json({ 
       error: 'Failed to fetch video library',
       details: error instanceof Error ? error.message : 'An unexpected error occurred'
@@ -437,8 +435,8 @@ export const getVideoLibrary = async (req: AuthRequest, res: Response) => {
 };
 
 export const generateGameplayScript = async (req: AuthRequest, res: Response) => {
-  console.log('🎮 [SCRIPT_CONTROLLER] generateGameplayScript called');
-  console.log('📝 Request body:', JSON.stringify(req.body, null, 2));
+  console.log('[SCRIPT_CONTROLLER] generateGameplayScript called');
+  console.log('Request body:', JSON.stringify(req.body, null, 2));
 
   try {
     const { prompt, videoId, targetAudience, tone, scriptLength, format } = req.body;
@@ -450,7 +448,6 @@ export const generateGameplayScript = async (req: AuthRequest, res: Response) =>
       });
     }
 
-    // Verify library item exists in global library
     const libraryItem = await prisma.library.findFirst({
       where: { 
         id: videoId,
@@ -465,9 +462,8 @@ export const generateGameplayScript = async (req: AuthRequest, res: Response) =>
       });
     }
 
-    console.log(`🎬 Generating 10-15 sec script for video: ${libraryItem.title}`);
+    console.log(`Generating 10-15 sec script for video: ${libraryItem.title}`);
     
-    // Generate ultra-short script specifically for gameplay (0-45 seconds max)
     const result = await scriptService.generateScript(
       `${prompt} (Create a punchy 15-45 second narration perfect for short video platforms like TikTok, Instagram Reels, or YouTube Shorts. Keep it engaging and concise.)`,
       {
@@ -479,7 +475,7 @@ export const generateGameplayScript = async (req: AuthRequest, res: Response) =>
       req.userId
     );
 
-    console.log(`✅ Gameplay script generated for video ${videoId}`);
+    console.log(`Gameplay script generated for video ${videoId}`);
 
     res.status(201).json({
       success: true,
@@ -491,7 +487,7 @@ export const generateGameplayScript = async (req: AuthRequest, res: Response) =>
     });
 
   } catch (error) {
-    console.error('❌ [SCRIPT_CONTROLLER] generateGameplayScript error:', error);
+    console.error('[SCRIPT_CONTROLLER] generateGameplayScript error:', error);
     res.status(500).json({ 
       error: 'Gameplay script generation failed',
       details: error instanceof Error ? error.message : 'An unexpected error occurred'
@@ -500,8 +496,8 @@ export const generateGameplayScript = async (req: AuthRequest, res: Response) =>
 };
 
 export const generateNarration = async (req: AuthRequest, res: Response) => {
-  console.log('🎙️ [SCRIPT_CONTROLLER] generateNarration called');
-  console.log('📝 Request body:', JSON.stringify(req.body, null, 2));
+  console.log('[SCRIPT_CONTROLLER] generateNarration called');
+  console.log('Request body:', JSON.stringify(req.body, null, 2));
 
   try {
     const { scriptId, voice, speed } = req.body;
@@ -513,7 +509,6 @@ export const generateNarration = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Get the script content
     const scriptProject = await prisma.scriptProject.findFirst({
       where: { 
         id: scriptId, 
@@ -544,13 +539,11 @@ export const generateNarration = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    console.log(`🎙️ Generating narration for script: "${textToNarrate.substring(0, 50)}..."`);
+    console.log(`Generating narration for script: "${textToNarrate.substring(0, 50)}..."`);
 
     try {
-      // Use the modern TTS service
-      console.log('🎙️ [TTS] Using Fish Audio TTS service...');
+      console.log('[TTS] Using Fish Audio TTS service...');
       
-      // Configure TTS options
       const ttsOptions = {
         text: textToNarrate,
         voice: {
@@ -565,19 +558,17 @@ export const generateNarration = async (req: AuthRequest, res: Response) => {
         }
       };
 
-      console.log(`🎙️ [TTS] Generating audio with options:`, ttsOptions);
+      console.log(`[TTS] Generating audio with options:`, ttsOptions);
       
-      // Generate TTS audio using the modern service
       const audioResult = await generateTTSAudio(ttsOptions);
       
       if (!audioResult.success) {
         throw new Error(audioResult.error || 'TTS generation failed');
       }
 
-      console.log(`✅ [TTS] Audio generated successfully: ${audioResult.duration}s (${audioResult.type})`);
-      console.log(`✅ [TTS] Audio URL: ${audioResult.audioUrl}`);
+      console.log(`[TTS] Audio generated successfully: ${audioResult.duration}s (${audioResult.type})`);
+      console.log(`[TTS] Audio URL: ${audioResult.audioUrl}`);
 
-      // Store audio information in the VideoGenerationProject table
       await storeAudioInfo(
         scriptId, 
         audioResult.audioUrl!, 
@@ -588,7 +579,7 @@ export const generateNarration = async (req: AuthRequest, res: Response) => {
 
       res.json({
         success: true,
-        message: `Audio generated successfully using ${audioResult.type === 'tts' ? 'Google Cloud TTS' : 'fallback method'}`,
+        message: `Audio generated successfully using ${audioResult.type === 'fish-audio' ? 'Fish Audio' : 'fallback method'}`,
         audioFilename: audioResult.audioUrl!.split('/').pop(),
         audioPath: audioResult.audioUrl,
         duration: audioResult.duration,
@@ -597,9 +588,8 @@ export const generateNarration = async (req: AuthRequest, res: Response) => {
       });
 
     } catch (ttsError) {
-      console.error('❌ TTS Error:', ttsError);
+      console.error('TTS Error:', ttsError);
       
-      // Return error response
       return res.status(500).json({
         success: false,
         message: 'Failed to generate narration audio',
@@ -608,7 +598,7 @@ export const generateNarration = async (req: AuthRequest, res: Response) => {
       });
     }
   } catch (error) {
-    console.error('❌ [SCRIPT_CONTROLLER] generateNarration error:', error);
+    console.error('[SCRIPT_CONTROLLER] generateNarration error:', error);
     res.status(500).json({ 
       error: 'Narration generation failed',
       details: error instanceof Error ? error.message : 'An unexpected error occurred'
@@ -617,8 +607,8 @@ export const generateNarration = async (req: AuthRequest, res: Response) => {
 };
 
 export const combineVideoWithNarration = async (req: AuthRequest, res: Response) => {
-  console.log('🎬 [SCRIPT_CONTROLLER] combineVideoWithNarration called');
-  console.log('📝 Request body:', JSON.stringify(req.body, null, 2));
+  console.log('[SCRIPT_CONTROLLER] combineVideoWithNarration called');
+  console.log('Request body:', JSON.stringify(req.body, null, 2));
 
   try {
     const { scriptId, videoId, addSubtitles } = req.body;
@@ -629,9 +619,8 @@ export const combineVideoWithNarration = async (req: AuthRequest, res: Response)
       });
     }
 
-    console.log('🎬 [SCRIPT_CONTROLLER] Starting video combination process with S3 audio...');
+    console.log('[SCRIPT_CONTROLLER] Starting video combination process with S3 audio...');
     
-    // Get the audio information from the VideoGenerationProject table
     const audioInfo = await scriptService.getAudioInfo(scriptId, req.userId);
     
     if (!audioInfo || !audioInfo.audioUrl) {
@@ -641,16 +630,14 @@ export const combineVideoWithNarration = async (req: AuthRequest, res: Response)
       });
     }
 
-    console.log(`🎬 [SCRIPT_CONTROLLER] Found audio: ${audioInfo.audioUrl}`);
-    console.log(`🎬 [SCRIPT_CONTROLLER] Audio duration: ${audioInfo.duration}s`);
+    console.log(`[SCRIPT_CONTROLLER] Found audio: ${audioInfo.audioUrl}`);
+    console.log(`[SCRIPT_CONTROLLER] Audio duration: ${audioInfo.duration}s`);
     
-    // Check if this is a mock/fallback audio
     const isMockAudio = audioInfo.audioUrl.startsWith('mock://');
     if (isMockAudio) {
-      console.log(`🎬 [SCRIPT_CONTROLLER] Processing with mock/fallback audio`);
+      console.log(`[SCRIPT_CONTROLLER] Processing with mock/fallback audio`);
     }
     
-    // Get the selected video from library  
     const libraryVideo = await prisma.library.findUnique({
       where: { id: videoId }
     });
@@ -659,16 +646,15 @@ export const combineVideoWithNarration = async (req: AuthRequest, res: Response)
       return res.status(404).json({ error: 'Library video not found' });
     }
 
-    console.log('🎬 [SCRIPT_CONTROLLER] Found script and video, starting processing...');
-    console.log(`📹 [SCRIPT_CONTROLLER] Library video: ${libraryVideo.title}`);
+    console.log('[SCRIPT_CONTROLLER] Found script and video, starting processing...');
+    console.log(`[SCRIPT_CONTROLLER] Library video: ${libraryVideo.title}`);
     
     try {
       let result;
       
       if (isMockAudio) {
-        console.log(`🎵 [SCRIPT_CONTROLLER] Processing video without audio overlay (mock audio)`);
+        console.log(`[SCRIPT_CONTROLLER] Processing video without audio overlay (mock audio)`);
         
-        // For mock audio, just return the library video as-is
         const libraryVideo = await prisma.library.findUnique({
           where: { id: videoId }
         });
@@ -681,12 +667,11 @@ export const combineVideoWithNarration = async (req: AuthRequest, res: Response)
           videoUrl: libraryVideo.videoUrl // Use the library video directly
         };
         
-        console.log(`✅ [SCRIPT_CONTROLLER] Using library video directly: ${result.videoUrl}`);
+        console.log(`[SCRIPT_CONTROLLER] Using library video directly: ${result.videoUrl}`);
         
       } else {
-        console.log(`🎵 [SCRIPT_CONTROLLER] Using S3 audio URL: ${audioInfo.audioUrl}`);
+        console.log(`[SCRIPT_CONTROLLER] Using S3 audio URL: ${audioInfo.audioUrl}`);
         
-        // Use scriptService to prepare the final video with the real S3 audio URL
         result = await scriptService.prepareFinalVideo(
           req.userId,
           scriptId,
@@ -696,11 +681,10 @@ export const combineVideoWithNarration = async (req: AuthRequest, res: Response)
         );
       }
       
-      console.log('✅ [SCRIPT_CONTROLLER] Video processed and uploaded to S3:', result.videoUrl);
+      console.log('[SCRIPT_CONTROLLER] Video processed and uploaded to S3:', result.videoUrl);
       
       const timestamp = Date.now();
       
-      // Return successful response with S3 URL
       res.json({
         success: true,
         message: 'Video combined and uploaded successfully',
@@ -711,9 +695,8 @@ export const combineVideoWithNarration = async (req: AuthRequest, res: Response)
       });
       
     } catch (processingError) {
-      console.error('❌ [SCRIPT_CONTROLLER] Video processing failed:', processingError);
+      console.error('[SCRIPT_CONTROLLER] Video processing failed:', processingError);
       
-      // Check if it's a credentials or service issue
       if (processingError instanceof Error && 
           (processingError.message.includes('AWS') || 
            processingError.message.includes('S3') ||
@@ -733,7 +716,7 @@ export const combineVideoWithNarration = async (req: AuthRequest, res: Response)
     }
 
   } catch (error) {
-    console.error('❌ [SCRIPT_CONTROLLER] combineVideoWithNarration error:', error);
+    console.error('[SCRIPT_CONTROLLER] combineVideoWithNarration error:', error);
     res.status(500).json({ 
       error: 'Video combination failed',
       details: error instanceof Error ? error.message : 'An unexpected error occurred'
@@ -742,7 +725,7 @@ export const combineVideoWithNarration = async (req: AuthRequest, res: Response)
 };
 
 export const getProcessingStatus = async (req: AuthRequest, res: Response) => {
-  console.log('📊 [SCRIPT_CONTROLLER] getProcessingStatus called');
+  console.log('[SCRIPT_CONTROLLER] getProcessingStatus called');
 
   try {
     const { jobId } = req.params;
@@ -771,7 +754,7 @@ export const getProcessingStatus = async (req: AuthRequest, res: Response) => {
     });
 
   } catch (error) {
-    console.error('❌ [SCRIPT_CONTROLLER] getProcessingStatus error:', error);
+    console.error('[SCRIPT_CONTROLLER] getProcessingStatus error:', error);
     res.status(500).json({ 
       error: 'Failed to get processing status',
       details: error instanceof Error ? error.message : 'An unexpected error occurred'
@@ -779,9 +762,6 @@ export const getProcessingStatus = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// Library is now global and managed through backend seeding
-// Individual users cannot add/update/delete library items
-// All library management will be done through database seeding
 
 function getStatusMessage(status: string): string {
   switch (status) {

@@ -6,7 +6,7 @@
 /*
  * This file exports the `Account` model and its related types.
  *
- * 🟢 You can import this file directly.
+ * You can import this file directly.
  */
 import type * as runtime from "@prisma/client/runtime/library"
 import type * as $Enums from "../enums"

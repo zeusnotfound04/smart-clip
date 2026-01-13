@@ -31,15 +31,12 @@ export async function generateThumbnail(
   try {
     await initFFmpeg();
     
-    // Fetch video file
     const videoData = await fetchFile(videoUrl);
     const inputName = 'input.mp4';
     const outputName = 'thumbnail.jpg';
     
-    // Write input file
     await ffmpeg.writeFile(inputName, videoData);
     
-    // Generate thumbnail at timestamp
     await ffmpeg.exec([
       '-i', inputName,
       '-ss', timestamp.toString(),
@@ -49,14 +46,11 @@ export async function generateThumbnail(
       outputName
     ]);
     
-    // Read output file
     const thumbnailData = await ffmpeg.readFile(outputName);
     
-    // Upload to S3
     const s3Key = `thumbnails/${Date.now()}_thumbnail.jpg`;
     const thumbnailUrl = await uploadFile(s3Key, Buffer.from(thumbnailData as Uint8Array), 'image/jpeg');
     
-    // Cleanup
     await ffmpeg.deleteFile(inputName);
     await ffmpeg.deleteFile(outputName);
     
@@ -79,16 +73,13 @@ export async function generateThumbnailSprite(
   try {
     await initFFmpeg();
     
-    // Fetch video file
     const videoData = await fetchFile(videoUrl);
     const inputName = 'input.mp4';
     
     await ffmpeg.writeFile(inputName, videoData);
     
-    // Get video duration
     await ffmpeg.exec(['-i', inputName, '-f', 'null', '-']);
     
-    // For simplicity, generate evenly spaced thumbnails
     const timestamps: number[] = [];
     const thumbnails: Buffer[] = [];
     
@@ -112,11 +103,9 @@ export async function generateThumbnailSprite(
       await ffmpeg.deleteFile(outputName);
     }
     
-    // Create sprite sheet (simplified - just upload first thumbnail)
     const s3Key = `sprites/${Date.now()}_sprite.jpg`;
     const spriteUrl = await uploadFile(s3Key, thumbnails[0], 'image/jpeg');
     
-    // Cleanup
     await ffmpeg.deleteFile(inputName);
     
     return {

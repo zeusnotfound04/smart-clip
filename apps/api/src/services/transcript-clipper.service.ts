@@ -47,20 +47,18 @@ class TranscriptClipperService {
     config: TranscriptClipperConfig,
     projectId: string
   ): Promise<ClipRecommendation[]> {
-    console.log(`[${projectId}] 🎙️ Starting transcript-based analysis`);
-    console.log(`[${projectId}] 📝 Transcript has ${transcript.length} segments`);
+    console.log(`[${projectId}] Starting transcript-based analysis`);
+    console.log(`[${projectId}] Transcript has ${transcript.length} segments`);
     
-    // Format transcript for Gemini
     const formattedTranscript = this.formatTranscriptForAI(transcript);
     
-    // Get clip recommendations from Gemini Pro
     const recommendations = await this.getGeminiClipRecommendations(
       formattedTranscript,
       config,
       projectId
     );
     
-    console.log(`[${projectId}] ✅ Got ${recommendations.length} clip recommendations`);
+    console.log(`[${projectId}] Got ${recommendations.length} clip recommendations`);
     
     return recommendations;
   }
@@ -87,7 +85,7 @@ class TranscriptClipperService {
     config: TranscriptClipperConfig,
     projectId: string
   ): Promise<ClipRecommendation[]> {
-    console.log(`[${projectId}] 🤖 Sending transcript to Gemini Pro...`);
+    console.log(`[${projectId}] Sending transcript to Gemini Pro...`);
     
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-pro' });
     
@@ -98,12 +96,10 @@ class TranscriptClipperService {
       const response = await result.response;
       const text = response.text();
       
-      console.log(`[${projectId}] 📥 Received Gemini response`);
+      console.log(`[${projectId}] Received Gemini response`);
       
-      // Parse the JSON response
       const recommendations = this.parseGeminiResponse(text, projectId);
       
-      // Validate and adjust clip durations
       const validatedRecommendations = this.validateClipDurations(
         recommendations,
         config.minClipDuration,
@@ -112,7 +108,7 @@ class TranscriptClipperService {
       
       return validatedRecommendations;
     } catch (error) {
-      console.error(`[${projectId}] ❌ Gemini API error:`, error);
+      console.error(`[${projectId}] Gemini API error:`, error);
       throw error;
     }
   }
@@ -174,7 +170,6 @@ Return exactly ${config.numberOfClips} clips, ordered by score (highest first).`
    */
   private parseGeminiResponse(text: string, projectId: string): ClipRecommendation[] {
     try {
-      // Extract JSON from response (in case there's extra text)
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
         console.error(`[${projectId}] No JSON found in response`);
@@ -211,15 +206,13 @@ Return exactly ${config.numberOfClips} clips, ordered by score (highest first).`
     minDuration: number,
     maxDuration: number
   ): ClipRecommendation[] {
-    return clips.map(clip => {
+    return clips.map((clip: any) => {
       let duration = clip.endTime - clip.startTime;
       
-      // If too short, extend end time
       if (duration < minDuration) {
         clip.endTime = clip.startTime + minDuration;
       }
       
-      // If too long, trim end time
       if (duration > maxDuration) {
         clip.endTime = clip.startTime + maxDuration;
       }
@@ -234,25 +227,20 @@ Return exactly ${config.numberOfClips} clips, ordered by score (highest first).`
   parseSubtitlesToTranscript(srtContent: string): TranscriptSegment[] {
     const segments: TranscriptSegment[] = [];
     
-    // Split by double newline (SRT block separator)
     const blocks = srtContent.trim().split(/\n\n+/);
     
     for (const block of blocks) {
       const lines = block.trim().split('\n');
       
-      // Skip if less than 2 lines (index + timestamp + text)
       if (lines.length < 2) continue;
       
-      // Find timestamp line (contains -->)
       const timestampLine = lines.find(line => line.includes('-->'));
       if (!timestampLine) continue;
       
-      // Parse timestamps
       const [startStr, endStr] = timestampLine.split('-->').map(s => s.trim());
       const startTime = this.parseTimestamp(startStr);
       const endTime = this.parseTimestamp(endStr);
       
-      // Get text (all lines after timestamp)
       const textStartIndex = lines.indexOf(timestampLine) + 1;
       const text = lines.slice(textStartIndex).join(' ').trim();
       
@@ -269,20 +257,16 @@ Return exactly ${config.numberOfClips} clips, ordered by score (highest first).`
    * Supports: "00:01:23,456" or "00:01:23.456" or "01:23.456"
    */
   private parseTimestamp(timestamp: string): number {
-    // Remove any extra whitespace
     timestamp = timestamp.trim();
     
-    // Replace comma with period (SRT uses comma)
     timestamp = timestamp.replace(',', '.');
     
     const parts = timestamp.split(':');
     
     if (parts.length === 3) {
-      // HH:MM:SS.mmm
       const [hours, minutes, seconds] = parts;
       return Number(hours) * 3600 + Number(minutes) * 60 + Number(seconds);
     } else if (parts.length === 2) {
-      // MM:SS.mmm
       const [minutes, seconds] = parts;
       return Number(minutes) * 60 + Number(seconds);
     }
@@ -304,11 +288,9 @@ Return exactly ${config.numberOfClips} clips, ordered by score (highest first).`
       const gap = next.startTime - current.endTime;
       
       if (gap <= maxGapSeconds) {
-        // Merge with current segment
         current.endTime = next.endTime;
         current.text += ' ' + next.text;
       } else {
-        // Save current and start new
         merged.push(current);
         current = { ...next };
       }

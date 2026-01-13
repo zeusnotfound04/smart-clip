@@ -42,7 +42,7 @@ export class CreditService {
 
     const hasCredits = user.credits >= requiredCredits;
 
-    console.log(`💳 [CREDITS] User ${userId} check:`, {
+    console.log(`[CREDITS] User ${userId} check:`, {
       currentCredits: user.credits,
       requiredCredits,
       hasCredits,
@@ -70,9 +70,8 @@ export class CreditService {
     description: string,
     metadata?: Record<string, any>
   ) {
-    console.log(`💸 [CREDITS] Deducting ${creditsToDeduct} credits from user ${userId}`);
+    console.log(`[CREDITS] Deducting ${creditsToDeduct} credits from user ${userId}`);
 
-    // Check if user has enough credits first
     const check = await this.checkUserCredits(userId, creditsToDeduct);
     if (!check.hasCredits) {
       throw new Error(
@@ -80,16 +79,13 @@ export class CreditService {
       );
     }
 
-    // Perform deduction and create transaction in a single transaction
-    const result = await prisma.$transaction(async (tx) => {
-      // Get current balance before update
+    const result = await prisma.$transaction(async (tx: any) => {
       const currentUser = await tx.user.findUnique({
         where: { id: userId },
         select: { credits: true },
       });
       const balanceBefore = currentUser?.credits || 0;
 
-      // Update user credits
       const updatedUser = await tx.user.update({
         where: { id: userId },
         data: {
@@ -108,7 +104,6 @@ export class CreditService {
         },
       });
 
-      // Create credit transaction record
       const transaction = await tx.creditTransaction.create({
         data: {
           userId,
@@ -124,7 +119,7 @@ export class CreditService {
       return { user: updatedUser, transaction };
     });
 
-    console.log(`✅ [CREDITS] Deducted ${creditsToDeduct} credits. New balance: ${result.user.credits}`);
+    console.log(`[CREDITS] Deducted ${creditsToDeduct} credits. New balance: ${result.user.credits}`);
     return result;
   }
 
@@ -143,10 +138,9 @@ export class CreditService {
     description: string,
     metadata?: Record<string, any>
   ) {
-    console.log(`💰 [CREDITS] Adding ${creditsToAdd} credits to user ${userId} (${type})`);
+    console.log(`[CREDITS] Adding ${creditsToAdd} credits to user ${userId} (${type})`);
 
-    const result = await prisma.$transaction(async (tx) => {
-      // Get current balance before update
+    const result = await prisma.$transaction(async (tx: any) => {
       const currentUser = await tx.user.findUnique({
         where: { id: userId },
         select: { credits: true },
@@ -183,7 +177,7 @@ export class CreditService {
       return { user: updatedUser, transaction };
     });
 
-    console.log(`✅ [CREDITS] Added ${creditsToAdd} credits. New balance: ${result.user.credits}`);
+    console.log(`[CREDITS] Added ${creditsToAdd} credits. New balance: ${result.user.credits}`);
     return result;
   }
 
@@ -206,7 +200,6 @@ export class CreditService {
       throw new Error('User not found');
     }
 
-    // Get recent transactions
     const recentTransactions = await prisma.creditTransaction.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
@@ -237,10 +230,9 @@ export class CreditService {
       throw new Error('User not found');
     }
 
-    // Free tier gets watermark, paid tiers don't
     const shouldWatermark = user.subscriptionTier === 'free' || user.subscriptionTier === 'trial';
     
-    console.log(`🎨 [WATERMARK] User ${userId} tier: ${user.subscriptionTier}, watermark: ${shouldWatermark}`);
+    console.log(`[WATERMARK] User ${userId} tier: ${user.subscriptionTier}, watermark: ${shouldWatermark}`);
     
     return shouldWatermark;
   }
@@ -277,7 +269,7 @@ export class CreditService {
       };
     }
 
-    console.log(`✅ [CREDITS] User can process ${videoDuration}s video for ${featureName}`);
+    console.log(`[CREDITS] User can process ${videoDuration}s video for ${featureName}`);
     console.log(`   Credits required: ${creditsRequired}, Available: ${creditCheck.currentCredits}`);
     console.log(`   Watermark: ${shouldWatermark ? 'Yes (Free tier)' : 'No (Paid tier)'}`);
 

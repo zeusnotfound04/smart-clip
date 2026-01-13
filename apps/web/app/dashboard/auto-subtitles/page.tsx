@@ -107,7 +107,7 @@ export default function AutoSubtitlesPage() {
         if (data.languages.length > 0 && !selectedLanguage) {
           const defaultLang = data.languages[0].code;
           setSelectedLanguage(defaultLang);
-          console.log('🌐 Default language set to:', defaultLang);
+          console.log('Default language set to:', defaultLang);
         }
       } catch (error) {
         console.error('Failed to fetch languages:', error);
@@ -123,7 +123,7 @@ export default function AutoSubtitlesPage() {
     const videoName = urlParams.get('videoName');
     
     if (videoUrl && videoUrl.includes('s3.') && !videoData) {
-      console.log('📦 Auto-uploading S3 video from AI script generator');
+      console.log('Auto-uploading S3 video from AI script generator');
       console.log('   - URL:', videoUrl);
       console.log('   - Name:', videoName);
       
@@ -164,11 +164,11 @@ export default function AutoSubtitlesPage() {
 
   const handleVideoSelect = async (video: any) => {
     try {
-      console.log('📹 handleVideoSelect called with:', video);
-      console.log('📹 video.videoUrl:', video.videoUrl);
-      console.log('📹 video.s3Url:', video.s3Url);
-      console.log('📹 video.urlData:', video.urlData);
-      console.log('📹 video.isUrlPreview:', video.isUrlPreview);
+      console.log('handleVideoSelect called with:', video);
+      console.log('video.videoUrl:', video.videoUrl);
+      console.log('video.s3Url:', video.s3Url);
+      console.log('video.urlData:', video.urlData);
+      console.log('video.isUrlPreview:', video.isUrlPreview);
       
       // Handle URL preview (from YouTube, etc.) - don't download yet
       if (video.isUrlPreview) {
@@ -177,7 +177,7 @@ export default function AutoSubtitlesPage() {
         // For other platforms, this will be the direct URL
         const previewUrl = video.videoUrl || video.s3Url;
         
-        console.log('🎬 Video Preview URL Selection:');
+        console.log('Video Preview URL Selection:');
         console.log('   - Platform:', video.urlData?.platform);
         console.log('   - Original URL:', video.urlData?.url);
         console.log('   - Direct URL (yt-dlp):', video.urlData?.directUrl);
@@ -189,7 +189,7 @@ export default function AutoSubtitlesPage() {
         setVideoPreviewUrl(previewUrl);
         setUploadStage('configuring');
         setError('');
-        console.log('✅ URL Preview video added to state');
+        console.log('URL Preview video added to state');
         console.log('   - videoData set:', !!video);
         console.log('   - selectedFile:', !!selectedFile);
         console.log('   - selectedLanguage:', selectedLanguage);
@@ -327,7 +327,7 @@ export default function AutoSubtitlesPage() {
       const finalFontSize = Math.round(Math.max(16, Math.min(24, subtitleOptions.style.fontSize * 0.8)) * subtitleScale);
 
       // Log the exact values being sent
-      console.log('🎨 Sending subtitle configuration to backend:');
+      console.log('Sending subtitle configuration to backend:');
       console.log('   - Position X:', subtitlePosition.x);
       console.log('   - Position Y:', subtitlePosition.y);
       console.log('   - Scale:', subtitleScale);
@@ -348,7 +348,7 @@ export default function AutoSubtitlesPage() {
         }
       };
       
-      console.log('📤 Final payload being sent:', JSON.stringify(subtitleOptionsWithPosition, null, 2));
+      console.log('Final payload being sent:', JSON.stringify(subtitleOptionsWithPosition, null, 2));
 
       // Start subtitle generation (returns immediately with job ID)
       const jobResponse = await apiClient.generateSubtitles(video.id, subtitleOptionsWithPosition, selectedLanguage || undefined);
@@ -422,7 +422,7 @@ export default function AutoSubtitlesPage() {
     if (!videoData?.id) return;
         // Skip configuration updates for URL previews (video doesn't exist in DB yet)
     if (videoData.isUrlPreview) {
-      console.log('⏭️ Skipping config update for URL preview - will apply on upload');
+      console.log('Skipping config update for URL preview - will apply on upload');
       return;
     }
         // Clear previous timeout
@@ -541,7 +541,7 @@ export default function AutoSubtitlesPage() {
             {(() => {
               const hasVideoValue = !!selectedFile || !!videoData;
               const hasLanguageValue = !!selectedLanguage;
-              console.log('📊 Passing props to SubtitleConfigurationPanel:');
+              console.log('Passing props to SubtitleConfigurationPanel:');
               console.log('   - selectedFile:', selectedFile ? selectedFile.name : 'null');
               console.log('   - videoData:', videoData ? videoData.id : 'null');
               console.log('   - selectedLanguage:', selectedLanguage);

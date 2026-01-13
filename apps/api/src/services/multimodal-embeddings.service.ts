@@ -249,7 +249,6 @@ export class GoogleMultimodalEmbeddingsService {
       .slice(0, 3)
       .reduce((sum, s) => sum + s.similarity, 0) / 3;
     
-    // Combine Pro score with embedding similarities (weighted 60/40)
     const embeddingComponent = Math.max(maxSimilarity, avgTopSimilarities) * 100;
     const finalScore = Math.round(proScore * 0.6 + embeddingComponent * 0.4);
     
@@ -260,7 +259,6 @@ export class GoogleMultimodalEmbeddingsService {
     similarities: Array<{ prototype: string; similarity: number }>,
     highlightType: string
   ): number {
-    // Look for prototypes that indicate general interest/engagement
     const interestKeywords = ['epic', 'incredible', 'amazing', 'insightful', 'compelling'];
     
     let interestScore = 0;
@@ -280,7 +278,6 @@ export class GoogleMultimodalEmbeddingsService {
     similarities: Array<{ prototype: string; similarity: number }>,
     highlightType: string
   ): number {
-    // Look for prototypes that indicate viral potential
     const viralKeywords = ['viral', 'trending', 'social', 'hilarious', 'shocking', 'epic'];
     
     let viralScore = 0;
@@ -293,7 +290,6 @@ export class GoogleMultimodalEmbeddingsService {
       }
     }
 
-    // Boost score for certain highlight types
     const viralTypes = ['funny', 'epic_moment', 'surprising', 'skillful'];
     const typeBoost = viralTypes.includes(highlightType) ? 1.2 : 1.0;
     
@@ -305,8 +301,6 @@ export class GoogleMultimodalEmbeddingsService {
     startTime: number;
     endTime: number;
   }): Promise<string> {
-    // This would use FFmpeg to extract the specific video segment
-    // For now, return mock data
     return Buffer.from('mock-video-segment-data').toString('base64');
   }
 
@@ -359,7 +353,6 @@ export class GoogleMultimodalEmbeddingsService {
       projectId
     );
 
-    // Update segments with embedding scores
     for (const result of embeddingResults) {
       await prisma.highlightSegment.update({
         where: { id: result.segmentId },
@@ -386,29 +379,26 @@ export class GoogleMultimodalEmbeddingsService {
     config: EmbeddingAnalysisConfig,
     projectId: string
   ): EmbeddingResult[] {
-    return segments.map(segment => {
-      // Generate realistic similarity scores based on highlight type and content type
+    return segments.map((segment: any) => {
       const mockSimilarities = config.highlightPrototypes.map(prototype => ({
         prototype,
         similarity: this.getMockSimilarity(segment.highlightType, prototype, config.contentType)
       }));
 
-      // Calculate enhanced scores based on Pro score and mock similarities
       const maxSimilarity = Math.max(...mockSimilarities.map(s => s.similarity));
-      const embeddingScore = Math.min(100, segment.proScore + (maxSimilarity * 15)); // Boost by similarity
+      const embeddingScore = Math.min(100, segment.proScore + (maxSimilarity * 15));
       
       return {
         segmentId: segment.id,
         embeddingScore,
         similarityScores: mockSimilarities,
-        interestingnessScore: Math.random() * 0.3 + 0.7, // 0.7-1.0
-        viralityScore: Math.random() * 0.4 + 0.6 // 0.6-1.0
+        interestingnessScore: Math.random() * 0.3 + 0.7,
+        viralityScore: Math.random() * 0.4 + 0.6
       };
     });
   }
 
   private getMockSimilarity(highlightType: string, prototype: string, contentType: string): number {
-    // Create realistic similarity mappings based on content relationships
     const similarityMatrix: { [key: string]: { [key: string]: number } } = {
       educational: {
         'educational_moment': 0.9,
@@ -443,8 +433,7 @@ export class GoogleMultimodalEmbeddingsService {
     const typeMatrix = similarityMatrix[highlightType] || {};
     const baseSimilarity = typeMatrix[prototype] || 0.3;
     
-    // Add some randomness and content type bonus
-    const randomVariation = (Math.random() - 0.5) * 0.2; // ±0.1 variation
+    const randomVariation = (Math.random() - 0.5) * 0.2;
     const contentBonus = contentType === 'tutorial' && prototype.includes('educational') ? 0.1 : 0;
     
     return Math.max(0.1, Math.min(1.0, baseSimilarity + randomVariation + contentBonus));

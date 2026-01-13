@@ -43,7 +43,7 @@ export const analyzeVideo = async (videoBuffer: Buffer) => {
 
 export const textToSpeech = async (text: string, voiceConfig?: any) => {
   try {
-    console.log(`🎙️ [AI-SERVICE] Generating speech with Fish Audio`);
+    console.log(`[AI-SERVICE] Generating speech with Fish Audio`);
     
     const result = await fishAudioService.generateTTS({
       text,
@@ -58,10 +58,10 @@ export const textToSpeech = async (text: string, voiceConfig?: any) => {
       throw new Error(result.error || 'Speech generation failed');
     }
 
-    console.log(`✅ [AI-SERVICE] Speech generated: ${result.audioUrl}`);
+    console.log(`[AI-SERVICE] Speech generated: ${result.audioUrl}`);
     return result.audioUrl; // Return URL instead of audio content
   } catch (error) {
-    console.error('❌ [AI-SERVICE] Speech generation failed:', error);
+    console.error('[AI-SERVICE] Speech generation failed:', error);
     throw error;
   }
 };

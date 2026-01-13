@@ -442,7 +442,7 @@ export const ContentTypeSelector: React.FC<ContentTypeSelectorProps> = ({
           </div>
           {selectedType && (
             <Badge variant="default" className="text-sm px-3 py-1">
-              ✓ {contentTypes.find(t => t.type === selectedType)?.name}
+              {contentTypes.find(t => t.type === selectedType)?.name}
             </Badge>
           )}
         </div>

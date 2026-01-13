@@ -22,10 +22,8 @@ export const creditProcessingHelper = {
   ): Promise<{ success: boolean; outputPath: string; creditsUsed: number; newBalance: number }> {
     const { userId, videoDuration, projectId, projectType, inputPath, outputPath, description } = params;
 
-    // Calculate credits needed
     const creditsNeeded = creditsService.calculateCreditsNeeded(videoDuration);
 
-    // Check if user has enough credits
     const hasCredits = await creditsService.hasEnoughCredits(userId, creditsNeeded);
     if (!hasCredits) {
       const balance = await creditsService.getBalance(userId);
@@ -34,7 +32,6 @@ export const creditProcessingHelper = {
       );
     }
 
-    // Deduct credits before processing
     const deductResult = await creditsService.deductCredits({
       userId,
       amount: creditsNeeded,
@@ -45,10 +42,8 @@ export const creditProcessingHelper = {
     });
 
     try {
-      // Process the video
       const processedPath = await processingFn();
 
-      // Get user's subscription tier to determine if watermark is needed
       const user = await prisma.user.findUnique({
         where: { id: userId },
         select: { subscriptionTier: true },
@@ -58,7 +53,6 @@ export const creditProcessingHelper = {
         throw new Error('User not found');
       }
 
-      // Apply watermark if user is on free tier
       const finalPath = await watermarkService.processVideoWithConditionalWatermark(
         processedPath,
         outputPath,
@@ -72,7 +66,6 @@ export const creditProcessingHelper = {
         newBalance: deductResult.newBalance,
       };
     } catch (error: any) {
-      // Refund credits if processing failed
       await creditsService.refundCredits({
         userId,
         amount: creditsNeeded,

@@ -66,23 +66,16 @@ export class FFmpegPreprocessingService {
   }
 
   private getDefaultTempDir(): string {
-    // Use Node.js os.tmpdir() for cross-platform compatibility
-    // This returns /tmp on Linux/macOS and C:\Users\{user}\AppData\Local\Temp on Windows
     return os.tmpdir();
   }
 
   private normalizePathForFFmpeg(filePath: string): string {
-    // Normalize path for FFmpeg command line usage
-    // FFmpeg works with forward slashes on all platforms, but we need to handle Windows paths carefully
     const resolved = path.resolve(filePath);
     
-    // On Windows, if we have a drive letter, ensure the path is properly formatted for FFmpeg
     if (process.platform === 'win32' && resolved.match(/^[A-Za-z]:\\/)) {
-      // Convert backslashes to forward slashes for FFmpeg on Windows
       return resolved.replace(/\\/g, '/');
     }
     
-    // On Unix-like systems, return as-is (already uses forward slashes)
     return resolved;
   }
 
@@ -103,23 +96,18 @@ export class FFmpegPreprocessingService {
     try {
       await this.ensureTempDir();
 
-      // Check if videoPath is an S3 key or local path
       if (videoPath.startsWith('videos/')) {
-        console.log(`[${projectId}] 🚀 Streaming video from S3: ${videoPath}`);
+        console.log(`[${projectId}] Streaming video from S3: ${videoPath}`);
         
-        // Create local temp file path
         const videoExtension = path.extname(videoPath) || '.mp4';
         localVideoPath = path.join(this.tempDir, `${projectId}-input${videoExtension}`);
         
-        // 🔥 Use streaming download to file (much faster, avoids RAM usage)
         await downloadFileToPath(videoPath, localVideoPath);
-        console.log(`[${projectId}] ✅ Video streamed to: ${localVideoPath}`);
+        console.log(`[${projectId}] Video streamed to: ${localVideoPath}`);
         
-        // Use local path for processing
         videoPath = localVideoPath;
       }
 
-      // Run analysis tasks in parallel for efficiency
       const [videoMetadata, audioAnalysis, sceneChanges, waveformData] = await Promise.all([
         this.extractVideoMetadata(videoPath, projectId),
         this.analyzeAudioEnergy(videoPath, projectId, options),
@@ -144,7 +132,6 @@ export class FFmpegPreprocessingService {
       console.error(`[${projectId}] Preprocessing failed:`, error);
       throw error;
     } finally {
-      // Clean up downloaded file
       if (localVideoPath) {
         try {
           await fs.unlink(localVideoPath);
@@ -207,18 +194,14 @@ export class FFmpegPreprocessingService {
     const tempAudioFile = path.join(this.tempDir, `${projectId}-audio.wav`);
 
     try {
-      // Extract audio and analyze energy
       const normalizedVideoPath = this.normalizePathForFFmpeg(videoPath);
       const normalizedTempAudioFile = this.normalizePathForFFmpeg(tempAudioFile);
       const audioCommand = `ffmpeg -i "${normalizedVideoPath}" -vn -acodec pcm_s16le -ar 44100 -ac 1 -threads ${this.maxConcurrentTasks} "${normalizedTempAudioFile}" -y`;
       await execAsyncLargeBuffer(audioCommand);
 
-      // Analyze RMS energy levels using astats filter without problematic file output
-      // Output metadata to stderr which we can capture directly
       const energyCommand = `ffmpeg -i "${normalizedTempAudioFile}" -af "astats=metadata=1:reset=1" -f null -`;
       const { stderr } = await execAsyncLargeBuffer(energyCommand);
 
-      // Detect silence segments - Windows compatible
       const silenceCommand = `ffmpeg -i "${normalizedTempAudioFile}" -af "silencedetect=noise=${silenceThreshold}dB:duration=0.5" -f null -`;
       
       let silenceOutput = '';
@@ -226,26 +209,20 @@ export class FFmpegPreprocessingService {
         const { stderr } = await execAsyncLargeBuffer(silenceCommand);
         silenceOutput = stderr; // silence detection output goes to stderr
       } catch (error: any) {
-        // silencedetect might not find any silence, which is okay
         console.log(`[${projectId}] No silence detected or command failed (this is okay)`);
-        // Extract stderr from error if available
         if (error && error.stderr) {
           silenceOutput = error.stderr;
         }
       }
 
-      // Parse energy data from stderr output
       const { rmsValues, energyPeaks, averageEnergy } = this.parseEnergyDataFromStderr(stderr, sampleInterval);
       
-      // Parse silence segments
       const silenceSegments = this.parseSilenceSegments(silenceOutput);
       
-      // Calculate silence ratio
       const totalSilenceDuration = silenceSegments.reduce((sum, seg) => sum + seg.duration, 0);
       const videoDuration = rmsValues.length * sampleInterval;
       const silenceRatio = totalSilenceDuration / videoDuration;
 
-      // Clean up temp files
       await this.cleanupTempFiles([tempAudioFile]);
 
       return {
@@ -268,7 +245,6 @@ export class FFmpegPreprocessingService {
     console.log(`[${projectId}] Detecting scene changes`);
     
     try {
-      // Use FFmpeg's scene detection filter
       const normalizedVideoPath = this.normalizePathForFFmpeg(videoPath);
       const command = `ffmpeg -i "${normalizedVideoPath}" -vf "select='gt(scene,0.3)',showinfo" -vsync vfr -f null - 2>&1 | grep "pts_time"`;
       
@@ -277,7 +253,6 @@ export class FFmpegPreprocessingService {
         const { stdout } = await execAsyncLargeBuffer(command);
         sceneOutput = stdout;
       } catch (error) {
-        // Scene detection might not find significant changes
         console.log(`[${projectId}] No significant scene changes detected`);
       }
 
@@ -306,23 +281,19 @@ export class FFmpegPreprocessingService {
     const tempDataFile = path.join(this.tempDir, `${projectId}-waveform.dat`);
 
     try {
-      // Extract audio at lower sample rate for waveform visualization
       const normalizedVideoPath = this.normalizePathForFFmpeg(videoPath);
       const normalizedTempWaveFile = this.normalizePathForFFmpeg(tempWaveFile);
       const normalizedTempDataFile = this.normalizePathForFFmpeg(tempDataFile);
       const audioCommand = `ffmpeg -i "${normalizedVideoPath}" -vn -acodec pcm_s16le -ar 8000 -ac 1 "${normalizedTempWaveFile}" -y`;
       await execAsyncLargeBuffer(audioCommand);
 
-      // Generate raw audio data for waveform
       const dataCommand = `ffmpeg -i "${normalizedTempWaveFile}" -f f64le "${normalizedTempDataFile}" -y`;
       await execAsyncLargeBuffer(dataCommand);
 
-      // Read and process the raw data
       const rawData = await fs.readFile(tempDataFile);
       const sampleCount = rawData.length / 8; // 8 bytes per f64 sample
       const waveformData: number[] = [];
 
-      // Downsample for visualization (keep every Nth sample)
       const downsampleRate = Math.max(1, Math.floor(sampleCount / 2000)); // Target ~2000 points
       
       for (let i = 0; i < sampleCount; i += downsampleRate) {
@@ -382,23 +353,19 @@ export class FFmpegPreprocessingService {
     try {
       await this.ensureTempDir();
 
-      // Check if videoPath is an S3 key or local path
       if (videoPath.startsWith('videos/')) {
         console.log(`[${userId}] Downloading video from S3: ${videoPath}`);
         const videoBuffer = await downloadFile(videoPath);
         
-        // Create local temp file
         const videoExtension = path.extname(videoPath) || '.mp4';
         localVideoPath = path.join(this.tempDir, `${userId}-input-${Date.now()}${videoExtension}`);
         await fs.writeFile(localVideoPath, videoBuffer);
         console.log(`[${userId}] Video downloaded to: ${localVideoPath}`);
         
-        // Use local path for processing
         videoPath = localVideoPath;
       }
 
       const duration = endTime - startTime;
-      // Use precise seeking with -ss before input for efficiency and accuracy
       const normalizedVideoPath = this.normalizePathForFFmpeg(videoPath);
       const normalizedOutputPath = this.normalizePathForFFmpeg(outputPath);
       const command = `ffmpeg -ss ${startTime} -i "${normalizedVideoPath}" -t ${duration} -c copy "${normalizedOutputPath}" -y`;
@@ -406,7 +373,6 @@ export class FFmpegPreprocessingService {
       console.log(`[${userId}] Running FFmpeg command:`, command);
       const { stderr } = await execAsyncLargeBuffer(command);
       
-      // Check if file was created successfully
       try {
         const stats = await fs.stat(outputPath);
         if (stats.size === 0) {
@@ -421,7 +387,6 @@ export class FFmpegPreprocessingService {
       console.error(`[${userId}] Clip extraction failed:`, error);
       throw error;
     } finally {
-      // Clean up downloaded file
       if (localVideoPath) {
         try {
           await fs.unlink(localVideoPath);
@@ -453,7 +418,6 @@ export class FFmpegPreprocessingService {
           
           const timestamp = i * sampleInterval;
           
-          // Identify peaks (values significantly above average)
           if (i > 2 && energyLinear > 0.1) { // Threshold for peak detection
             const recentAvg = rmsValues.slice(-5).reduce((sum, val) => sum + val, 0) / 5;
             if (energyLinear > recentAvg * 1.5) {
@@ -494,7 +458,6 @@ export class FFmpegPreprocessingService {
           
           const timestamp = i * sampleInterval;
           
-          // Identify peaks (values significantly above average)
           if (i > 2 && energyLinear > 0.1) { // Threshold for peak detection
             const recentAvg = rmsValues.slice(-5).reduce((sum, val) => sum + val, 0) / 5;
             if (energyLinear > recentAvg * 1.5) {
@@ -566,7 +529,6 @@ export class FFmpegPreprocessingService {
     try {
       await fs.mkdir(this.tempDir, { recursive: true });
     } catch (error) {
-      // Directory might already exist
     }
   }
 
@@ -575,7 +537,6 @@ export class FFmpegPreprocessingService {
       try {
         await fs.unlink(filePath);
       } catch (error) {
-        // File might not exist or already deleted
         console.log(`Could not delete temp file ${filePath}:`, error);
       }
     }
@@ -593,7 +554,6 @@ export class FFmpegPreprocessingService {
   }
 
   async getOptimalChunkSize(videoDuration: number, targetChunks: number = 10): Promise<number> {
-    // Calculate optimal chunk size (in seconds) for Gemini processing
     const baseChunkSize = 120; // 2 minutes
     const calculatedSize = Math.max(60, Math.min(300, videoDuration / targetChunks)); // Between 1-5 minutes
     

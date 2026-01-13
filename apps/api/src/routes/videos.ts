@@ -7,7 +7,6 @@ const router: Router = Router();
 router.post('/upload-url', authMiddleware, getPresignedUrl);
 router.post('/confirm-upload', authMiddleware, confirmUpload);
 
-// Multipart upload endpoints for large files
 router.post('/multipart/initiate', authMiddleware, initiateMultipartUpload);
 router.post('/multipart/part-url', authMiddleware, getMultipartUploadPartUrl);
 router.post('/multipart/complete', authMiddleware, completeMultipartUpload);

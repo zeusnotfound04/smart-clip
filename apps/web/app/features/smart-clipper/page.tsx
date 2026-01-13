@@ -139,18 +139,18 @@ export default function SmartClipperPage() {
   const pollVideoStatus = async (projectId: string, fileName: string) => {
     const token = localStorage.getItem('smartclips_token') || localStorage.getItem('token') || localStorage.getItem('auth_token');
     if (!token) {
-      console.error('❌ No auth token found for polling');
+      console.error('No auth token found for polling');
       return;
     }
 
     // Clear any existing poll for this project
     const existingPoll = activePolls.get(projectId);
     if (existingPoll) {
-      console.log(`🛑 Clearing existing poll for project ${projectId}`);
+      console.log(`Clearing existing poll for project ${projectId}`);
       clearInterval(existingPoll);
     }
 
-    console.log(`🔄 Starting new poll for project ${projectId} (${fileName})`);
+    console.log(`Starting new poll for project ${projectId} (${fileName})`);
     const pollInterval = setInterval(async () => {
       try {
         const response = await fetch(`/api/smart-clipper/projects/${projectId}`, {
@@ -163,7 +163,7 @@ export default function SmartClipperPage() {
           const projectResponse = await response.json();
           const project = projectResponse.project || projectResponse; // Handle different response formats
           
-          console.log(`📊 [${fileName}] Status: ${project.status}, Progress: ${project.processingStage || 'N/A'}`);
+          console.log(`[${fileName}] Status: ${project.status}, Progress: ${project.processingStage || 'N/A'}`);
           
           setVideos(prev => 
             prev.map(v => {
@@ -203,7 +203,7 @@ export default function SmartClipperPage() {
                       clipReady: segment.clipReady || !!segment.s3Url // Whether clip is ready for playback/download
                     }));
                     
-                    console.log(`✅ ${v.name}: Generated ${updatedVideo.clips?.length} clips`);
+                    console.log(`${v.name}: Generated ${updatedVideo.clips?.length} clips`);
                   }
                   
                   // Always clear interval when project is ready, regardless of segments
@@ -241,7 +241,7 @@ export default function SmartClipperPage() {
 
     // Clear interval after 10 minutes to prevent endless polling
     setTimeout(() => {
-      console.log(`⏰ 10-minute timeout reached for project ${projectId}`);
+      console.log(`10-minute timeout reached for project ${projectId}`);
       clearInterval(pollInterval);
       setActivePolls(prev => {
         const newPolls = new Map(prev);
@@ -307,7 +307,7 @@ export default function SmartClipperPage() {
         // Fallback to generating clip if no S3 URL available
         const token = localStorage.getItem('smartclips_token') || localStorage.getItem('token') || localStorage.getItem('auth_token');
         if (!token) {
-          console.error('❌ No auth token found for download');
+          console.error('No auth token found for download');
           alert('Please log in to download clips.');
           return;
         }

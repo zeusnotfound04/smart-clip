@@ -9,7 +9,6 @@ interface AuthRequest extends Request {
   userId?: string;
 }
 
-// Validation schemas
 const validateUrlSchema = z.object({
   url: z.string().url('Invalid URL format'),
 });
@@ -19,7 +18,6 @@ const uploadFromUrlSchema = z.object({
   projectName: z.string().optional(),
   processType: z.enum(['subtitles', 'smart-clipper', 'none']).default('none'),
   options: z.object({
-    // Subtitle options
     language: z.string().optional(),
     detectAllLanguages: z.boolean().optional(),
     style: z.object({
@@ -34,7 +32,6 @@ const uploadFromUrlSchema = z.object({
       alignment: z.enum(['left', 'center', 'right']).optional(),
       showShadow: z.boolean().optional(),
     }).optional(),
-    // Smart clipper options
     contentType: z.enum(['gaming', 'podcast', 'interview', 'vlog', 'tutorial']).optional(),
     numberOfClips: z.number().optional(),
     minClipDuration: z.number().optional(),
@@ -49,7 +46,6 @@ export const validateUrl = async (req: AuthRequest, res: Response) => {
   try {
     const { url } = validateUrlSchema.parse(req.body);
 
-    // Validate URL
     const validation = videoDownloader.validateUrl(url);
 
     if (!validation.isValid) {
@@ -59,13 +55,12 @@ export const validateUrl = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Get video info without downloading
     try {
       const videoInfo = await videoDownloader.getVideoInfo(url);
 
       console.log("Entire videoInfo object:", videoInfo);
 
-      console.log('📤 Sending video info to frontend:');
+      console.log('Sending video info to frontend:');
       console.log('   - Title:', videoInfo.title);
       console.log('   - Direct URL:', videoInfo.url);
       console.log('   - Original URL:', videoInfo.originalUrl);
@@ -85,7 +80,7 @@ export const validateUrl = async (req: AuthRequest, res: Response) => {
         },
       };
 
-      console.log('📦 Complete response being sent:', JSON.stringify(responseData, null, 2));
+      console.log('Complete response being sent:', JSON.stringify(responseData, null, 2));
 
       return res.json(responseData);
     } catch (error) {
@@ -128,20 +123,17 @@ export const uploadFromUrl = async (req: AuthRequest, res: Response) => {
   try {
     const { url, projectName, processType, options } = uploadFromUrlSchema.parse(req.body);
 
-    console.log(`📥 Starting URL upload for user ${userId}: ${url}`);
+    console.log(`Starting URL upload for user ${userId}: ${url}`);
 
-    // Check if this is an S3 URL (from AI-generated videos)
     const isS3Url = url.includes('s3.') && url.includes('.amazonaws.com');
     
     if (isS3Url) {
-      console.log(`📦 Detected S3 URL - creating video record directly without download`);
+      console.log(`Detected S3 URL - creating video record directly without download`);
       
-      // Extract filename from S3 URL
       const urlParts = url.split('/');
       const filename = urlParts[urlParts.length - 1];
       const title = projectName || filename.replace(/\.[^/.]+$/, ''); // Remove extension
       
-      // Create video record pointing directly to the S3 URL
       const video = await prisma.video.create({
         data: {
           userId,
@@ -155,9 +147,8 @@ export const uploadFromUrl = async (req: AuthRequest, res: Response) => {
         },
       });
 
-      console.log(`✅ Video record created for S3 URL: ${video.id}`);
+      console.log(`Video record created for S3 URL: ${video.id}`);
 
-      // If processType is subtitles, queue subtitle generation
       if (processType === 'subtitles') {
         const { subtitleQueue } = await import('../lib/queues');
         
@@ -168,7 +159,7 @@ export const uploadFromUrl = async (req: AuthRequest, res: Response) => {
           options: options,
         });
 
-        console.log(`🎬 Subtitle generation job queued: ${job.id}`);
+        console.log(`Subtitle generation job queued: ${job.id}`);
 
         return res.status(200).json({
           success: true,
@@ -186,7 +177,6 @@ export const uploadFromUrl = async (req: AuthRequest, res: Response) => {
         });
       }
 
-      // No processing needed - just return the video
       return res.status(200).json({
         success: true,
         message: 'Video loaded from S3 successfully',
@@ -202,8 +192,6 @@ export const uploadFromUrl = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Original logic for social media URLs
-    // Validate URL
     const validation = videoDownloader.validateUrl(url);
     if (!validation.isValid) {
       return res.status(400).json({
@@ -212,11 +200,9 @@ export const uploadFromUrl = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Get video info (quick, no download)
-    console.log(`📋 Fetching video info from ${validation.platform}...`);
+    console.log(`Fetching video info from ${validation.platform}...`);
     const videoInfo = await videoDownloader.getVideoInfo(url);
 
-    // Create placeholder video record
     const video = await prisma.video.create({
       data: {
         userId,
@@ -230,23 +216,19 @@ export const uploadFromUrl = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    console.log(`✅ Video record created: ${video.id}`);
+    console.log(`Video record created: ${video.id}`);
 
-    // Queue download + processing in background worker
-    // This prevents blocking the API request thread
     let jobId: string | undefined;
     let projectId: string | undefined;
 
     if (processType === 'subtitles') {
-      // Queue: Download → Upload to S3 → Generate Subtitles
       const { subtitleQueue } = await import('../lib/queues');
       
-      // Check for existing jobs for this video
       const existingJobs = await subtitleQueue.getJobs(['active', 'waiting', 'delayed']);
       const duplicateJob = existingJobs.find(j => j.data.videoId === video.id);
       
       if (duplicateJob) {
-        console.log(`⚠️  Job already exists for video ${video.id}, skipping duplicate`);
+        console.log(`Job already exists for video ${video.id}, skipping duplicate`);
         return res.status(200).json({
           success: true,
           message: 'Video is already being processed',
@@ -255,7 +237,6 @@ export const uploadFromUrl = async (req: AuthRequest, res: Response) => {
         });
       }
       
-      // Create job that will:
       // 1. Download video using yt-dlp (handles Twitter HLS automatically)
       // 2. Upload to S3
       // 3. Generate subtitles
@@ -270,9 +251,8 @@ export const uploadFromUrl = async (req: AuthRequest, res: Response) => {
 
       jobId = job.id as string;
 
-      console.log(`🎬 Download + subtitle generation job queued: ${jobId}`);
+      console.log(`Download + subtitle generation job queued: ${jobId}`);
     } else if (processType === 'smart-clipper') {
-      // Create smart clipper project
       const smartClipperProject = await prisma.smartClipperProject.create({
         data: {
           userId,
@@ -285,18 +265,16 @@ export const uploadFromUrl = async (req: AuthRequest, res: Response) => {
 
       projectId = smartClipperProject.id;
 
-      // Queue: Download → Upload to S3 → Smart Clipper Analysis
       const { smartClipperQueue } = await import('../lib/queues');
       const analysisType = ['podcast', 'interview'].includes(options?.contentType || '')
         ? 'analyze-podcast-transcript'
         : 'analyze-video-complete';
 
-      // Check for existing jobs for this project
       const existingJobs = await smartClipperQueue.getJobs(['active', 'waiting', 'delayed']);
       const duplicateJob = existingJobs.find(j => j.data.projectId === smartClipperProject.id);
       
       if (duplicateJob) {
-        console.log(`⚠️  Job already exists for project ${smartClipperProject.id}, skipping duplicate`);
+        console.log(`Job already exists for project ${smartClipperProject.id}, skipping duplicate`);
         return res.status(200).json({
           success: true,
           message: 'Project is already being processed',
@@ -306,8 +284,6 @@ export const uploadFromUrl = async (req: AuthRequest, res: Response) => {
         });
       }
 
-      // Note: This would require a similar download-and-analyze job
-      // For now, keeping the original flow but marking it as needing update
       const job = await smartClipperQueue.add(analysisType, {
         projectId: smartClipperProject.id,
         videoId: video.id,
@@ -324,7 +300,7 @@ export const uploadFromUrl = async (req: AuthRequest, res: Response) => {
 
       jobId = job.id as string;
 
-      console.log(`🎯 Smart clipper download + analysis job queued: ${jobId}`);
+      console.log(`Smart clipper download + analysis job queued: ${jobId}`);
     }
 
     return res.json({
@@ -349,7 +325,6 @@ export const uploadFromUrl = async (req: AuthRequest, res: Response) => {
   } catch (error) {
     console.error('URL upload error:', error);
 
-    // Clean up downloaded file if it exists
     if (downloadedFilePath) {
       try {
         await videoDownloader.cleanupFile(downloadedFilePath);
@@ -424,7 +399,6 @@ export const getVideoInfo = async (req: AuthRequest, res: Response) => {
   try {
     const { url } = validateUrlSchema.parse(req.body);
 
-    // Validate URL
     const validation = videoDownloader.validateUrl(url);
     if (!validation.isValid) {
       return res.status(400).json({
@@ -433,7 +407,6 @@ export const getVideoInfo = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Get video info
     const videoInfo = await videoDownloader.getVideoInfo(url);
     console.log("Entire videoInfo object:", videoInfo);
 

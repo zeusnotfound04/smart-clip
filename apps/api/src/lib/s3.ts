@@ -4,7 +4,6 @@ import { Readable } from 'stream';
 import * as fs from 'fs';
 import * as path from 'path';
 
-// 🔥 OPTIMIZED S3 CLIENT - Maximum Performance Configuration
 const s3Client = new S3Client({
   region: process.env.AWS_REGION || 'ap-south-1',
   credentials: {
@@ -12,52 +11,41 @@ const s3Client = new S3Client({
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
   },
   
-  // 🚀 Performance Optimizations
   maxAttempts: 3, // Auto-retry failed requests
   
-  // Use virtual-hosted-style URLs (faster DNS resolution)
   forcePathStyle: false,
   
-  // Enable S3 Transfer Acceleration for global uploads/downloads
   useAccelerateEndpoint: process.env.USE_S3_ACCELERATION === 'true',
   
-  // Optimize checksums for presigned URLs
   requestChecksumCalculation: 'WHEN_SUPPORTED',
   responseChecksumValidation: 'WHEN_SUPPORTED',
 });
 
 const bucketName = "smart-clip-temp";
 
-// Helper to get optimized S3 URL (with CloudFront CDN support)
 const getOptimizedUrl = (key: string): string => {
   const cloudfrontDomain = process.env.CLOUDFRONT_DOMAIN;
   const useAcceleration = process.env.USE_S3_ACCELERATION === 'true';
   
   if (cloudfrontDomain) {
-    // Use CloudFront for best global performance
     return `https://${cloudfrontDomain}/${key}`;
   }
   
   if (useAcceleration) {
-    // Use S3 Transfer Acceleration
     return `https://${bucketName}.s3-accelerate.amazonaws.com/${key}`;
   }
   
-  // Standard S3 URL
   return `https://${bucketName}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
 };
 
-// 🔥 OPTIMIZED UPLOAD - Maximum Speed with Dynamic Chunking
 export const uploadFile = async (key: string, buffer: Buffer, contentType: string): Promise<string> => {
   const fileSizeMB = Math.round(buffer.length / 1024 / 1024);
   
-  // Use multipart for files > 50MB
   if (buffer.length > 50 * 1024 * 1024) {
-    console.log(`📤 Uploading ${fileSizeMB}MB with parallel multipart upload`);
+    console.log(`Uploading ${fileSizeMB}MB with parallel multipart upload`);
     
     const { Upload } = await import('@aws-sdk/lib-storage');
     
-    // 🚀 Dynamic optimization based on file size
     let partSize: number;
     let queueSize: number;
     
@@ -75,7 +63,7 @@ export const uploadFile = async (key: string, buffer: Buffer, contentType: strin
       queueSize = 8; // 8 concurrent uploads
     }
     
-    console.log(`⚙️ Config: ${partSize / 1024 / 1024}MB parts × ${queueSize} parallel streams`);
+    console.log(`Config: ${partSize / 1024 / 1024}MB parts × ${queueSize} parallel streams`);
     
     const startTime = Date.now();
     const upload = new Upload({
@@ -85,7 +73,6 @@ export const uploadFile = async (key: string, buffer: Buffer, contentType: strin
         Key: key,
         Body: buffer,
         ContentType: contentType,
-        // Enable server-side encryption
         ServerSideEncryption: 'AES256',
       },
       partSize: partSize,
@@ -93,7 +80,6 @@ export const uploadFile = async (key: string, buffer: Buffer, contentType: strin
       leavePartsOnError: false,
     });
 
-    // Progress tracking with speed calculation
     let lastLogTime = startTime;
     let lastLoaded = 0;
     
@@ -104,17 +90,15 @@ export const uploadFile = async (key: string, buffer: Buffer, contentType: strin
         const loadedMB = Math.round(progress.loaded! / 1024 / 1024);
         const totalMB = Math.round(progress.total! / 1024 / 1024);
         
-        // Calculate instantaneous speed
         const bytesSinceLastLog = progress.loaded! - lastLoaded;
         const timeSinceLastLog = (now - lastLogTime) / 1000;
         const speedMBps = timeSinceLastLog > 0 ? (bytesSinceLastLog / timeSinceLastLog / 1024 / 1024).toFixed(1) : '0';
         
-        // Calculate ETA
         const remainingBytes = progress.total! - progress.loaded!;
         const avgSpeed = progress.loaded! / ((now - startTime) / 1000);
         const etaSeconds = avgSpeed > 0 ? Math.round(remainingBytes / avgSpeed) : 0;
         
-        console.log(`📊 Upload: ${percent}% (${loadedMB}/${totalMB}MB) @ ${speedMBps}MB/s | ETA: ${etaSeconds}s`);
+        console.log(`Upload: ${percent}% (${loadedMB}/${totalMB}MB) @ ${speedMBps}MB/s | ETA: ${etaSeconds}s`);
         
         lastLogTime = now;
         lastLoaded = progress.loaded!;
@@ -125,11 +109,10 @@ export const uploadFile = async (key: string, buffer: Buffer, contentType: strin
     
     const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
     const avgSpeed = (fileSizeMB / parseFloat(totalTime)).toFixed(1);
-    console.log(`✅ Upload complete: ${fileSizeMB}MB in ${totalTime}s (avg ${avgSpeed}MB/s)`);
+    console.log(`Upload complete: ${fileSizeMB}MB in ${totalTime}s (avg ${avgSpeed}MB/s)`);
     
     return getOptimizedUrl(key);
   } else {
-    // Fast upload for small files
     const command = new PutObjectCommand({
       Bucket: bucketName,
       Key: key,
@@ -180,14 +163,12 @@ export const getSignedDownloadUrl = async (key: string, expiresIn: number = 3600
 
 export const getPresignedUploadUrl = async (key: string, contentType: string, expiresIn: number = 3600): Promise<string> => {
   try {
-    // Create a new S3Client instance for this specific request to ensure clean state
     const tempS3Client = new S3Client({
       region: process.env.AWS_REGION || 'ap-south-1',
       credentials: {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
       },
-      // Use virtual-hosted-style URLs
       forcePathStyle: false,
     });
 
@@ -197,12 +178,9 @@ export const getPresignedUploadUrl = async (key: string, contentType: string, ex
       ContentType: contentType,
     });
 
-    // Generate presigned URL ensuring Content-Type is included in signature
     const url = await getSignedUrl(tempS3Client, command, { 
       expiresIn,
-      // Explicitly sign the Content-Type header
       signableHeaders: new Set(['content-type']),
-      // Disable unsignable headers to avoid conflicts
       unsignableHeaders: new Set([
         'authorization',
         'user-agent',
@@ -217,7 +195,6 @@ export const getPresignedUploadUrl = async (key: string, contentType: string, ex
   }
 };
 
-// Multipart upload helpers for frontend chunked uploads
 import { CreateMultipartUploadCommand, UploadPartCommand, CompleteMultipartUploadCommand, AbortMultipartUploadCommand } from '@aws-sdk/client-s3';
 
 export const initiateMultipartUpload = async (key: string, contentType: string): Promise<{ uploadId: string; key: string }> => {
@@ -240,7 +217,6 @@ export const getUploadPartUrl = async (key: string, uploadId: string, partNumber
     PartNumber: partNumber,
   });
 
-  // Longer expiry for large files
   return await getSignedUrl(s3Client, command, { expiresIn: 7200 }); // 2 hours
 };
 
@@ -266,10 +242,8 @@ export const abortMultipartUpload = async (key: string, uploadId: string): Promi
   await s3Client.send(command);
 };
 
-// 🔥 PARALLEL RANGE DOWNLOAD - 5-10x Faster for Large Files
 export const downloadFile = async (key: string): Promise<Buffer> => {
   try {
-    // Get file metadata first
     const headCommand = new HeadObjectCommand({
       Bucket: bucketName,
       Key: key,
@@ -282,23 +256,20 @@ export const downloadFile = async (key: string): Promise<Buffer> => {
     }
     
     const fileSizeMB = Math.round(ContentLength / 1024 / 1024);
-    console.log(`📥 Downloading ${fileSizeMB}MB: ${key}`);
+    console.log(`Downloading ${fileSizeMB}MB: ${key}`);
     
-    // Use parallel downloads for files > 100MB
     if (ContentLength > 100 * 1024 * 1024) {
       return await downloadFileParallel(key, ContentLength);
     }
     
-    // Standard single-stream download for smaller files
     return await downloadFileSingle(key);
     
   } catch (error) {
-    console.error(`❌ Download failed for ${key}:`, error);
+    console.error(`Download failed for ${key}:`, error);
     throw error;
   }
 };
 
-// Single stream download (for small files)
 async function downloadFileSingle(key: string): Promise<Buffer> {
   const command = new GetObjectCommand({
     Bucket: bucketName,
@@ -321,11 +292,9 @@ async function downloadFileSingle(key: string): Promise<Buffer> {
   });
 }
 
-// 🚀 PARALLEL DOWNLOAD with byte ranges (HUGE SPEED BOOST!)
 async function downloadFileParallel(key: string, fileSize: number): Promise<Buffer> {
   const startTime = Date.now();
   
-  // Dynamic chunking based on file size
   let chunkSize: number;
   let concurrency: number;
   
@@ -343,7 +312,7 @@ async function downloadFileParallel(key: string, fileSize: number): Promise<Buff
   const numChunks = Math.ceil(fileSize / chunkSize);
   const fileSizeMB = Math.round(fileSize / 1024 / 1024);
   
-  console.log(`⚡ Parallel download: ${numChunks} chunks × ${concurrency} streams`);
+  console.log(`Parallel download: ${numChunks} chunks × ${concurrency} streams`);
   
   const chunks: Buffer[] = new Array(numChunks);
   let downloadedChunks = 0;
@@ -373,7 +342,7 @@ async function downloadFileParallel(key: string, fileSize: number): Promise<Buff
           const elapsed = (Date.now() - startTime) / 1000;
           const downloadedMB = Math.round((downloadedChunks / numChunks) * fileSizeMB);
           const speedMBps = elapsed > 0 ? (downloadedMB / elapsed).toFixed(1) : '0';
-          console.log(`📊 Download: ${progress}% (${downloadedMB}/${fileSizeMB}MB) @ ${speedMBps}MB/s`);
+          console.log(`Download: ${progress}% (${downloadedMB}/${fileSizeMB}MB) @ ${speedMBps}MB/s`);
         }
         resolve();
       });
@@ -381,7 +350,6 @@ async function downloadFileParallel(key: string, fileSize: number): Promise<Buff
     });
   };
   
-  // Download in batches with concurrency limit
   for (let i = 0; i < numChunks; i += concurrency) {
     const batch = [];
     for (let j = i; j < Math.min(i + concurrency, numChunks); j++) {
@@ -392,16 +360,14 @@ async function downloadFileParallel(key: string, fileSize: number): Promise<Buff
   
   const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
   const avgSpeed = (fileSizeMB / parseFloat(totalTime)).toFixed(1);
-  console.log(`✅ Download complete: ${fileSizeMB}MB in ${totalTime}s (avg ${avgSpeed}MB/s)`);
+  console.log(`Download complete: ${fileSizeMB}MB in ${totalTime}s (avg ${avgSpeed}MB/s)`);
   
   return Buffer.concat(chunks);
 }
 
-// 🚀 ULTRA-FAST: Stream download directly to file (avoids RAM usage)
 export const downloadFileToPath = async (key: string, outputPath: string): Promise<void> => {
   const startTime = Date.now();
   
-  // Get file size first
   const headCommand = new HeadObjectCommand({
     Bucket: bucketName,
     Key: key,
@@ -409,21 +375,18 @@ export const downloadFileToPath = async (key: string, outputPath: string): Promi
   
   const { ContentLength } = await s3Client.send(headCommand);
   const fileSizeMB = Math.round((ContentLength || 0) / 1024 / 1024);
-  console.log(`📥 Streaming ${fileSizeMB}MB to: ${outputPath}`);
+  console.log(`Streaming ${fileSizeMB}MB to: ${outputPath}`);
   
-  // Ensure output directory exists
   const dir = path.dirname(outputPath);
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
   
-  // For large files (>200MB), use parallel range download to file
   if (ContentLength && ContentLength > 200 * 1024 * 1024) {
     await downloadFileToPathParallel(key, outputPath, ContentLength);
     return;
   }
   
-  // Standard streaming download for smaller files
   const command = new GetObjectCommand({
     Bucket: bucketName,
     Key: key,
@@ -448,7 +411,7 @@ export const downloadFileToPath = async (key: string, outputPath: string): Promi
       if (now - lastLogTime > 2000) {
         const progress = ContentLength ? Math.round((downloadedBytes / ContentLength) * 100) : 0;
         const speedMBps = (downloadedBytes / 1024 / 1024) / ((now - startTime) / 1000);
-        console.log(`📊 Download: ${progress}% @ ${speedMBps.toFixed(1)}MB/s`);
+        console.log(`Download: ${progress}% @ ${speedMBps.toFixed(1)}MB/s`);
         lastLogTime = now;
       }
     });
@@ -456,7 +419,7 @@ export const downloadFileToPath = async (key: string, outputPath: string): Promi
     stream.pipe(writeStream);
     writeStream.on('finish', () => {
       const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
-      console.log(`✅ Stream download complete: ${fileSizeMB}MB in ${totalTime}s`);
+      console.log(`Stream download complete: ${fileSizeMB}MB in ${totalTime}s`);
       resolve();
     });
     writeStream.on('error', reject);
@@ -464,12 +427,10 @@ export const downloadFileToPath = async (key: string, outputPath: string): Promi
   });
 };
 
-// 🔥 ULTRA-FAST: Parallel range download directly to file
 async function downloadFileToPathParallel(key: string, outputPath: string, fileSize: number): Promise<void> {
   const startTime = Date.now();
   const fileSizeMB = Math.round(fileSize / 1024 / 1024);
   
-  // AGGRESSIVE chunking for speed
   let chunkSize: number;
   let concurrency: number;
   
@@ -488,9 +449,8 @@ async function downloadFileToPathParallel(key: string, outputPath: string, fileS
   }
   
   const numChunks = Math.ceil(fileSize / chunkSize);
-  console.log(`⚡ Parallel file download: ${numChunks} chunks × ${concurrency} streams → ${outputPath}`);
+  console.log(`Parallel file download: ${numChunks} chunks × ${concurrency} streams → ${outputPath}`);
   
-  // Pre-allocate file
   const fd = fs.openSync(outputPath, 'w');
   fs.ftruncateSync(fd, fileSize);
   
@@ -523,7 +483,7 @@ async function downloadFileToPathParallel(key: string, outputPath: string, fileS
           const elapsed = (Date.now() - startTime) / 1000;
           const downloadedMB = Math.round((downloadedChunks / numChunks) * fileSizeMB);
           const speedMBps = elapsed > 0 ? (downloadedMB / elapsed).toFixed(1) : '0';
-          console.log(`📊 Download: ${progress}% (${downloadedMB}/${fileSizeMB}MB) @ ${speedMBps}MB/s`);
+          console.log(`Download: ${progress}% (${downloadedMB}/${fileSizeMB}MB) @ ${speedMBps}MB/s`);
         }
         resolve();
       });
@@ -531,7 +491,6 @@ async function downloadFileToPathParallel(key: string, outputPath: string, fileS
     });
   };
   
-  // Download all chunks in parallel batches
   for (let i = 0; i < numChunks; i += concurrency) {
     const batch = [];
     for (let j = i; j < Math.min(i + concurrency, numChunks); j++) {
@@ -544,7 +503,7 @@ async function downloadFileToPathParallel(key: string, outputPath: string, fileS
   
   const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
   const avgSpeed = (fileSizeMB / parseFloat(totalTime)).toFixed(1);
-  console.log(`✅ Parallel file download complete: ${fileSizeMB}MB in ${totalTime}s (avg ${avgSpeed}MB/s)`);
+  console.log(`Parallel file download complete: ${fileSizeMB}MB in ${totalTime}s (avg ${avgSpeed}MB/s)`);
 }
 
 export const deleteFile = async (key: string): Promise<void> => {
@@ -556,26 +515,22 @@ export const deleteFile = async (key: string): Promise<void> => {
   await s3Client.send(command);
 };
 
-// 🔥 OPTIMIZED CLIP UPLOAD with streaming for large files
 export const uploadClip = async (filePath: string, userId: string, segmentId: string, projectId: string): Promise<string> => {
-  // Get file stats first
   const stats = fs.statSync(filePath);
   const fileSizeMB = Math.round(stats.size / 1024 / 1024);
-  console.log(`📁 Uploading clip: ${path.basename(filePath)} (${fileSizeMB}MB)`);
+  console.log(`Uploading clip: ${path.basename(filePath)} (${fileSizeMB}MB)`);
   
   const fileName = path.basename(filePath);
   const key = `clips/${userId}/${projectId}/${segmentId}-${fileName}`;
   
-  // Use streaming upload for files > 30MB
   if (stats.size > 30 * 1024 * 1024) {
-    console.log(`📤 Streaming multipart upload for clip`);
+    console.log(`Streaming multipart upload for clip`);
     
     const { Upload } = await import('@aws-sdk/lib-storage');
     const fileStream = fs.createReadStream(filePath, {
       highWaterMark: 1024 * 1024, // 1MB buffer for streaming
     });
     
-    // Optimize based on clip size
     const partSize = stats.size > 100 * 1024 * 1024 ? 10 * 1024 * 1024 : 5 * 1024 * 1024;
     const queueSize = stats.size > 100 * 1024 * 1024 ? 8 : 6;
     
@@ -598,16 +553,15 @@ export const uploadClip = async (filePath: string, userId: string, segmentId: st
       const now = Date.now();
       if (now - lastLog > 2000 || progress.loaded === progress.total) {
         const percent = Math.round((progress.loaded! / progress.total!) * 100);
-        console.log(`📊 Clip upload: ${percent}% (${segmentId})`);
+        console.log(`Clip upload: ${percent}% (${segmentId})`);
         lastLog = now;
       }
     });
 
     await upload.done();
     const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
-    console.log(`✅ Clip uploaded: ${fileSizeMB}MB in ${totalTime}s`);
+    console.log(`Clip uploaded: ${fileSizeMB}MB in ${totalTime}s`);
   } else {
-    // Fast upload for smaller clips
     const fileBuffer = fs.readFileSync(filePath);
     const command = new PutObjectCommand({
       Bucket: bucketName,
@@ -618,7 +572,7 @@ export const uploadClip = async (filePath: string, userId: string, segmentId: st
     });
 
     await s3Client.send(command);
-    console.log(`✅ Clip uploaded: ${key}`);
+    console.log(`Clip uploaded: ${key}`);
   }
   
   return getOptimizedUrl(key);
@@ -626,7 +580,6 @@ export const uploadClip = async (filePath: string, userId: string, segmentId: st
 
 export const generateKey = (userId: string, originalName: string, type: 'video' | 'audio' | 'subtitle' = 'video'): string => {
   const timestamp = Date.now();
-  // Remove extension from originalName to avoid double extensions
   const nameWithoutExt = originalName.replace(/\.[^/.]+$/, '');
   const extension = originalName.split('.').pop() || 'mp4';
   return `${type}s/${userId}/${timestamp}-${nameWithoutExt.replace(/[^a-zA-Z0-9.-]/g, '_')}.${extension}`;

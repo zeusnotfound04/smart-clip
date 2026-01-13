@@ -131,9 +131,9 @@ async function seedContentTypes() {
         update: config,
         create: config
       });
-      console.log(`✓ Seeded ${config.name} configuration`);
+      console.log(`Seeded ${config.name} configuration`);
     } catch (error) {
-      console.error(`✗ Failed to seed ${config.name}:`, error);
+      console.error(`Failed to seed ${config.name}:`, error);
     }
   }
 
@@ -141,7 +141,7 @@ async function seedContentTypes() {
 }
 
 async function seedGlobalLibrary() {
-  console.log('🌱 Seeding global video library...');
+  console.log('Seeding global video library...');
 
   // Seed the Subway Surfers video for the global library
   const sampleVideos = [
@@ -170,16 +170,16 @@ async function seedGlobalLibrary() {
         await prisma.library.create({
           data: video
         });
-        console.log(`✅ Seeded video: ${video.title}`);
+        console.log(`Seeded video: ${video.title}`);
       } else {
-        console.log(`⏭️  Skipped existing video: ${video.title}`);
+        console.log(`Skipped existing video: ${video.title}`);
       }
     } catch (error) {
-      console.error(`✗ Failed to seed video ${video.title}:`, error);
+      console.error(`Failed to seed video ${video.title}:`, error);
     }
   }
 
-  console.log('🌱 Global video library seeding completed!');
+  console.log('Global video library seeding completed!');
 }
 
 async function main() {

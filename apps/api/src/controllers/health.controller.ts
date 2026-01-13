@@ -25,7 +25,6 @@ export async function healthDetailed(req: Request, res: Response): Promise<void>
         'split-streamer': true,
         'smart-clipper': true,
         'script-generator': true,
-        'fake-conversations': true,
         'thumbnail-generation': true,
         'video-processing': true
       },
@@ -41,7 +40,6 @@ export async function healthDetailed(req: Request, res: Response): Promise<void>
       }
     };
 
-    // Check database connectivity
     try {
       await prisma.$queryRaw`SELECT 1`;
       checks.database = true;
@@ -49,22 +47,18 @@ export async function healthDetailed(req: Request, res: Response): Promise<void>
       console.error('Database health check failed:', error);
     }
 
-    // Check S3 connectivity (basic check)
     try {
-      // This is a simplified check - in production you'd test actual S3 operations
       checks.external.s3 = !!process.env.AWS_ACCESS_KEY_ID && !!process.env.AWS_S3_BUCKET;
     } catch (error) {
       console.error('S3 health check failed:', error);
     }
 
-    // Check Google Cloud connectivity
     try {
       checks.external['google-cloud'] = !!process.env.GOOGLE_CLOUD_PROJECT_ID;
     } catch (error) {
       console.error('Google Cloud health check failed:', error);
     }
 
-    // Check Redis queue connectivity
     try {
       await Promise.allSettled([
         smartClipperQueue.isReady().then(() => { checks.queues['smart-clipper'] = true; }),
@@ -76,7 +70,6 @@ export async function healthDetailed(req: Request, res: Response): Promise<void>
       console.error('Queue health checks failed:', error);
     }
 
-    // Overall status
     const allChecksPass = checks.database && 
       Object.values(checks.services).every(Boolean) &&
       Object.values(checks.queues).every(Boolean);
@@ -106,7 +99,6 @@ export async function healthDetailed(req: Request, res: Response): Promise<void>
  */
 export async function serviceStatus(req: Request, res: Response): Promise<void> {
   try {
-    // Get project statistics
     const stats = await prisma.project.groupBy({
       by: ['type', 'status'],
       _count: {
@@ -114,7 +106,6 @@ export async function serviceStatus(req: Request, res: Response): Promise<void> 
       }
     });
 
-    // Recent activity
     const recentProjects = await prisma.project.findMany({
       take: 10,
       orderBy: { createdAt: 'desc' },
@@ -129,7 +120,6 @@ export async function serviceStatus(req: Request, res: Response): Promise<void> 
       }
     });
 
-    // System metrics
     const totalProjects = await prisma.project.count();
     const totalUsers = await prisma.user.count();
     const totalVideos = await prisma.video.count();

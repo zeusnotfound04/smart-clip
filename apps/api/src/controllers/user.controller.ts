@@ -83,14 +83,13 @@ export const uploadProfilePicture = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    console.log('📸 [PROFILE_PICTURE] Uploading for user:', userId);
-    console.log('📦 File details:', {
+    console.log('[PROFILE_PICTURE] Uploading for user:', userId);
+    console.log('File details:', {
       originalName: file.originalname,
       mimetype: file.mimetype,
       size: file.size
     });
 
-    // Validate file type
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     if (!allowedTypes.includes(file.mimetype)) {
       return res.status(400).json({ 
@@ -98,7 +97,6 @@ export const uploadProfilePicture = async (req: Request, res: Response) => {
       });
     }
 
-    // Validate file size (5MB max)
     const maxSize = 5 * 1024 * 1024; // 5MB
     if (file.size > maxSize) {
       return res.status(400).json({ 
@@ -106,19 +104,15 @@ export const uploadProfilePicture = async (req: Request, res: Response) => {
       });
     }
 
-    // Generate S3 key
     const fileExtension = file.originalname.split('.').pop();
     const s3Key = `profile-pictures/${userId}/${randomUUID()}.${fileExtension}`;
 
-    // Upload to S3
-    console.log('☁️ [PROFILE_PICTURE] Uploading to S3:', s3Key);
+    console.log('[PROFILE_PICTURE] Uploading to S3:', s3Key);
     await uploadFile(s3Key, file.buffer, file.mimetype);
 
-    // Generate S3 URL
     const imageUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${s3Key}`;
-    console.log('✅ [PROFILE_PICTURE] Upload successful:', imageUrl);
+    console.log('[PROFILE_PICTURE] Upload successful:', imageUrl);
 
-    // Update user profile
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: { image: imageUrl },
@@ -178,7 +172,6 @@ export const getUserStats = async (req: Request, res: Response) => {
   }
 };
 
-// Request email change OTP
 export const requestEmailChange = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId;
@@ -188,13 +181,11 @@ export const requestEmailChange = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'New email is required' });
     }
 
-    // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(newEmail)) {
       return res.status(400).json({ error: 'Invalid email format' });
     }
 
-    // Check if email already exists
     const existingUser = await prisma.user.findUnique({
       where: { email: newEmail }
     });
@@ -203,17 +194,14 @@ export const requestEmailChange = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Email already in use' });
     }
 
-    // Get user for name
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { name: true }
     });
 
-    // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-    // Store OTP in EmailVerification table with new email
     await prisma.emailVerification.create({
       data: {
         email: newEmail,
@@ -223,14 +211,13 @@ export const requestEmailChange = async (req: Request, res: Response) => {
       }
     });
 
-    // Send OTP email
     await EmailService.sendOTPEmail({
       to: newEmail,
       otp,
       name: user?.name || 'User'
     });
 
-    console.log(`✅ [EMAIL_CHANGE] OTP sent to ${newEmail} for user ${userId}`);
+    console.log(`[EMAIL_CHANGE] OTP sent to ${newEmail} for user ${userId}`);
 
     res.json({
       success: true,
@@ -242,7 +229,6 @@ export const requestEmailChange = async (req: Request, res: Response) => {
   }
 };
 
-// Verify OTP and change email
 export const verifyEmailChange = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId;
@@ -252,7 +238,6 @@ export const verifyEmailChange = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Email and OTP are required' });
     }
 
-    // Find OTP record
     const otpRecord = await prisma.emailVerification.findFirst({
       where: {
         email: newEmail,
@@ -268,12 +253,10 @@ export const verifyEmailChange = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid verification code' });
     }
 
-    // Check if OTP is expired
     if (new Date() > otpRecord.expiresAt) {
       return res.status(400).json({ error: 'Verification code expired' });
     }
 
-    // Check if email is still available
     const existingUser = await prisma.user.findUnique({
       where: { email: newEmail }
     });
@@ -282,7 +265,6 @@ export const verifyEmailChange = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Email already in use' });
     }
 
-    // Update user email and mark OTP as verified
     const [updatedUser] = await Promise.all([
       prisma.user.update({
         where: { id: userId },
@@ -300,7 +282,7 @@ export const verifyEmailChange = async (req: Request, res: Response) => {
       })
     ]);
 
-    console.log(`✅ [EMAIL_CHANGE] Email updated to ${newEmail} for user ${userId}`);
+    console.log(`[EMAIL_CHANGE] Email updated to ${newEmail} for user ${userId}`);
 
     res.json({
       success: true,
