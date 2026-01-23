@@ -18,7 +18,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { HiHome, HiCog, HiLogout, HiScissors } from "react-icons/hi";
-import { HiSparkles, HiChatBubbleLeftRight, HiFilm, HiCreditCard, HiVideoCamera, HiShieldCheck } from "react-icons/hi2";
+import { HiSparkles, HiChatBubbleLeftRight, HiFilm, HiCreditCard, HiVideoCamera, HiShieldCheck, HiArrowDownTray } from "react-icons/hi2";
 import { motion } from "framer-motion";
 import { User } from "@/lib/api-client";
 
@@ -29,6 +29,7 @@ interface AppSidebarProps {
 const navigation = [
   { name: "Home", href: "/", icon: HiHome },
   { name: "My Clips", href: "/my-clips", icon: HiVideoCamera },
+  { name: "Multi-Platform Downloader", href: "/multi-platform-downloader", icon: HiArrowDownTray },
   { name: "AI Script Generator", href: "/ai-script-generator", icon: HiSparkles },
   { name: "Video Generation", href: "/video-generation", icon: HiFilm },
   { name: "Podcast Clipper", href: "/dashboard/podcast-clipper", icon: HiScissors },

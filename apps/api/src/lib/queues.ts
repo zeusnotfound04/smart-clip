@@ -125,6 +125,24 @@ export const podcastClipperQueue = new Bull('podcast clipper', {
   }
 });
 
+// Multi-Platform Video Download Queue
+// For Rumble, Kick, Twitch, Google Drive downloads with controlled concurrency
+export const multiPlatformDownloadQueue = new Bull('multi-platform download', {
+  redis: redisConfig,
+  settings: {
+    stalledInterval: 180 * 1000, // 3 minutes
+    maxStalledCount: 1, // Conservative - don't retry stalled jobs
+    lockDuration: 600000, // 10 minutes
+    lockRenewTime: 150000, // 2.5 minutes
+  },
+  defaultJobOptions: {
+    removeOnComplete: 50,
+    removeOnFail: 100,
+    attempts: 1, // No retries - handled internally by downloaders
+    timeout: 600000, // 10 minutes max per download
+  }
+});
+
 const addConnectionListeners = (queue: Bull.Queue, name: string) => {
   queue.on('error', (error) => {
     console.error(`${name} Queue Error:`, error.message);
@@ -152,6 +170,7 @@ addConnectionListeners(subtitleQueue, 'Subtitle');
 addConnectionListeners(aiQueue, 'AI');
 addConnectionListeners(smartClipperQueue, 'Smart Clipper');
 addConnectionListeners(podcastClipperQueue, 'Podcast Clipper');
+addConnectionListeners(multiPlatformDownloadQueue, 'Multi-Platform Download');
 
 export async function cleanupStalledJobs() {
   console.log('Cleaning up stalled jobs from previous server run...');
@@ -226,6 +245,7 @@ console.log('  Subtitle Queue ready');
 console.log('  AI Queue ready');
 console.log('  Smart Clipper Queue ready');
 console.log('  Podcast Clipper Queue ready');
+console.log('  Multi-Platform Download Queue ready');
 console.log('All workers are listening for jobs!');
 
 setTimeout(async () => {

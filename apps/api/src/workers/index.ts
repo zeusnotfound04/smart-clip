@@ -1,4 +1,4 @@
-import { videoProcessingQueue, subtitleQueue, aiQueue, smartClipperQueue, podcastClipperQueue } from '../lib/queues';
+import { videoProcessingQueue, subtitleQueue, aiQueue, smartClipperQueue, podcastClipperQueue, multiPlatformDownloadQueue } from '../lib/queues';
 import Bull from 'bull';
 import { generateSubtitles, generateSRT } from '../services/auto-subtitles.service';
 import { combineVideos } from '../services/split-streamer.service';
@@ -9,6 +9,8 @@ import { multimodalEmbeddings } from '../services/multimodal-embeddings.service'
 import { ffmpegPreprocessing } from '../services/ffmpeg-preprocessing.service';
 import { segmentScoring } from '../services/segment-scoring.service';
 import { transcriptClipper } from '../services/transcript-clipper.service';
+import { multiPlatformDownloader } from '../services/downloaders/multi-platform-downloader.service';
+import { uploadFile, generateKey } from '../lib/s3';
 import { prisma } from '../lib/prisma';
 
 videoProcessingQueue.process('combine-videos', 8, async (job) => {
@@ -1367,5 +1369,120 @@ setTimeout(async () => {
     }
   } catch (error) {
     console.error('[PODCAST_CLIPPER_CHECK] Error checking queue:', error);
+  }
+}, 10000);
+
+// ============================================================================
+// MULTI-PLATFORM VIDEO DOWNLOAD WORKER
+// Handles Rumble, Kick, Twitch, Google Drive downloads
+// ============================================================================
+
+multiPlatformDownloadQueue.process('download-video', 3, async (job) => {
+  const { url, userId, videoId, platform } = job.data;
+  
+  try {
+    console.log(`[Multi-Platform Download] Job ${job.id} started for ${platform}: ${url}`);
+    
+    // Update video status to processing
+    if (videoId) {
+      await prisma.video.update({
+        where: { id: videoId },
+        data: { status: 'processing' }
+      });
+    }
+    
+    await job.progress(10);
+    
+    // Download video using multi-platform downloader
+    console.log(`[Multi-Platform Download] Downloading from ${platform}...`);
+    const result = await multiPlatformDownloader.download({
+      url,
+      userId,
+      platform,
+    });
+    
+    await job.progress(50);
+    console.log(`[Multi-Platform Download] Downloaded to: ${result.localPath}`);
+    
+    // Upload to S3
+    console.log(`[Multi-Platform Download] Uploading to S3...`);
+    const fs = await import('fs/promises');
+    const fileBuffer = await fs.readFile(result.localPath);
+    
+    const s3Key = generateKey(userId, result.fileName, 'video');
+    const s3Url = await uploadFile(s3Key, fileBuffer, 'video/mp4');
+    
+    await job.progress(90);
+    console.log(`[Multi-Platform Download] Uploaded to S3: ${s3Url}`);
+    
+    // Clean up local file
+    await multiPlatformDownloader.cleanup(result.localPath);
+    
+    // Update video record
+    if (videoId) {
+      await prisma.video.update({
+        where: { id: videoId },
+        data: {
+          status: 'completed',
+          s3Key: s3Key,
+          s3Url: s3Url,
+          title: result.videoInfo.title,
+          duration: result.videoInfo.duration,
+        }
+      });
+    }
+    
+    await job.progress(100);
+    console.log(`[Multi-Platform Download] Job ${job.id} completed successfully`);
+    
+    return {
+      success: true,
+      s3Url,
+      s3Key,
+      videoInfo: result.videoInfo,
+    };
+    
+  } catch (error: any) {
+    console.error(`[Multi-Platform Download] Job ${job.id} failed:`, error);
+    
+    // Update video status to failed
+    if (videoId) {
+      await prisma.video.update({
+        where: { id: videoId },
+        data: {
+          status: 'failed',
+        }
+      });
+    }
+    
+    throw error;
+  }
+});
+
+multiPlatformDownloadQueue.on('waiting', (jobId) => {
+  console.log(`[Multi-Platform Download] Job ${jobId} is waiting`);
+});
+
+multiPlatformDownloadQueue.on('active', (job) => {
+  console.log(`[Multi-Platform Download] Job ${job.id} started: ${job.data.platform}`);
+});
+
+multiPlatformDownloadQueue.on('completed', (job, result) => {
+  console.log(`[Multi-Platform Download] Job ${job.id} completed for ${job.data.platform}`);
+});
+
+multiPlatformDownloadQueue.on('failed', (job, error) => {
+  console.error(`[Multi-Platform Download] Job ${job?.id} failed for ${job?.data?.platform}:`, error.message);
+});
+
+console.log('[Multi-Platform Download] Worker initialized and ready');
+
+// Cleanup check for multi-platform queue
+setTimeout(async () => {
+  try {
+    const stats = await multiPlatformDownloadQueue.getJobCounts();
+    console.log(`[Multi-Platform Download] Queue stats: waiting(${stats.waiting}) active(${stats.active}) completed(${stats.completed}) failed(${stats.failed})`);
+  } catch (error) {
+    console.error('[Multi-Platform Download] Failed to check queue stats:', error);
   }
 }, 5000);

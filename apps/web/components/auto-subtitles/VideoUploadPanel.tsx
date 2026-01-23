@@ -1,7 +1,7 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, FileVideo, Settings, Folder, Link2, Youtube, Twitter, Loader2 } from 'lucide-react';
+import { Upload, FileVideo, Settings, Folder, Link2, Youtube, Twitter, Loader2, Instagram, Music, Video, Gamepad2, Tv, HardDrive } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { VideoSelectorModal } from '@/components/video-selector-modal';
@@ -110,15 +110,45 @@ export function VideoUploadPanel({
         const directVideoUrl = result.videoInfo.url; // This is the direct .mp4 URL
         console.log('Direct video URL from yt-dlp:', directVideoUrl);
         console.log('Full videoInfo:', result.videoInfo);
+        console.log('Platform:', result.platform);
         
-        // For Twitter videos, use backend proxy to bypass CORS
+        // Platform-specific handling
         const isTwitterVideo = directVideoUrl?.includes('video.twimg.com');
-        const proxyUrl = isTwitterVideo 
-          ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/video-url-upload/proxy?url=${encodeURIComponent(directVideoUrl)}`
-          : directVideoUrl;
+        const isInstagramVideo = result.platform === 'Instagram';
+        const isTikTokVideo = result.platform === 'TikTok' || directVideoUrl?.includes('tikcdn.io');
+        const isGoogleDrive = result.platform === 'Google Drive';
         
-        console.log('Using proxy for Twitter:', isTwitterVideo);
-        console.log('Final preview URL:', proxyUrl);
+        // For Twitter, Instagram, and TikTok videos, use backend proxy to bypass CORS
+        const needsProxy = isTwitterVideo || isInstagramVideo || isTikTokVideo;
+        
+        // Determine preview URL and download URL
+        let previewUrl;
+        let downloadUrl;
+        
+        if (isGoogleDrive) {
+          // For Google Drive: use original URL for preview, direct URL for download
+          previewUrl = result.videoInfo.originalUrl || url;
+          downloadUrl = directVideoUrl; // Direct download link for S3 upload
+        } else if (needsProxy) {
+          // For Twitter/Instagram/TikTok: use proxy for both preview and download
+          const proxyUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/video-url-upload/proxy?url=${encodeURIComponent(directVideoUrl)}`;
+          previewUrl = proxyUrl;
+          downloadUrl = proxyUrl;
+        } else {
+          // For YouTube and others: use direct URL for both
+          previewUrl = directVideoUrl;
+          downloadUrl = directVideoUrl;
+        }
+        
+        console.log('Platform detection:', {
+          isTwitterVideo,
+          isInstagramVideo,
+          isTikTokVideo,
+          isGoogleDrive,
+          needsProxy,
+          previewUrl,
+          downloadUrl
+        });
         
         // Immediately pass video info to parent for preview
         if (onVideoSelect) {
@@ -126,16 +156,17 @@ export function VideoUploadPanel({
             id: 'url-preview',
             name: result.videoInfo.title,
             size: 0,
-            // Use proxy URL for Twitter videos to bypass CORS
-            videoUrl: proxyUrl || url,
-            s3Url: proxyUrl || url,
+            // Use appropriate URL for preview
+            videoUrl: previewUrl,
+            s3Url: downloadUrl, // Use download URL for S3 upload
             originalName: result.videoInfo.title,
             isUrlPreview: true,
             urlData: {
-              url: url, // Original tweet URL
+              url: url, // Original user-provided URL
               originalUrl: result.videoInfo.originalUrl || url,
-              directUrl: directVideoUrl, // Direct .mp4 URL from yt-dlp
-              proxyUrl: proxyUrl, // Proxied URL for playback
+              directUrl: directVideoUrl, // Direct download URL from yt-dlp
+              previewUrl: previewUrl, // URL for preview player
+              downloadUrl: downloadUrl, // URL for S3 upload
               platform: result.platform,
               thumbnail: result.videoInfo.thumbnail,
               duration: result.videoInfo.duration
@@ -237,14 +268,14 @@ export function VideoUploadPanel({
                     
                     <h3 className="text-lg font-semibold">Paste Video URL</h3>
                     <p className="text-muted-foreground text-sm">
-                      YouTube, Twitter/X, TikTok, Instagram
+                      YouTube, Instagram, TikTok, Twitter/X, Rumble, Kick, Twitch, Google Drive, Zoom Clips
                     </p>
 
                     {/* URL Input */}
                     <div className="flex gap-2">
                       <Input
                         type="url"
-                        placeholder="Paste YouTube, TikTok, Instagram, or X/Twitter link..."
+                        placeholder="Paste video link from any supported platform..."
                         value={url}
                         onChange={(e) => {
                           setUrl(e.target.value);
@@ -280,16 +311,36 @@ export function VideoUploadPanel({
                         YouTube
                       </Badge>
                       <Badge variant="secondary" className="text-xs">
+                        <Instagram className="mr-1 h-3 w-3" />
+                        Instagram
+                      </Badge>
+                      <Badge variant="secondary" className="text-xs">
+                        <Music className="mr-1 h-3 w-3" />
+                        TikTok
+                      </Badge>
+                      <Badge variant="secondary" className="text-xs">
                         <Twitter className="mr-1 h-3 w-3" />
                         Twitter/X
                       </Badge>
                       <Badge variant="secondary" className="text-xs">
-                        <FileVideo className="mr-1 h-3 w-3" />
-                        TikTok
+                        <Video className="mr-1 h-3 w-3" />
+                        Rumble
                       </Badge>
                       <Badge variant="secondary" className="text-xs">
-                        <FileVideo className="mr-1 h-3 w-3" />
-                        Instagram
+                        <Gamepad2 className="mr-1 h-3 w-3" />
+                        Kick
+                      </Badge>
+                      <Badge variant="secondary" className="text-xs">
+                        <Tv className="mr-1 h-3 w-3" />
+                        Twitch
+                      </Badge>
+                      <Badge variant="secondary" className="text-xs">
+                        <HardDrive className="mr-1 h-3 w-3" />
+                        Google Drive
+                      </Badge>
+                      <Badge variant="secondary" className="text-xs">
+                        <Video className="mr-1 h-3 w-3" />
+                        Zoom Clips
                       </Badge>
                     </div>
 

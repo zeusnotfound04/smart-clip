@@ -2,11 +2,15 @@ import youtubeDl from 'youtube-dl-exec';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import { instagramDownloader } from './instagram-downloader.service';
+import { tiktokDownloader } from './tiktok-downloader.service';
+import { multiPlatformDownloader } from './downloaders/multi-platform-downloader.service';
+import fetch from 'node-fetch';
 
 /**
  * Video Downloader Service
  * 
- * Handles downloading videos from various platforms using yt-dlp.
+ * Handles downloading videos from various platforms using yt-dlp and specialized downloaders.
  * 
  * ## Twitter/X Video Strategy:
  * 
@@ -106,9 +110,30 @@ export class VideoDownloaderService {
         return { isValid: true, platform: 'Facebook' };
       }
 
+      // NEW PLATFORMS
+      if (hostname.includes('rumble.com')) {
+        return { isValid: true, platform: 'Rumble' };
+      }
+
+      if (hostname.includes('kick.com')) {
+        return { isValid: true, platform: 'Kick' };
+      }
+
+      if (hostname.includes('twitch.tv')) {
+        return { isValid: true, platform: 'Twitch' };
+      }
+
+      if (hostname.includes('drive.google.com') || hostname.includes('docs.google.com')) {
+        return { isValid: true, platform: 'Google Drive' };
+      }
+
+      if (hostname.includes('zoom.us') && url.includes('/clips/share/')) {
+        return { isValid: true, platform: 'Zoom Clips' };
+      }
+
       return {
         isValid: false,
-        error: 'Unsupported platform. Supported: YouTube, Twitter/X, Instagram, TikTok, Vimeo, Facebook'
+        error: 'Unsupported platform. Supported: YouTube, Twitter/X, Instagram, TikTok, Vimeo, Facebook, Rumble, Kick, Twitch, Google Drive, Zoom Clips'
       };
     } catch (error) {
       return {
@@ -124,6 +149,55 @@ export class VideoDownloaderService {
   async getVideoInfo(url: string): Promise<VideoInfo> {
     try {
       const validation = this.validateUrl(url);
+      
+      // Use specialized Instagram downloader
+      if (validation.platform === 'Instagram') {
+        console.log('[Video Downloader] Using Instagram specialized downloader');
+        const result = await instagramDownloader.getDownloadUrl(url);
+        
+        return {
+          title: result.title || 'Instagram Video',
+          duration: result.duration || 0,
+          thumbnail: result.thumbnail || '',
+          url: result.downloadUrl,
+          originalUrl: url,
+          platform: 'Instagram',
+          extractor: 'instagram-specialized',
+        };
+      }
+      
+      // Use specialized TikTok downloader
+      if (validation.platform === 'TikTok') {
+        console.log('[Video Downloader] Using TikTok specialized downloader');
+        const result = await tiktokDownloader.getDownloadUrl(url);
+        
+        return {
+          title: result.title || 'TikTok Video',
+          duration: result.duration || 0,
+          thumbnail: result.thumbnail || '',
+          url: result.downloadUrl,
+          originalUrl: url,
+          platform: 'TikTok',
+          extractor: 'tiktok-specialized',
+        };
+      }
+      
+      // Use multi-platform downloader for new platforms
+      if (['Rumble', 'Kick', 'Twitch', 'Google Drive', 'Zoom Clips'].includes(validation.platform || '')) {
+        console.log(`[Video Downloader] Using multi-platform downloader for ${validation.platform}`);
+        const result = await multiPlatformDownloader.getVideoInfo(url);
+        
+        return {
+          title: result.title || `${validation.platform} Video`,
+          duration: result.duration || 0,
+          thumbnail: result.thumbnail || '',
+          url: result.downloadUrl,
+          originalUrl: url,
+          platform: validation.platform || 'Unknown',
+          extractor: 'multi-platform',
+        };
+      }
+      
       const isYouTube = validation.platform === 'YouTube';
       
       const options: any = {
@@ -264,6 +338,82 @@ export class VideoDownloaderService {
       }
 
       console.log(`Downloading video from ${validation.platform}: ${url}`);
+
+      // Use specialized Instagram downloader
+      if (validation.platform === 'Instagram') {
+        console.log('[Video Downloader] Using Instagram specialized downloader for download');
+        const result = await instagramDownloader.getDownloadUrl(url);
+        
+        const videoId = uuidv4();
+        const fileName = `${userId}_${videoId}.mp4`;
+        const localPath = path.join(this.downloadDir, fileName);
+        
+        console.log('[Instagram Downloader] Downloading from CDN...');
+        const response = await fetch(result.downloadUrl);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to download from CDN: ${response.statusText}`);
+        }
+        
+        const buffer = await response.buffer();
+        await fs.writeFile(localPath, buffer);
+        
+        console.log(`[Instagram Downloader] Video saved: ${localPath} (${(buffer.length / 1024 / 1024).toFixed(2)} MB)`);
+        
+        const videoInfo: VideoInfo = {
+          title: result.title || 'Instagram Video',
+          duration: result.duration || 0,
+          thumbnail: result.thumbnail || '',
+          url: result.downloadUrl,
+          originalUrl: url,
+          platform: 'Instagram',
+          extractor: 'instagram-specialized',
+        };
+        
+        return {
+          localPath,
+          videoInfo,
+          fileName,
+        };
+      }
+
+      // Use specialized TikTok downloader
+      if (validation.platform === 'TikTok') {
+        console.log('[Video Downloader] Using TikTok specialized downloader for download');
+        const result = await tiktokDownloader.getDownloadUrl(url);
+        
+        const videoId = uuidv4();
+        const fileName = `${userId}_${videoId}.mp4`;
+        const localPath = path.join(this.downloadDir, fileName);
+        
+        console.log('[TikTok Downloader] Downloading from CDN...');
+        const response = await fetch(result.downloadUrl);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to download from CDN: ${response.statusText}`);
+        }
+        
+        const buffer = await response.buffer();
+        await fs.writeFile(localPath, buffer);
+        
+        console.log(`[TikTok Downloader] Video saved: ${localPath} (${(buffer.length / 1024 / 1024).toFixed(2)} MB)`);
+        
+        const videoInfo: VideoInfo = {
+          title: result.title || 'TikTok Video',
+          duration: result.duration || 0,
+          thumbnail: result.thumbnail || '',
+          url: result.downloadUrl,
+          originalUrl: url,
+          platform: 'TikTok',
+          extractor: 'tiktok-specialized',
+        };
+        
+        return {
+          localPath,
+          videoInfo,
+          fileName,
+        };
+      }
 
       const videoId = uuidv4();
       const outputTemplate = path.join(this.downloadDir, `${userId}_${videoId}.%(ext)s`);

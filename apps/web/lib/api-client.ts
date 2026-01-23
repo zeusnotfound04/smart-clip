@@ -1291,6 +1291,82 @@ class APIClient {
     const response = await axiosInstance.get('/api/podcast-clipper/subtitle-styles');
     return response.data;
   }
+
+  // ==========================================
+  // Instagram Downloader Methods
+  // ==========================================
+
+  async getInstagramDownloadUrl(instagramUrl: string): Promise<{
+    success: boolean;
+    data?: {
+      downloadUrl: string;
+      thumbnail?: string;
+      duration?: number;
+      cached: boolean;
+      expiresIn: string;
+    };
+    message?: string;
+    error?: string;
+  }> {
+    const response = await axiosInstance.post('/api/instagram/download', { url: instagramUrl });
+    return response.data;
+  }
+
+  async getInstagramServiceStats(): Promise<{
+    success: boolean;
+    data: {
+      proxyCount: number;
+      currentProxyIndex: number;
+      circuitBreakerOpen: boolean;
+      failureCount: number;
+      cacheTTL: number;
+      rateLimit: string;
+    };
+  }> {
+    const response = await axiosInstance.get('/api/instagram/stats');
+    return response.data;
+  }
+
+  async getInstagramServiceHealth(): Promise<{
+    success: boolean;
+    status: string;
+    data: {
+      service: string;
+      version: string;
+      features: string[];
+      stats: any;
+    };
+  }> {
+    const response = await axiosInstance.get('/api/instagram/health');
+    return response.data;
+  }
+
+  // Multi-Platform Downloader API
+  multiPlatform = {
+    download: async (url: string, userId: string) => {
+      return axiosInstance.post('/api/multi-platform/download', { url, userId });
+    },
+
+    downloadWithSubtitles: async (url: string, userId: string) => {
+      return axiosInstance.post('/api/multi-platform/download-and-subtitle', { url, userId });
+    },
+
+    getStatus: async (videoId: string) => {
+      return axiosInstance.get(`/api/multi-platform/status/${videoId}`);
+    },
+
+    getVideoInfo: async (url: string) => {
+      return axiosInstance.get('/api/multi-platform/info', { params: { url } });
+    },
+
+    getSystemStats: async () => {
+      return axiosInstance.get('/api/multi-platform/stats');
+    },
+
+    getMyDownloads: async () => {
+      return axiosInstance.get('/api/videos');
+    },
+  };
 }
 
 export const apiClient = new APIClient();

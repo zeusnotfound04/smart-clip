@@ -25,6 +25,7 @@ import testRoutes from './routes/test.routes.js';
 import myClipsRoutes from './routes/my-clips.routes';
 import adminRoutes from './routes/admin.routes';
 import videoUrlUploadRoutes from './routes/video-url-upload.routes';
+import instagramRoutes from './routes/instagram.routes';
 import userRoutes from './routes/user.routes';
 import { 
   errorHandler, 
@@ -119,6 +120,7 @@ app.use('/api/thumbnails', thumbnailRoutes);
 app.use('/api/video-processing', videoProcessingRoutes);
 app.use('/api/video-generation', videoGenerationRoutes);
 app.use('/api/video-url-upload', videoUrlUploadRoutes);
+app.use('/api/instagram', instagramRoutes);
 
 app.use('/api/credits', creditsRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);

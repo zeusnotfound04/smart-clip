@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
 import { useRef, useState, useEffect } from 'react';
+import Hls from 'hls.js';
 
 type UploadStage = 'idle' | 'configuring' | 'downloading' | 'uploading' | 'processing' | 'completed' | 'error';
 
@@ -60,11 +61,33 @@ export function VideoPreviewArea({
     if (!url) return false;
     return url.includes('youtube.com') || url.includes('youtu.be');
   };
+  
   const isTwitterUrl = (url: string | null) => {
     if (!url) return false;
     const isTweetUrl = (url.includes('twitter.com') || url.includes('x.com')) && url.includes('/status/');
     const isDirectVideo = url.includes('video.twimg.com') || url.includes('.mp4') || url.includes('.m3u8');
     return isTweetUrl && !isDirectVideo;
+  };
+  
+  const isGoogleDriveUrl = (url: string | null) => {
+    if (!url) return false;
+    return url.includes('drive.google.com');
+  };
+  
+  // Convert Google Drive URL to preview URL
+  const getGoogleDrivePreviewUrl = (url: string) => {
+    try {
+      // Extract file ID from various Google Drive URL formats
+      const fileIdMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+      if (fileIdMatch && fileIdMatch[1]) {
+        const fileId = fileIdMatch[1];
+        // Use Google Drive preview URL
+        return `https://drive.google.com/file/d/${fileId}/preview`;
+      }
+      return url;
+    } catch (e) {
+      return url;
+    }
   };
   
   // Convert YouTube URL to embed URL
@@ -124,6 +147,59 @@ export function VideoPreviewArea({
       video.removeEventListener('pause', handlePause);
     };
   }, [videoPreviewUrl]);
+
+  // HLS support for streaming videos (Kick, Twitch, etc.)
+  useEffect(() => {
+    const video = videoRef.current;
+    const videoUrl = subtitledVideoUrl || videoPreviewUrl;
+    
+    if (!video || !videoUrl) return;
+    
+    // Check if URL is an HLS stream (.m3u8)
+    const isHlsStream = videoUrl.includes('.m3u8');
+    
+    if (isHlsStream && Hls.isSupported()) {
+      const hls = new Hls({
+        enableWorker: true,
+        lowLatencyMode: true,
+        backBufferLength: 90,
+      });
+      
+      hls.loadSource(videoUrl);
+      hls.attachMedia(video);
+      
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        console.log('HLS stream loaded successfully');
+      });
+      
+      hls.on(Hls.Events.ERROR, (event, data) => {
+        if (data.fatal) {
+          console.error('Fatal HLS error:', data);
+          switch (data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              console.log('Network error, trying to recover...');
+              hls.startLoad();
+              break;
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              console.log('Media error, trying to recover...');
+              hls.recoverMediaError();
+              break;
+            default:
+              console.log('Unrecoverable error, destroying HLS instance');
+              hls.destroy();
+              break;
+          }
+        }
+      });
+      
+      return () => {
+        hls.destroy();
+      };
+    } else if (isHlsStream && video.canPlayType('application/vnd.apple.mpegurl')) {
+      // Native HLS support (Safari)
+      video.src = videoUrl;
+    }
+  }, [videoPreviewUrl, subtitledVideoUrl]);
 
   const formatTime = (time: number) => {
     const minutes = Math.floor(time / 60);
@@ -205,27 +281,42 @@ export function VideoPreviewArea({
                 {(() => {
                   const isYouTube = isYouTubeUrl(videoPreviewUrl);
                   const isTwitter = isTwitterUrl(videoPreviewUrl);
-                  const shouldUseIframe = (isYouTube || isTwitter) && !subtitledVideoUrl;
+                  const isGoogleDrive = isGoogleDriveUrl(videoPreviewUrl);
+                  const shouldUseIframe = ((isYouTube || isTwitter || isGoogleDrive) && !subtitledVideoUrl);
                   
                   console.log('VideoPreviewArea rendering decision:');
                   console.log('   - videoPreviewUrl:', videoPreviewUrl);
                   console.log('   - subtitledVideoUrl:', subtitledVideoUrl);
                   console.log('   - isYouTube:', isYouTube);
                   console.log('   - isTwitter (tweet URL check):', isTwitter);
+                  console.log('   - isGoogleDrive:', isGoogleDrive);
                   console.log('   - shouldUseIframe:', shouldUseIframe);
                   console.log('   - Contains .mp4:', videoPreviewUrl?.includes('.mp4'));
                   console.log('   - Contains video.twimg.com:', videoPreviewUrl?.includes('video.twimg.com'));
                   
                   if (shouldUseIframe) {
-                    const embedUrl = isYouTube 
-                      ? getYouTubeEmbedUrl(videoPreviewUrl!)
-                      : getTwitterEmbedUrl(videoPreviewUrl!);
+                    let embedUrl;
+                    let platformLabel;
+                    
+                    if (isYouTube) {
+                      embedUrl = getYouTubeEmbedUrl(videoPreviewUrl!);
+                      platformLabel = 'YouTube Preview';
+                    } else if (isTwitter) {
+                      embedUrl = getTwitterEmbedUrl(videoPreviewUrl!);
+                      platformLabel = 'Tweet Preview - Video will be extracted';
+                    } else if (isGoogleDrive) {
+                      embedUrl = getGoogleDrivePreviewUrl(videoPreviewUrl!);
+                      platformLabel = 'Google Drive Preview';
+                    }
+                    
                     console.log('Using iframe with URL:', embedUrl);
+                    console.log('Platform:', platformLabel);
+                    
                     return (
                       <div className="w-full h-full relative">
-                        {isTwitter && (
+                        {(isTwitter || isGoogleDrive) && (
                           <div className="absolute top-2 right-2 z-10 bg-blue-500/90 text-white px-2 py-1 rounded text-xs font-medium">
-                            Tweet Preview - Video will be extracted
+                            {platformLabel}
                           </div>
                         )}
                         <iframe
