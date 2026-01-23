@@ -237,14 +237,14 @@ export function VideoUploadPanel({
                     
                     <h3 className="text-lg font-semibold">Paste Video URL</h3>
                     <p className="text-muted-foreground text-sm">
-                      YouTube, Twitter/X
+                      YouTube, Twitter/X, TikTok, Instagram
                     </p>
 
                     {/* URL Input */}
                     <div className="flex gap-2">
                       <Input
                         type="url"
-                        placeholder="https://youtube.com/watch?v=... or https://x.com/..."
+                        placeholder="Paste YouTube, TikTok, Instagram, or X/Twitter link..."
                         value={url}
                         onChange={(e) => {
                           setUrl(e.target.value);
@@ -283,7 +283,14 @@ export function VideoUploadPanel({
                         <Twitter className="mr-1 h-3 w-3" />
                         Twitter/X
                       </Badge>
-                     
+                      <Badge variant="secondary" className="text-xs">
+                        <FileVideo className="mr-1 h-3 w-3" />
+                        TikTok
+                      </Badge>
+                      <Badge variant="secondary" className="text-xs">
+                        <FileVideo className="mr-1 h-3 w-3" />
+                        Instagram
+                      </Badge>
                     </div>
 
                     {/* Error Alert */}

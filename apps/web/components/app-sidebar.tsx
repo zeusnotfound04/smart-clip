@@ -103,21 +103,22 @@ export function AppSidebar({ user }: AppSidebarProps) {
               {navItems.map((item, index) => {
                 const isActive = pathname === item.href;
                 return (
-                  <motion.div
-                    key={item.name}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.3, delay: 0.2 + index * 0.1 }}
-                  >
-                    <SidebarMenuItem>
+                  <SidebarMenuItem key={item.name}>
+                    <motion.div
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3, delay: 0.2 + index * 0.1 }}
+                      whileHover={{ x: 4 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
                       <SidebarMenuButton asChild isActive={isActive}>
                         <Link href={item.href}>
                           <item.icon className="size-5" />
                           <span>{item.name}</span>
                         </Link>
                       </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  </motion.div>
+                    </motion.div>
+                  </SidebarMenuItem>
                 );
               })}
             </SidebarMenu>
