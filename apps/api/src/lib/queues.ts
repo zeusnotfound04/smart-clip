@@ -107,6 +107,24 @@ export const smartClipperQueue = new Bull('smart clipper', {
   }
 });
 
+export const podcastClipperQueue = new Bull('podcast clipper', {
+  redis: redisConfig,
+  settings: {
+    stalledInterval: 120 * 1000,
+    maxStalledCount: 2,
+  },
+  defaultJobOptions: {
+    removeOnComplete: 50,
+    removeOnFail: 100,
+    attempts: 2,
+    backoff: {
+      type: 'exponential',
+      delay: 5000
+    },
+    timeout: 3600000 // 1 hour max for long videos
+  }
+});
+
 const addConnectionListeners = (queue: Bull.Queue, name: string) => {
   queue.on('error', (error) => {
     console.error(`${name} Queue Error:`, error.message);
@@ -133,6 +151,7 @@ addConnectionListeners(videoProcessingQueue, 'Video Processing');
 addConnectionListeners(subtitleQueue, 'Subtitle');
 addConnectionListeners(aiQueue, 'AI');
 addConnectionListeners(smartClipperQueue, 'Smart Clipper');
+addConnectionListeners(podcastClipperQueue, 'Podcast Clipper');
 
 export async function cleanupStalledJobs() {
   console.log('Cleaning up stalled jobs from previous server run...');
@@ -206,6 +225,7 @@ console.log('  Video Processing Queue ready');
 console.log('  Subtitle Queue ready'); 
 console.log('  AI Queue ready');
 console.log('  Smart Clipper Queue ready');
+console.log('  Podcast Clipper Queue ready');
 console.log('All workers are listening for jobs!');
 
 setTimeout(async () => {

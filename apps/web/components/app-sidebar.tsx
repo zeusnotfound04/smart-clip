@@ -17,7 +17,7 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { HiHome, HiCog, HiLogout } from "react-icons/hi";
+import { HiHome, HiCog, HiLogout, HiScissors } from "react-icons/hi";
 import { HiSparkles, HiChatBubbleLeftRight, HiFilm, HiCreditCard, HiVideoCamera, HiShieldCheck } from "react-icons/hi2";
 import { motion } from "framer-motion";
 import { User } from "@/lib/api-client";
@@ -31,6 +31,7 @@ const navigation = [
   { name: "My Clips", href: "/my-clips", icon: HiVideoCamera },
   { name: "AI Script Generator", href: "/ai-script-generator", icon: HiSparkles },
   { name: "Video Generation", href: "/video-generation", icon: HiFilm },
+  { name: "Podcast Clipper", href: "/dashboard/podcast-clipper", icon: HiScissors },
   { name: "Fake Conversations", href: "/fake-conversations", icon: HiChatBubbleLeftRight },
   { name: "Credits & Plans", href: "/credits", icon: HiCreditCard },
   { name: "Settings", href: "/settings", icon: HiCog },

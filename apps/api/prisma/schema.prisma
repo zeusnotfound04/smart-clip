@@ -64,6 +64,7 @@ model User {
   segmentFeedback         SegmentFeedback[]
   sessions                Session[]
   smartClipperProjects    SmartClipperProject[]
+  podcastClipperProjects  PodcastClipperProject[]
   videoGenerationProjects VideoGenerationProject[]
   videos                  Video[]
   creditTransactions      CreditTransaction[]
@@ -115,6 +116,7 @@ model Video {
   subtitledVideoUrl    String?               @map("subtitled_video_url")
   projects             Project[]
   smartClipperProjects SmartClipperProject[]
+  podcastClipperProjects  PodcastClipperProject[]
   subtitles            Subtitle[]
   user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -615,4 +617,88 @@ model SubscriptionPlan {
   @@index([tier])
   @@index([isActive])
   @@map("subscription_plans")
+}
+
+model PodcastClipperProject {
+  id                String   @id @default(cuid())
+  userId            String   @map("user_id")
+  
+  // Source video info
+  sourceType        String   @map("source_type") // 'upload' | 'youtube'
+  sourceUrl         String?  @map("source_url")  // YouTube URL if applicable
+  sourceVideoId     String?  @map("source_video_id") // Reference to Video model
+  
+  // Video metadata
+  title             String?
+  thumbnail         String?
+  totalDuration     Float?   @map("total_duration") // Total video duration in seconds
+  
+  // Clip configuration
+  clipStartTime     Float    @map("clip_start_time")
+  clipEndTime       Float    @map("clip_end_time")
+  clipDuration      Float    @map("clip_duration") // Computed: endTime - startTime
+  
+  // Subtitle configuration
+  subtitleStyle     String   @default("chris_cinematic") @map("subtitle_style")
+  whisperModel      String   @default("base") @map("whisper_model")
+  
+  // Processing state
+  status            String   @default("pending") // pending, downloading, analyzing, rendering, completed, failed
+  processingStage   String?  @map("processing_stage")
+  progress          Int      @default(0)
+  
+  // Results
+  speakersDetected  Int?     @map("speakers_detected")
+  layoutMode        String?  @map("layout_mode") // 'single' | 'split'
+  outputUrl         String?  @map("output_url")
+  subtitlePath      String?  @map("subtitle_path")
+  
+  // Cost tracking
+  estimatedCost     Decimal? @map("estimated_cost") @db.Decimal(10, 4)
+  actualCost        Decimal? @map("actual_cost") @db.Decimal(10, 4)
+  processingTimeMs  Int?     @map("processing_time_ms")
+  creditsUsed       Int?     @map("credits_used")
+  
+  // Error handling
+  errorMessage      String?  @map("error_message")
+  
+  // Timestamps
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  completedAt       DateTime? @map("completed_at")
+  
+  // Relations
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sourceVideo       Video?   @relation(fields: [sourceVideoId], references: [id])
+  
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("podcast_clipper_projects")
+}
+
+model SubtitleStyleConfig {
+  id                String   @id @default(cuid())
+  styleKey          String   @unique @map("style_key")
+  name              String
+  description       String?
+  previewImage      String?  @map("preview_image")
+  
+  // Style configuration
+  fontFamily        String   @map("font_family")
+  fontSize          Int      @map("font_size")
+  primaryColor      String   @map("primary_color")    // RGB hex
+  highlightColor    String   @map("highlight_color")  // RGB hex
+  borderWidth       Int      @map("border_width")
+  shadowDepth       Int      @map("shadow_depth")
+  scaleNormal       Int      @map("scale_normal")
+  scaleHighlight    Int      @map("scale_highlight")
+  
+  isActive          Boolean  @default(true) @map("is_active")
+  sortOrder         Int      @default(0) @map("sort_order")
+  
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  
+  @@map("subtitle_style_configs")
 }

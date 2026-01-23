@@ -9,6 +9,7 @@ import projectRoutes from './routes/projects';
 import subtitleRoutes from './routes/subtitles';
 import splitStreamerRoutes from './routes/split-streamer.routes';
 import smartClipperRoutes from './routes/smart-clipper.routes';
+import podcastClipperRoutes from './routes/podcast-clipper.routes';
 import scriptGeneratorRoutes from './routes/script-generator.routes';
 import aiScriptGeneratorRoutes from './routes/ai-script-generator.routes';
 import statusRoutes from './routes/status.routes';
@@ -33,7 +34,7 @@ import {
   securityHeaders 
 } from './middleware/error.middleware';
 import './workers';
-import { smartClipperQueue, videoProcessingQueue, subtitleQueue, aiQueue } from './lib/queues';
+import { smartClipperQueue, videoProcessingQueue, subtitleQueue, aiQueue, podcastClipperQueue } from './lib/queues';
 
 dotenv.config();
 
@@ -94,6 +95,7 @@ app.use((req, res, next) => {
   if (req.path.includes('/split-streamer') || 
       req.path.includes('/subtitles') || 
       req.path.includes('/smart-clipper') ||
+      req.path.includes('/podcast-clipper') ||
       req.path.includes('/video-processing')) {
     req.setTimeout(1800000);
     res.setTimeout(1800000);
@@ -109,6 +111,7 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/subtitles', subtitleRoutes);
 app.use('/api/split-streamer', splitStreamerRoutes);
 app.use('/api/smart-clipper', smartClipperRoutes);
+app.use('/api/podcast-clipper', podcastClipperRoutes);
 app.use('/api/script-generator', scriptGeneratorRoutes);
 app.use('/api/ai-script-generator', aiScriptGeneratorRoutes);
 app.use('/api/status', statusRoutes);
@@ -139,6 +142,7 @@ async function initializeRedisConnections() {
   
   const queues = [
     { name: 'Smart Clipper Queue', queue: smartClipperQueue },
+    { name: 'Podcast Clipper Queue', queue: podcastClipperQueue },
     { name: 'Video Processing Queue', queue: videoProcessingQueue },
     { name: 'Subtitle Queue', queue: subtitleQueue },
     { name: 'AI Queue', queue: aiQueue }
@@ -185,6 +189,7 @@ process.on('SIGTERM', async () => {
   console.log('\nSIGTERM received, shutting down gracefully...');
   await Promise.all([
     smartClipperQueue.close(),
+    podcastClipperQueue.close(),
     videoProcessingQueue.close(),
     subtitleQueue.close(),
     aiQueue.close()
@@ -197,6 +202,7 @@ process.on('SIGINT', async () => {
   console.log('\nSIGINT received, shutting down gracefully...');
   await Promise.all([
     smartClipperQueue.close(),
+    podcastClipperQueue.close(),
     videoProcessingQueue.close(),
     subtitleQueue.close(),
     aiQueue.close()

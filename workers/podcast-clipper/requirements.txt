@@ -1,0 +1,16 @@
+Flask==2.3.3
+gunicorn==21.2.0
+redis==5.0.1
+boto3==1.34.0
+opencv-python==4.9.0.80
+numpy==1.26.3
+moviepy==1.0.3
+onnxruntime>=1.17.0
+openai-whisper==20231117
+whisper-timestamped==1.14.2
+Pillow==10.2.0
+scipy==1.12.0
+python-dotenv==1.0.0
+psutil==5.9.8
+yt-dlp>=2024.1.0
+torch>=2.0.0

@@ -36,3 +36,54 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+venv/
+.venv/
+ENV/
+env/
+.env.local
+
+# Workers - Podcast Clipper
+workers/podcast-clipper/output/
+workers/podcast-clipper/temp/
+workers/podcast-clipper/.env
+workers/podcast-clipper/*.mp4
+workers/podcast-clipper/*.mp3
+workers/podcast-clipper/*.wav
+workers/podcast-clipper/*.srt
+workers/podcast-clipper/*.ass
+workers/podcast-clipper/*.json
+workers/podcast-clipper/transcription_*.json
+
+# Workers - General
+workers/**/output/
+workers/**/temp/
+workers/**/.env
+workers/**/__pycache__/
+workers/**/*.pyc
+
+# IDE
+.idea/
+*.swp
+*.swo
+.vscode/settings.json
