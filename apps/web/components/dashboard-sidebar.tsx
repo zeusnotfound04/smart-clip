@@ -35,6 +35,7 @@ import {
   MessageCircle,
   Wand2,
   Columns2,
+  Mic,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -58,6 +59,12 @@ const navigationItems = [
     url: "/dashboard/ai-script-generator",
     icon: Wand2,
     badge: "AI",
+  },
+  {
+    title: "Podcast Clipper",
+    url: "/dashboard/podcast-clipper",
+    icon: Mic,
+    badge: "Beta",
   },
   // {
   //   title: "Fake Conversations",

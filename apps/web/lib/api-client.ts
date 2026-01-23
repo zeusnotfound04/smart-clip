@@ -31,10 +31,10 @@ axiosInstance.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       // Only redirect on authentication check or user profile endpoints
-      const isAuthEndpoint = error.config?.url?.includes('/me') || 
-                             error.config?.url?.includes('/auth/') ||
-                             error.config?.url?.includes('/profile');
-      
+      const isAuthEndpoint = error.config?.url?.includes('/me') ||
+        error.config?.url?.includes('/auth/') ||
+        error.config?.url?.includes('/profile');
+
       if (isAuthEndpoint && typeof window !== 'undefined') {
         localStorage.removeItem('smartclips_token');
         localStorage.removeItem('smartclips_user');
@@ -112,12 +112,12 @@ class APIClient {
   // Auth methods
   async signUp(name: string, email: string, password: string, otp: string): Promise<AuthResponse> {
     const response = await axiosInstance.post('/api/auth/signup', { name, email, password, otp });
-    
+
     if (response.data.token && typeof window !== 'undefined') {
       localStorage.setItem('smartclips_token', response.data.token);
       localStorage.setItem('smartclips_user', JSON.stringify(response.data.user));
     }
-    
+
     return {
       success: true,
       data: {
@@ -129,12 +129,12 @@ class APIClient {
 
   async signIn(email: string, password: string): Promise<AuthResponse> {
     const response = await axiosInstance.post('/api/auth/signin', { email, password });
-    
+
     if (response.data.token && typeof window !== 'undefined') {
       localStorage.setItem('smartclips_token', response.data.token);
       localStorage.setItem('smartclips_user', JSON.stringify(response.data.user));
     }
-    
+
     return {
       success: true,
       data: {
@@ -250,21 +250,21 @@ class APIClient {
   async createCheckoutSession(tier: string): Promise<ApiResponse<{ sessionId: string; url: string }>> {
     console.log('[API CLIENT] Creating checkout session');
     console.log('[API CLIENT] Tier:', tier);
-    
+
     const token = typeof window !== 'undefined' ? localStorage.getItem('smartclips_token') : null;
     console.log('[API CLIENT] Token present:', !!token);
     if (token) {
       console.log('[API CLIENT] Token preview:', token.substring(0, 20) + '...');
     }
-    
+
     console.log('[API CLIENT] Sending request to:', `${API_BASE_URL}/api/subscriptions/create-checkout-session`);
-    
+
     const response = await axiosInstance.post('/api/subscriptions/create-checkout-session', {
       tier
     });
-    
+
     console.log('[API CLIENT] Checkout session response:', response.data);
-    
+
     return {
       success: true,
       data: response.data.data
@@ -287,12 +287,12 @@ class APIClient {
   async getUploadUrl(fileName: string, fileType: string): Promise<ApiResponse<{ uploadUrl: string; key: string }>> {
     console.log('[API_CLIENT] getUploadUrl called:', { fileName, fileType });
     const requestData = { filename: fileName, fileType };
-    
+
     try {
       console.log('Sending request to /api/videos/upload-url...');
       const response = await axiosInstance.post('/api/videos/upload-url', requestData);
       console.log('Upload URL response:', response.status, response.statusText);
-      
+
       const result = {
         success: true,
         data: {
@@ -310,12 +310,12 @@ class APIClient {
   async confirmUpload(key: string, originalName: string, size?: number, mimeType?: string, language?: string): Promise<ApiResponse<Video>> {
     console.log('[API_CLIENT] confirmUpload called:', { key, originalName, size, mimeType, language });
     const requestData = { s3Key: key, originalName, size, mimeType, language };
-    
+
     try {
       console.log('Sending request to /api/videos/confirm-upload...');
       const response = await axiosInstance.post('/api/videos/confirm-upload', requestData);
       console.log('Confirmation response:', response.status, response.statusText);
-      
+
       const result = {
         success: true,
         data: response.data.video
@@ -366,27 +366,27 @@ class APIClient {
   async uploadVideo(file: File, onProgress?: (progress: number) => void, language?: string): Promise<Video> {
     console.log('[API_CLIENT] uploadVideo started', { language });
     console.log('File details:', { name: file.name, size: file.size, type: file.type });
-    
+
     // Use multipart upload for files larger than 50MB
     const USE_MULTIPART_THRESHOLD = 50 * 1024 * 1024; // 50MB
-    
+
     if (file.size > USE_MULTIPART_THRESHOLD) {
       console.log(`Large file detected (${Math.round(file.size / 1024 / 1024)}MB), using multipart upload`);
       return this.uploadVideoMultipart(file, onProgress, language);
     }
-    
+
     try {
       console.log('Step 1: Getting upload URL...');
       const uploadUrlResponse = await this.getUploadUrl(file.name, file.type);
       console.log('Upload URL response:', { success: uploadUrlResponse.success, hasData: !!uploadUrlResponse.data });
-      
+
       if (!uploadUrlResponse.success || !uploadUrlResponse.data) {
         throw new Error('Failed to get upload URL');
       }
 
       const { uploadUrl, key } = uploadUrlResponse.data;
       console.log('Received S3 key:', key);
-      
+
       // Validate the URL format
       try {
         new URL(uploadUrl);
@@ -404,9 +404,9 @@ class APIClient {
           'Content-Type': file.type,
         },
       });
-      
+
       console.log('S3 upload response:', { status: response.status, ok: response.ok });
-      
+
       if (!response.ok) {
         let errorText = '';
         try {
@@ -417,13 +417,13 @@ class APIClient {
         console.error('S3 upload failed:', { status: response.status, statusText: response.statusText, errorText });
         throw new Error(`S3 upload failed with status ${response.status}: ${errorText || response.statusText}`);
       }
-      
+
       console.log('S3 upload successful, confirming upload...');
       console.log('Step 3: Confirming upload in database...');
-      
+
       const confirmResponse = await this.confirmUpload(key, file.name, file.size, file.type, language);
       console.log('Confirmation response:', { success: confirmResponse.success, hasData: !!confirmResponse.data });
-      
+
       if (!confirmResponse.success || !confirmResponse.data) {
         throw new Error('Failed to confirm upload');
       }
@@ -440,7 +440,7 @@ class APIClient {
     console.log('[API_CLIENT] uploadVideoMultipart started');
     const fileSizeMB = Math.round(file.size / 1024 / 1024);
     const startTime = Date.now();
-    
+
     try {
       // Step 1: Initiate multipart upload
       console.log('Initiating multipart upload...');
@@ -449,18 +449,18 @@ class APIClient {
         fileType: file.type,
         fileSize: file.size,
       });
-      
+
       const { uploadId, s3Key, chunkSize } = initResponse.data;
       const chunkSizeMB = Math.round(chunkSize / 1024 / 1024);
       console.log(`Upload initiated: ID=${uploadId}, chunk=${chunkSizeMB}MB`);
-      
+
       // Step 2: Upload chunks in parallel
       const totalChunks = Math.ceil(file.size / chunkSize);
       console.log(`Total chunks: ${totalChunks}`);
-      
+
       const uploadedParts: Array<{ ETag: string; PartNumber: number }> = [];
       let uploadedBytes = 0;
-      
+
       // OPTIMIZED: Dynamic concurrency based on file size for maximum speed
       let MAX_CONCURRENT: number;
       if (file.size > 2 * 1024 * 1024 * 1024) { // >2GB
@@ -473,17 +473,17 @@ class APIClient {
         MAX_CONCURRENT = 8; // 8 parallel uploads (default)
       }
       console.log(`Concurrency: ${MAX_CONCURRENT} parallel uploads`);
-      
+
       // OPTIMIZED: Pre-fetch all presigned URLs for faster uploads
       console.log('Pre-fetching presigned URLs...');
-      const presignedUrlPromises = Array.from({ length: totalChunks }, (_, i) => 
+      const presignedUrlPromises = Array.from({ length: totalChunks }, (_, i) =>
         axiosInstance.post('/api/videos/multipart/part-url', {
           s3Key,
           uploadId,
           partNumber: i + 1,
         }).then(res => res.data.presignedUrl)
       );
-      
+
       // Batch fetch URLs (8 at a time to avoid overwhelming the server)
       const presignedUrls: string[] = [];
       for (let i = 0; i < totalChunks; i += 8) {
@@ -492,49 +492,49 @@ class APIClient {
         presignedUrls.push(...urls);
       }
       console.log(`Got ${presignedUrls.length} presigned URLs`);
-      
+
       const uploadChunk = async (chunkIndex: number, retryCount = 0): Promise<{ ETag: string; PartNumber: number }> => {
         const start = chunkIndex * chunkSize;
         const end = Math.min(start + chunkSize, file.size);
         const chunk = file.slice(start, end);
         const partNumber = chunkIndex + 1;
-        
+
         try {
           // Use pre-fetched presigned URL
           const presignedUrl = presignedUrls[chunkIndex];
-          
+
           // Upload the chunk
           const response = await fetch(presignedUrl, {
             method: 'PUT',
             body: chunk,
             headers: { 'Content-Type': file.type },
           });
-          
+
           if (!response.ok) {
             throw new Error(`Failed to upload part ${partNumber}: ${response.statusText}`);
           }
-          
+
           const etag = response.headers.get('ETag');
           if (!etag) {
             throw new Error(`No ETag received for part ${partNumber}`);
           }
-          
+
           uploadedBytes += chunk.size;
           const progress = Math.round((uploadedBytes / file.size) * 100);
           const elapsed = (Date.now() - startTime) / 1000;
           const speedMBps = (uploadedBytes / 1024 / 1024) / elapsed;
           const remaining = file.size - uploadedBytes;
           const eta = remaining / (uploadedBytes / elapsed);
-          
+
           // Log every 10% or at completion
           if (progress % 10 === 0 || progress === 100) {
             console.log(`Part ${partNumber}/${totalChunks} (${progress}%) @ ${speedMBps.toFixed(1)}MB/s | ETA: ${Math.round(eta)}s`);
           }
-          
+
           if (onProgress) {
             onProgress(progress);
           }
-          
+
           return { ETag: etag, PartNumber: partNumber };
         } catch (error: any) {
           // Auto-retry on failure (up to 3 times)
@@ -546,7 +546,7 @@ class APIClient {
           throw error;
         }
       };
-      
+
       // Upload chunks with concurrency control
       for (let i = 0; i < totalChunks; i += MAX_CONCURRENT) {
         const batch = [];
@@ -556,10 +556,10 @@ class APIClient {
         const results = await Promise.all(batch);
         uploadedParts.push(...results);
       }
-      
+
       // Sort parts by part number
       uploadedParts.sort((a, b) => a.PartNumber - b.PartNumber);
-      
+
       // Step 3: Complete multipart upload
       console.log('Completing multipart upload...');
       const completeResponse = await axiosInstance.post('/api/videos/multipart/complete', {
@@ -570,15 +570,15 @@ class APIClient {
         size: file.size,
         mimeType: file.type,
       });
-      
+
       const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
       const avgSpeed = (fileSizeMB / parseFloat(totalTime)).toFixed(1);
       console.log(`Multipart upload completed in ${totalTime}s (avg ${avgSpeed}MB/s)`);
-      
+
       return completeResponse.data.video;
     } catch (error: any) {
       console.error('Multipart upload failed:', error);
-      
+
       // Attempt to abort the multipart upload on error
       try {
         if (error.uploadId && error.s3Key) {
@@ -591,13 +591,13 @@ class APIClient {
       } catch (abortError) {
         console.error('Failed to abort multipart upload:', abortError);
       }
-      
+
       throw new Error('Failed to upload video: ' + (error.response?.data?.message || error.message));
     }
   }
 
-  async generateSubtitles(videoId: string, options?: any, language?: string): Promise<{ 
-    message: string; 
+  async generateSubtitles(videoId: string, options?: any, language?: string): Promise<{
+    message: string;
     videoId: string;
     jobId: string;
     estimatedTimeMinutes: number;
@@ -618,7 +618,7 @@ class APIClient {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
-    
+
     if (authHeader.Authorization) {
       headers.Authorization = authHeader.Authorization;
     }
@@ -651,7 +651,7 @@ class APIClient {
   }> {
     const authHeader = this.getAuthHeader();
     const headers: Record<string, string> = {};
-    
+
     if (authHeader.Authorization) {
       headers.Authorization = authHeader.Authorization;
     }
@@ -681,7 +681,7 @@ class APIClient {
       const poll = async () => {
         try {
           const status = await this.getSubtitleJobStatus(jobId);
-          
+
           // Report progress
           if (onProgress) {
             const etaMs = status.estimatedRemainingMinutes * 60 * 1000;
@@ -722,7 +722,7 @@ class APIClient {
   async getSubtitles(videoId: string): Promise<{ subtitles: any[]; status: string }> {
     const authHeader = this.getAuthHeader();
     const headers: Record<string, string> = {};
-    
+
     if (authHeader.Authorization) {
       headers.Authorization = authHeader.Authorization;
     }
@@ -745,7 +745,7 @@ class APIClient {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
-    
+
     if (authHeader.Authorization) {
       headers.Authorization = authHeader.Authorization;
     }
@@ -779,7 +779,7 @@ class APIClient {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
-    
+
     if (authHeader.Authorization) {
       headers.Authorization = authHeader.Authorization;
     }
@@ -825,7 +825,7 @@ class APIClient {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
-    
+
     if (authHeader.Authorization) {
       headers.Authorization = authHeader.Authorization;
     }
@@ -857,7 +857,7 @@ class APIClient {
   }> {
     const authHeader = this.getAuthHeader();
     const headers: Record<string, string> = {};
-    
+
     if (authHeader.Authorization) {
       headers.Authorization = authHeader.Authorization;
     }
@@ -877,7 +877,7 @@ class APIClient {
 
   // Poll job status for long-running operations
   async pollJobStatus(
-    projectId: string, 
+    projectId: string,
     onProgress?: (progress: { status: string; progress?: number; message?: string }) => void,
     maxAttempts: number = 36, // 15 minutes with 25s intervals
     interval: number = 25000 // 25 seconds to reduce server load
@@ -889,13 +889,13 @@ class APIClient {
     config: any;
   }> {
     let attempts = 0;
-    
+
     return new Promise((resolve, reject) => {
       const poll = async () => {
         try {
           attempts++;
           const project = await this.getSplitStreamerProject(projectId);
-          
+
           // Call progress callback if provided
           if (onProgress) {
             onProgress({
@@ -903,33 +903,33 @@ class APIClient {
               message: `Processing video combination... (${attempts}/${maxAttempts})`
             });
           }
-          
+
           // Check if job is complete
           if (project.status === 'completed') {
             resolve(project);
             return;
           }
-          
+
           // Check if job failed
           if (project.status === 'failed' || project.status === 'error') {
             reject(new Error('Video combination failed'));
             return;
           }
-          
+
           // Check if we've exceeded max attempts
           if (attempts >= maxAttempts) {
             reject(new Error('Video combination timed out'));
             return;
           }
-          
+
           // Continue polling
           setTimeout(poll, interval);
-          
+
         } catch (error) {
           reject(error);
         }
       };
-      
+
       // Start polling
       poll();
     });
@@ -1031,6 +1031,265 @@ class APIClient {
       return token ? { Authorization: `Bearer ${token}` } : {};
     }
     return {};
+  }
+
+  // ==========================================
+  // Podcast Clipper Methods
+  // ==========================================
+
+  async getPodcastClipperYouTubeInfo(url: string): Promise<{
+    success: boolean;
+    videoInfo?: {
+      title: string;
+      duration: number;
+      durationFormatted: string;
+      thumbnail: string;
+      channelName?: string;
+      platform: string;
+      url: string;
+    };
+    error?: string;
+  }> {
+    const response = await axiosInstance.get('/api/podcast-clipper/youtube-info', { params: { url } });
+    return response.data;
+  }
+
+  async uploadPodcastClipperVideo(
+    file: File,
+    onProgress?: (progress: number) => void
+  ): Promise<{
+    success: boolean;
+    videoId: string;
+    filename: string;
+    size: number;
+    duration?: number;
+    previewUrl: string;
+    uploadedAt: string;
+  }> {
+    // Use multipart upload for files larger than 50MB
+    const USE_MULTIPART_THRESHOLD = 50 * 1024 * 1024;
+
+    if (file.size > USE_MULTIPART_THRESHOLD) {
+      // Use existing multipart upload and then register with podcast-clipper
+      const video = await this.uploadVideoMultipart(file, onProgress);
+      return {
+        success: true,
+        videoId: video.id,
+        filename: video.originalName,
+        size: video.size || file.size,
+        duration: video.duration,
+        previewUrl: video.thumbnailPath || '',
+        uploadedAt: video.createdAt,
+      };
+    }
+
+    // For smaller files, use direct upload
+    const uploadUrlResponse = await this.getUploadUrl(file.name, file.type);
+    if (!uploadUrlResponse.success || !uploadUrlResponse.data) {
+      throw new Error('Failed to get upload URL');
+    }
+
+    const { uploadUrl, key } = uploadUrlResponse.data;
+
+    // Upload to S3
+    const response = await fetch(uploadUrl, {
+      method: 'PUT',
+      body: file,
+      headers: { 'Content-Type': file.type },
+    });
+
+    if (!response.ok) {
+      throw new Error(`S3 upload failed: ${response.statusText}`);
+    }
+
+    // Confirm upload
+    const confirmResponse = await this.confirmUpload(key, file.name, file.size, file.type);
+    if (!confirmResponse.success || !confirmResponse.data) {
+      throw new Error('Failed to confirm upload');
+    }
+
+    const video = confirmResponse.data;
+    return {
+      success: true,
+      videoId: video.id,
+      filename: video.originalName,
+      size: video.size || file.size,
+      duration: video.duration,
+      previewUrl: video.thumbnailPath || '',
+      uploadedAt: video.createdAt,
+    };
+  }
+
+  async createPodcastClipperProject(params: {
+    sourceType: 'upload' | 'youtube';
+    sourceUrl?: string;
+    videoId?: string;
+    title?: string;
+    thumbnail?: string;
+    totalDuration?: number;
+    clipStartTime: number;
+    clipEndTime: number;
+    subtitleStyle: string;
+    whisperModel?: string;
+  }): Promise<{
+    success: boolean;
+    projectId: string;
+    estimatedCredits: number;
+    estimatedProcessingTime: number;
+  }> {
+    const response = await axiosInstance.post('/api/podcast-clipper/projects', params);
+    return response.data;
+  }
+
+  async getPodcastClipperProjectStatus(projectId: string): Promise<{
+    id: string;
+    status: string;
+    progress: number;
+    processingStage?: string;
+    speakersDetected?: number;
+    layoutMode?: string;
+    outputUrl?: string;
+    outputSignedUrl?: string;
+    errorMessage?: string;
+    createdAt: string;
+    completedAt?: string;
+  }> {
+    const response = await axiosInstance.get(`/api/podcast-clipper/projects/${projectId}/status`);
+    return response.data;
+  }
+
+  async pollPodcastClipperProject(
+    projectId: string,
+    onProgress?: (status: {
+      status: string;
+      progress: number;
+      processingStage?: string;
+      speakersDetected?: number;
+      layoutMode?: string;
+    }) => void,
+    pollInterval: number = 3000,
+    maxAttempts: number = 600 // 30 minutes max
+  ): Promise<{
+    id: string;
+    status: string;
+    outputUrl?: string;
+    outputSignedUrl?: string;
+  }> {
+    return new Promise((resolve, reject) => {
+      let attempts = 0;
+
+      const poll = async () => {
+        try {
+          attempts++;
+          const status = await this.getPodcastClipperProjectStatus(projectId);
+
+          if (onProgress) {
+            onProgress({
+              status: status.status,
+              progress: status.progress,
+              processingStage: status.processingStage,
+              speakersDetected: status.speakersDetected,
+              layoutMode: status.layoutMode,
+            });
+          }
+
+          if (status.status === 'completed') {
+            resolve({
+              id: status.id,
+              status: status.status,
+              outputUrl: status.outputUrl,
+              outputSignedUrl: status.outputSignedUrl,
+            });
+            return;
+          }
+
+          if (status.status === 'failed') {
+            reject(new Error(status.errorMessage || 'Processing failed'));
+            return;
+          }
+
+          if (attempts >= maxAttempts) {
+            reject(new Error('Processing timed out'));
+            return;
+          }
+
+          setTimeout(poll, pollInterval);
+        } catch (error) {
+          reject(error);
+        }
+      };
+
+      poll();
+    });
+  }
+
+  async getPodcastClipperDownloadUrl(projectId: string): Promise<{
+    success: boolean;
+    downloadUrl: string;
+    filename: string;
+    expiresIn: number;
+  }> {
+    const response = await axiosInstance.get(`/api/podcast-clipper/projects/${projectId}/download`);
+    return response.data;
+  }
+
+  async getPodcastClipperProjects(limit?: number, offset?: number): Promise<{
+    success: boolean;
+    projects: Array<{
+      id: string;
+      title?: string;
+      thumbnail?: string;
+      sourceType: string;
+      clipStartTime: number;
+      clipEndTime: number;
+      clipDuration: number;
+      subtitleStyle: string;
+      status: string;
+      progress: number;
+      outputUrl?: string;
+      outputSignedUrl?: string;
+      createdAt: string;
+      completedAt?: string;
+    }>;
+    total: number;
+    limit: number;
+    offset: number;
+  }> {
+    const response = await axiosInstance.get('/api/podcast-clipper/projects', {
+      params: { limit, offset }
+    });
+    return response.data;
+  }
+
+  async calculatePodcastClipperCredits(clipDuration: number): Promise<{
+    success: boolean;
+    clipDuration: number;
+    credits: number;
+    estimatedProcessingTime: number;
+  }> {
+    const response = await axiosInstance.post('/api/podcast-clipper/calculate-credits', { clipDuration });
+    return response.data;
+  }
+
+  async getPodcastClipperSubtitleStyles(): Promise<{
+    success: boolean;
+    styles: Array<{
+      styleKey: string;
+      name: string;
+      description: string;
+      previewImage?: string;
+      fontFamily: string;
+      fontSize: number;
+      primaryColor: string;
+      highlightColor: string;
+      borderWidth: number;
+      shadowDepth: number;
+      scaleNormal: number;
+      scaleHighlight: number;
+    }>;
+  }> {
+    const response = await axiosInstance.get('/api/podcast-clipper/subtitle-styles');
+    return response.data;
   }
 }
 

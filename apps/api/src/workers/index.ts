@@ -1,4 +1,4 @@
-import { videoProcessingQueue, subtitleQueue, aiQueue, smartClipperQueue } from '../lib/queues';
+import { videoProcessingQueue, subtitleQueue, aiQueue, smartClipperQueue, podcastClipperQueue } from '../lib/queues';
 import Bull from 'bull';
 import { generateSubtitles, generateSRT } from '../services/auto-subtitles.service';
 import { combineVideos } from '../services/split-streamer.service';
@@ -340,6 +340,13 @@ export const extractClipQueue = new Bull('extract-clip', {
   }
 });
 
+/**
+ * Immediately log the start of the extraction clip processing to verify this section is executing
+ */
+extractClipQueue.on('waiting', (jobId) => {
+  console.log(`[EXTRACT_CLIP] Job ${jobId} is waiting to be processed`);
+});
+
 extractClipQueue.process('extract-clip', 2, async (job) => {
   try {
     const { projectId, videoUrl, startTime, endTime, highlightType } = job.data;
@@ -392,7 +399,11 @@ extractClipQueue.process('extract-clip', 2, async (job) => {
   }
 });
 
+/**
+ * Immediately log the start of the clip clipping to verify the clip clipping section is executing
+ */
 console.log('Setting up Smart Clipper processor...');
+console.log('smartClipperQueue exists:', !!smartClipperQueue);
 
 smartClipperQueue.on('waiting', (jobId) => {
   console.log(`Smart Clipper job ${jobId} is waiting to be processed`);
@@ -408,14 +419,20 @@ smartClipperQueue.on('progress', (job, progress) => {
 
 smartClipperQueue.on('completed', (job, result) => {
   console.log(`Smart Clipper job ${job.id} completed successfully`);
+  console.log(`Smart Clipper job ${job.id} result:`, JSON.stringify(result));
 });
 
 smartClipperQueue.on('failed', (job, error) => {
   console.error(`Smart Clipper job ${job?.id} failed:`, error.message);
+  console.error(`Smart Clipper job ${job?.id} stack trace:`, error.stack);
 });
 
 smartClipperQueue.on('stalled', (job) => {
   console.warn(`Smart Clipper job ${job.id} stalled`);
+});
+
+smartClipperQueue.on('error', (error) => {
+  console.error(`Smart Clipper queue error:`, error.message);
 });
 
 smartClipperQueue.process('analyze-video-complete', 10, async (job) => {
@@ -912,6 +929,9 @@ setTimeout(async () => {
   }
 }, 3000);
 
+/**
+ * Immediately log the start of the extraction clip generation to verify the clip generation section is executing
+ */
 smartClipperQueue.process('generate-clip', 8, async (job) => {
   const { segmentId, videoPath, startTime, endTime, exportSettings, projectId, userId } = job.data;
   
@@ -964,7 +984,7 @@ smartClipperQueue.process('score-segments', 6, async (job) => {
     await prisma.smartClipperProject.update({
       where: { id: projectId },
       data: { 
-        status: 'ready',
+        status: 'completed',
         processingStage: null,
         scoringResults: analytics
       }
@@ -1019,3 +1039,333 @@ smartClipperQueue.process('rebalance-scores', 6, async (job) => {
     throw error;
   }
 });
+
+// ============================================================================
+// Podcast Clipper Queue Processor
+// ============================================================================
+
+console.log('[PODCAST_CLIPPER_INIT] Setting up Podcast Clipper processor...');
+console.log('[PODCAST_CLIPPER_INIT] podcastClipperQueue exists:', !!podcastClipperQueue);
+
+podcastClipperQueue.on('waiting', (jobId) => {
+  console.log(`[PODCAST_CLIPPER] Job ${jobId} is waiting to be processed`);
+});
+
+podcastClipperQueue.on('active', (job) => {
+  console.log(`[PODCAST_CLIPPER] Job ${job.id} started processing`);
+  console.log(`[PODCAST_CLIPPER] Job data:`, JSON.stringify(job.data));
+});
+
+podcastClipperQueue.on('progress', (job, progress) => {
+  console.log(`[PODCAST_CLIPPER] Job ${job.id} progress: ${progress}%`);
+});
+
+podcastClipperQueue.on('completed', (job, result) => {
+  console.log(`[PODCAST_CLIPPER] Job ${job.id} completed successfully`);
+  console.log(`[PODCAST_CLIPPER] Result:`, JSON.stringify(result));
+});
+
+podcastClipperQueue.on('failed', (job, error) => {
+  console.error(`[PODCAST_CLIPPER] Job ${job?.id} failed:`, error.message);
+  console.error(`[PODCAST_CLIPPER] Error stack:`, error.stack);
+});
+
+podcastClipperQueue.on('stalled', (job) => {
+  console.warn(`[PODCAST_CLIPPER] Job ${job.id} stalled`);
+});
+
+podcastClipperQueue.on('error', (error) => {
+  console.error(`[PODCAST_CLIPPER] Queue error:`, error.message);
+});
+
+/**
+ * Podcast Clipper Queue Processor
+ * 
+ * This processor handles the orchestration of podcast clip generation.
+ * The actual heavy lifting (transcription, face detection, rendering) is done
+ * by the Python worker service which polls Redis for jobs.
+ * 
+ * Flow:
+ * 1. Node.js receives job and updates status to 'processing'
+ * 2. Node.js downloads video (if YouTube) or gets S3 URL
+ * 3. Node.js pushes job to Python worker queue
+ * 4. Python worker processes video and updates status via Redis
+ * 5. Node.js monitors completion and finalizes
+ */
+podcastClipperQueue.process('process-podcast-clip', 3, async (job) => {
+  const { 
+    projectId, 
+    userId, 
+    sourceType, 
+    sourceUrl, 
+    videoId,
+    clipStartTime, 
+    clipEndTime, 
+    subtitleStyle, 
+    whisperModel,
+    requestId 
+  } = job.data;
+  
+  console.log(`[${requestId}] Starting Podcast Clipper processing for project ${projectId}`);
+  console.log(`[${requestId}] Source: ${sourceType}, Clip: ${clipStartTime}s - ${clipEndTime}s`);
+  console.log(`[${requestId}] Style: ${subtitleStyle}, Whisper: ${whisperModel}`);
+  
+  try {
+    // Update project status
+    await prisma.podcastClipperProject.update({
+      where: { id: projectId },
+      data: { 
+        status: 'processing',
+        processingStage: 'initializing',
+        progress: 5
+      }
+    });
+    
+    await job.progress(5);
+    
+    let videoPath: string;
+    let localVideoPath: string | null = null;
+    
+    // Step 1: Get video file
+    if (sourceType === 'youtube') {
+      console.log(`[${requestId}] Downloading YouTube video...`);
+      
+      await prisma.podcastClipperProject.update({
+        where: { id: projectId },
+        data: { 
+          status: 'downloading',
+          processingStage: 'downloading',
+          progress: 10
+        }
+      });
+      
+      await job.progress(10);
+      
+      const { videoDownloader } = await import('../services/video-downloader.service');
+      const downloadResult = await videoDownloader.downloadAndGetDuration(sourceUrl!, userId);
+      
+      localVideoPath = downloadResult.localPath;
+      
+      // Upload to S3 for processing
+      const { promises: fs } = await import('fs');
+      const fileBuffer = await fs.readFile(localVideoPath);
+      
+      const { uploadFile, generateKey } = await import('../lib/s3');
+      const s3Key = generateKey(userId, downloadResult.fileName, 'video');
+      videoPath = await uploadFile(s3Key, fileBuffer, 'video/mp4');
+      
+      console.log(`[${requestId}] Video uploaded to S3: ${videoPath}`);
+      
+      // Update project with video info
+      await prisma.podcastClipperProject.update({
+        where: { id: projectId },
+        data: { 
+          totalDuration: downloadResult.duration,
+          progress: 20
+        }
+      });
+      
+      await job.progress(20);
+      
+    } else {
+      // Get video from uploaded file
+      const video = await prisma.video.findUnique({
+        where: { id: videoId }
+      });
+      
+      if (!video) {
+        throw new Error('Uploaded video not found');
+      }
+      
+      videoPath = video.filePath;
+      console.log(`[${requestId}] Using uploaded video: ${videoPath}`);
+      
+      await job.progress(20);
+    }
+    
+    // Step 2: Push job to Python worker queue via Redis
+    console.log(`[${requestId}] Pushing job to Python worker queue...`);
+    
+    await prisma.podcastClipperProject.update({
+      where: { id: projectId },
+      data: { 
+        status: 'processing',
+        processingStage: 'queued_for_processing',
+        progress: 25
+      }
+    });
+    
+    await job.progress(25);
+    
+    // Create Python worker job payload
+    const pythonJobPayload = {
+      job_id: requestId,
+      project_id: projectId,
+      user_id: userId,
+      video_path: videoPath,
+      clip_start_time: clipStartTime,
+      clip_end_time: clipEndTime,
+      subtitle_style: subtitleStyle,
+      whisper_model: whisperModel,
+      output_bucket: process.env.AWS_S3_BUCKET_NAME || 'smart-clip-temp',
+      output_prefix: `podcast-clips/${userId}/${projectId}`,
+      created_at: new Date().toISOString()
+    };
+    
+    // Push to Redis queue for Python worker
+    // Use the redis package (already installed) instead of ioredis
+    const { createClient } = await import('redis');
+    const redis = createClient({
+      url: process.env.REDIS_URL || 'redis://localhost:6379'
+    });
+    await redis.connect();
+    
+    await redis.lPush('podcast_clipper_jobs', JSON.stringify(pythonJobPayload));
+    console.log(`[${requestId}] Job pushed to Python worker queue`);
+    
+    // Step 3: Poll for completion (with timeout)
+    let maxWaitTime = 55 * 60 * 1000; // 55 minutes (leave buffer for job timeout)
+    let pollInterval = 5000; // 5 seconds
+    let startTime = Date.now();
+    
+    console.log(`[${requestId}] Waiting for Python worker to complete...`);
+    
+    while (Date.now() - startTime < maxWaitTime) {
+      // Check for completion status in Redis
+      const statusKey = `podcast_clipper_status:${projectId}`;
+      const statusJson = await redis.get(statusKey);
+      
+      if (statusJson) {
+        const status = JSON.parse(statusJson);
+        
+        // Update progress
+        if (status.progress) {
+          const mappedProgress = 25 + (status.progress * 0.7); // Map 0-100 to 25-95
+          await job.progress(mappedProgress);
+          
+          await prisma.podcastClipperProject.update({
+            where: { id: projectId },
+            data: { 
+              progress: Math.round(mappedProgress),
+              processingStage: status.stage || 'processing'
+            }
+          });
+        }
+        
+        // Check for completion
+        if (status.status === 'completed') {
+          console.log(`[${requestId}] Python worker completed successfully`);
+          
+          // Get output URL from status
+          const outputUrl = status.output_url;
+          const speakersDetected = status.speakers_detected || 1;
+          const layoutMode = status.layout_mode || 'single';
+          const processingTimeMs = status.processing_time_ms;
+          
+          // Calculate credits
+          const clipDuration = clipEndTime - clipStartTime;
+          const creditsUsed = Math.ceil(clipDuration / 60) * 2;
+          
+          // Deduct credits
+          const { podcastClipperService } = await import('../services/podcast-clipper.service');
+          await podcastClipperService.deductCredits(projectId, userId, creditsUsed);
+          
+          // Update project as completed
+          await prisma.podcastClipperProject.update({
+            where: { id: projectId },
+            data: { 
+              status: 'completed',
+              processingStage: null,
+              progress: 100,
+              outputUrl,
+              speakersDetected,
+              layoutMode,
+              processingTimeMs,
+              completedAt: new Date()
+            }
+          });
+          
+          await job.progress(100);
+          
+          // Cleanup
+          await redis.del(statusKey);
+          await redis.quit();
+          
+          if (localVideoPath) {
+            const { videoDownloader } = await import('../services/video-downloader.service');
+            await videoDownloader.cleanupFile(localVideoPath);
+          }
+          
+          console.log(`[${requestId}] Podcast clip completed: ${outputUrl}`);
+          
+          return {
+            projectId,
+            outputUrl,
+            speakersDetected,
+            layoutMode,
+            creditsUsed
+          };
+        }
+        
+        // Check for failure
+        if (status.status === 'failed') {
+          const errorMessage = status.error || 'Python worker failed';
+          throw new Error(errorMessage);
+        }
+      }
+      
+      // Wait before next poll
+      await new Promise(resolve => setTimeout(resolve, pollInterval));
+    }
+    
+    // Timeout reached
+    await redis.quit();
+    throw new Error('Processing timeout - Python worker did not complete in time');
+    
+  } catch (error: any) {
+    console.error(`[${requestId}] Podcast Clipper failed:`, error.message);
+    
+    await prisma.podcastClipperProject.update({
+      where: { id: projectId },
+      data: { status: 'failed', errorMessage: error.message }
+    });
+    
+    throw error;
+  }
+});
+
+console.log('Podcast Clipper processor registered');
+
+// Check podcast clipper queue status after a delay
+setTimeout(async () => {
+  try {
+    console.log('[PODCAST_CLIPPER_CHECK] Checking podcast clipper queue status...');
+    const stats = await podcastClipperQueue.getJobCounts();
+    console.log(`[PODCAST_CLIPPER_CHECK] Queue stats: waiting(${stats.waiting}) active(${stats.active}) completed(${stats.completed}) failed(${stats.failed}) delayed(${stats.delayed})`);
+    
+    if (stats.waiting > 0) {
+      const waitingJobs = await podcastClipperQueue.getWaiting();
+      console.log(`[PODCAST_CLIPPER_CHECK] Found ${waitingJobs.length} waiting jobs`);
+      for (const job of waitingJobs) {
+        console.log(`[PODCAST_CLIPPER_CHECK] Waiting job ${job.id}: ${job.name}`, job.data?.projectId);
+      }
+      
+      // Try to resume the queue if it's paused
+      console.log('[PODCAST_CLIPPER_CHECK] Checking if queue is paused...');
+      const isPaused = await podcastClipperQueue.isPaused();
+      console.log(`[PODCAST_CLIPPER_CHECK] Queue paused: ${isPaused}`);
+      
+      if (isPaused) {
+        console.log('[PODCAST_CLIPPER_CHECK] Resuming paused queue...');
+        await podcastClipperQueue.resume();
+      }
+      
+      // Check if processor is registered
+      console.log('[PODCAST_CLIPPER_CHECK] Checking processor count...');
+      const client = await podcastClipperQueue.client;
+      console.log('[PODCAST_CLIPPER_CHECK] Queue client connected:', client.status);
+    }
+  } catch (error) {
+    console.error('[PODCAST_CLIPPER_CHECK] Error checking queue:', error);
+  }
+}, 5000);

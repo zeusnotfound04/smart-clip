@@ -136,6 +136,7 @@ export const uploadFile = async (key: string, buffer: Buffer, contentType: strin
 
     
     
+    
     const params = {
       Bucket: process.env.AWS_S3_BUCKET_NAME,
       Key: `videos/${timestampedFilename}`,
@@ -152,7 +153,29 @@ export const uploadFile = async (key: string, buffer: Buffer, contentType: strin
 
 
 
-export const getSignedDownloadUrl = async (key: string, expiresIn: number = 3600): Promise<string> => {
+
+export const getSignedDownloadUrl = async (keyOrUrl: string, expiresIn: number = 3600): Promise<string> => {
+  // Extract key from full URL if needed
+  let key = keyOrUrl;
+  
+  // Handle full S3 URLs
+  if (keyOrUrl.startsWith('https://')) {
+    // Parse URL to extract key
+    // Format: https://bucket.s3.region.amazonaws.com/key
+    // or: https://bucket.s3-accelerate.amazonaws.com/key
+    try {
+      const url = new URL(keyOrUrl);
+      key = url.pathname.slice(1); // Remove leading slash
+    } catch (e) {
+      // If URL parsing fails, use as-is
+      console.warn(`Could not parse URL, using as key: ${keyOrUrl}`);
+    }
+  } else if (keyOrUrl.startsWith('s3://')) {
+    // Handle s3:// URLs
+    const parts = keyOrUrl.slice(5).split('/');
+    key = parts.slice(1).join('/'); // Remove bucket name
+  }
+  
   const command = new GetObjectCommand({
     Bucket: bucketName,
     Key: key,
