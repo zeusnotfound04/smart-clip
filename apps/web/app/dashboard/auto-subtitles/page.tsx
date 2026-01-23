@@ -342,7 +342,7 @@ export default function AutoSubtitlesPage() {
         ...subtitleOptions,
         style: {
           ...subtitleOptions.style,
-          fontSize: finalFontSize, // Send the final scaled font size
+          fontSize: finalFontSize, 
           position: subtitlePosition,
           scale: subtitleScale
         }
@@ -485,7 +485,7 @@ export default function AutoSubtitlesPage() {
       {/* Header with Logo Integration */}
       <AppHeader 
         title="Auto Subtitles"
-        description="Generate accurate subtitles using AI speech recognition"
+        description="Generate accurate subtitles using AI speech recognition heloo bhai"
         icon={<Subtitles className="w-6 h-6 text-white" />}
       />
 

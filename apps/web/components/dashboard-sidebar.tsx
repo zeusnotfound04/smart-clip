@@ -52,13 +52,13 @@ const navigationItems = [
     title: "Auto Subtitles",
     url: "/dashboard/auto-subtitles",
     icon: FileText,
-    badge: "New",
+    badge: null,
   },
   {
     title: "AI Script Generator",
     url: "/dashboard/ai-script-generator",
     icon: Wand2,
-    badge: "AI",
+    badge: null,
   },
   {
     title: "Podcast Clipper",
@@ -82,7 +82,7 @@ const navigationItems = [
     title: "Split Streamer",
     url: "/dashboard/features/split-streamer",
     icon: Columns2,
-    badge: "New",
+    badge: null,
   },
   // {
   //   title: "Video Enhancement",
@@ -138,63 +138,108 @@ export function DashboardSidebar() {
       collapsible="icon"
       className="border-r border-border bg-sidebar"
     >
-      <SidebarHeader className="border-b border-gray-800 p-4">
+      <SidebarHeader className="border-b border-gray-800 p-6">
         <div className="flex items-center justify-center">
           <motion.div
-            className="flex h-10 w-48 items-center justify-center rounded-lg  overflow-hidden"
+            className="flex h-12 w-full items-center justify-center rounded-xl overflow-hidden relative group"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: "spring", stiffness: 200 }}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            <Image src="/dash-logo.png" alt="SmartClip Logo" width={50} height={15} className="object-contain" />
+            <motion.div
+              className="absolute inset-0 bg-white/5 rounded-xl"
+              initial={{ opacity: 0 }}
+              whileHover={{ opacity: 1 }}
+              transition={{ duration: 0.2 }}
+            />
+            <Image src="/dash-logo.png" alt="SmartClip Logo" width={50} height={15} className="object-contain relative z-10" />
           </motion.div>
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="bg-sidebar">
+      <SidebarContent className="bg-sidebar px-3 py-4">
         <SidebarGroup>
-          <SidebarGroupLabel className="text-gray-400 text-xs font-medium px-2 pb-2">
-            MAIN MENU
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
+          <motion.div
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.1 }}
+          >
+            <SidebarGroupLabel className="text-gray-400 text-xs font-bold uppercase tracking-wider px-4 pb-3 pt-2">
+              Main Menu
+            </SidebarGroupLabel>
+          </motion.div>
+          <SidebarGroupContent className="space-y-1.5">
             <SidebarMenu>
-              {navigationItems.map((item) => {
+              {navigationItems.map((item, index) => {
                 const isActive = pathname === item.url;
                 return (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive}
-                      tooltip={state === "collapsed" ? item.title : undefined}
-                      className={`
-                        w-full justify-start text-left
-                        ${isActive 
-                          ? 'bg-white text-black hover:bg-gray-200' 
-                          : 'text-gray-300 hover:bg-gray-900 hover:text-white'
-                        }
-                        transition-all duration-200 ease-in-out
-                        group relative
-                      `}
+                    <motion.div
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.1 + index * 0.05, type: "spring", stiffness: 200 }}
                     >
-                      <Link href={item.url} className="flex items-center gap-3 w-full">
-                        <motion.div
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.95 }}
-                        >
-                          <item.icon className="size-5" />
-                        </motion.div>
-                        <span className="flex-1 group-data-[collapsible=icon]:hidden">
-                          {item.title}
-                        </span>
-                        {item.badge && (
-                          <span className="ml-auto bg-green-500 text-black px-2 py-1 rounded-full text-xs font-medium group-data-[collapsible=icon]:hidden">
-                            {item.badge}
-                          </span>
-                        )}
-                        {isActive && state !== "collapsed" && (
-                          <ChevronRight className="size-4 ml-auto opacity-60" />
-                        )}
-                      </Link>
-                    </SidebarMenuButton>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive}
+                        tooltip={state === "collapsed" ? item.title : undefined}
+                        className={`
+                          w-full justify-start text-left rounded-xl relative overflow-hidden
+                          ${isActive 
+                            ? 'bg-white text-black hover:bg-gray-200 shadow-md' 
+                            : 'text-gray-300 hover:bg-gray-900 hover:text-white'
+                          }
+                          transition-all duration-300 ease-out
+                          group
+                        `}
+                      >
+                        <Link href={item.url} className="flex items-center gap-3.5 w-full py-1">
+                          <motion.div
+                            className={`p-2 rounded-lg ${isActive ? 'bg-gray-100' : 'bg-transparent'} transition-colors`}
+                            whileHover={{ scale: 1.15, rotate: 10 }}
+                            whileTap={{ scale: 0.9 }}
+                            transition={{ type: "spring", stiffness: 400 }}
+                          >
+                            <item.icon className="size-4" />
+                          </motion.div>
+                          <motion.span 
+                            className="flex-1 group-data-[collapsible=icon]:hidden font-medium text-sm"
+                            whileHover={{ x: 3 }}
+                            transition={{ type: "spring", stiffness: 300 }}
+                          >
+                            {item.title}
+                          </motion.span>
+                          {item.badge && (
+                            <motion.span 
+                              className="ml-auto bg-green-500 text-black px-2.5 py-0.5 rounded-full text-xs font-bold group-data-[collapsible=icon]:hidden shadow-sm"
+                              initial={{ scale: 0, rotate: -180 }}
+                              animate={{ scale: 1, rotate: 0 }}
+                              transition={{ type: "spring", delay: 0.2 + index * 0.05 }}
+                              whileHover={{ scale: 1.1 }}
+                            >
+                              {item.badge}
+                            </motion.span>
+                          )}
+                          {isActive && state !== "collapsed" && (
+                            <motion.div
+                              initial={{ x: -10, opacity: 0 }}
+                              animate={{ x: 0, opacity: 1 }}
+                              transition={{ type: "spring", stiffness: 200 }}
+                            >
+                              <ChevronRight className="size-4 ml-auto opacity-70" />
+                            </motion.div>
+                          )}
+                          {!isActive && (
+                            <motion.div
+                              className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 rounded-xl"
+                              transition={{ duration: 0.2 }}
+                            />
+                          )}
+                        </Link>
+                      </SidebarMenuButton>
+                    </motion.div>
                   </SidebarMenuItem>
                 );
               })}
@@ -202,41 +247,74 @@ export function DashboardSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
+        {/* Decorative Animated Divider */}
+        <motion.div 
+          className="mx-4 my-6 h-px bg-gradient-to-r from-transparent via-gray-700 to-transparent"
+          initial={{ scaleX: 0, opacity: 0 }}
+          animate={{ scaleX: 1, opacity: 1 }}
+          transition={{ delay: 0.5, duration: 0.5 }}
+        />
+
         <SidebarGroup className="mt-auto">
-          <SidebarGroupLabel className="text-gray-400 text-xs font-medium px-2 pb-2">
-            SUPPORT
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
+          <motion.div
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.6 }}
+          >
+            <SidebarGroupLabel className="text-gray-400 text-xs font-bold uppercase tracking-wider px-4 pb-3 pt-2">
+              Support
+            </SidebarGroupLabel>
+          </motion.div>
+          <SidebarGroupContent className="space-y-1.5">
             <SidebarMenu>
-              {bottomNavigation.map((item) => {
+              {bottomNavigation.map((item, index) => {
                 const isActive = pathname === item.url;
                 return (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive}
-                      tooltip={state === "collapsed" ? item.title : undefined}
-                      className={`
-                        w-full justify-start text-left
-                        ${isActive 
-                          ? 'bg-white text-black hover:bg-gray-200' 
-                          : 'text-gray-300 hover:bg-gray-900 hover:text-white'
-                        }
-                        transition-all duration-200 ease-in-out
-                      `}
+                    <motion.div
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.7 + index * 0.05, type: "spring", stiffness: 200 }}
                     >
-                      <Link href={item.url} className="flex items-center gap-3 w-full">
-                        <motion.div
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.95 }}
-                        >
-                          <item.icon className="size-5" />
-                        </motion.div>
-                        <span className="flex-1 group-data-[collapsible=icon]:hidden">
-                          {item.title}
-                        </span>
-                      </Link>
-                    </SidebarMenuButton>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive}
+                        tooltip={state === "collapsed" ? item.title : undefined}
+                        className={`
+                          w-full justify-start text-left rounded-xl relative overflow-hidden
+                          ${isActive 
+                            ? 'bg-white text-black hover:bg-gray-200 shadow-md' 
+                            : 'text-gray-300 hover:bg-gray-900 hover:text-white'
+                          }
+                          transition-all duration-300 ease-out
+                          group
+                        `}
+                      >
+                        <Link href={item.url} className="flex items-center gap-3.5 w-full py-1">
+                          <motion.div
+                            className={`p-2 rounded-lg ${isActive ? 'bg-gray-100' : 'bg-transparent'} transition-colors`}
+                            whileHover={{ scale: 1.15, rotate: 10 }}
+                            whileTap={{ scale: 0.9 }}
+                            transition={{ type: "spring", stiffness: 400 }}
+                          >
+                            <item.icon className="size-4" />
+                          </motion.div>
+                          <motion.span 
+                            className="flex-1 group-data-[collapsible=icon]:hidden font-medium text-sm"
+                            whileHover={{ x: 3 }}
+                            transition={{ type: "spring", stiffness: 300 }}
+                          >
+                            {item.title}
+                          </motion.span>
+                          {!isActive && (
+                            <motion.div
+                              className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 rounded-xl"
+                              transition={{ duration: 0.2 }}
+                            />
+                          )}
+                        </Link>
+                      </SidebarMenuButton>
+                    </motion.div>
                   </SidebarMenuItem>
                 );
               })}
@@ -245,67 +323,118 @@ export function DashboardSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-border p-3 bg-sidebar space-y-2.5">
-        {/* Compact Promotional Banner */}
+      <SidebarFooter className="border-t border-border p-4 bg-sidebar space-y-3">
+        {/* Enhanced Promotional Banner */}
         <motion.div
-          whileHover={{ scale: 1.02 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.8, type: "spring" }}
+          whileHover={{ scale: 1.03, y: -2 }}
+          whileTap={{ scale: 0.98 }}
           className="group-data-[collapsible=icon]:hidden"
         >
           <Link href="/credits">
-            <div className="rounded-lg bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 p-3 cursor-pointer hover:shadow-lg transition-shadow">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-base"></span>
-                <h3 className="text-white font-bold text-xs">🚀 Go Premium</h3>
+            <div className="rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 p-4 cursor-pointer shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden group">
+              <motion.div
+                className="absolute inset-0 bg-white/10"
+                initial={{ x: '-100%' }}
+                whileHover={{ x: '100%' }}
+                transition={{ duration: 0.6 }}
+              />
+              <div className="flex items-center gap-2 mb-2 relative z-10">
+                <motion.span 
+                  className="text-base"
+                  animate={{ rotate: [0, 15, -15, 0] }}
+                  transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+                >
+                  🚀
+                </motion.span>
+                <h3 className="text-white font-bold text-xs">Go Premium</h3>
               </div>
-              <p className="text-white/90 text-[10px] leading-tight">
+              <p className="text-white/95 text-[10px] leading-tight relative z-10">
                 Unlock unlimited clips and advanced AI features
               </p>
             </div>
           </Link>
         </motion.div>
 
-        {/* Billing Button */}
-        <Button
-          asChild
-          variant="outline"
-          className="w-full justify-start text-left border-gray-700 text-gray-300 hover:bg-gray-900 hover:text-white group-data-[collapsible=icon]:justify-center"
+        {/* Enhanced Billing Button */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.9, type: "spring" }}
         >
-          <Link href="/credits" className="flex items-center gap-3">
-            <motion.div
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-              </svg>
-            </motion.div>
-            <span className="group-data-[collapsible=icon]:hidden">Billing & Credits</span>
-          </Link>
-        </Button>
+          <Button
+            asChild
+            variant="outline"
+            className="w-full justify-start text-left border-gray-700 text-gray-300 hover:bg-gray-900 hover:text-white group-data-[collapsible=icon]:justify-center rounded-xl transition-all duration-300 hover:border-gray-600"
+          >
+            <Link href="/credits" className="flex items-center gap-3">
+              <motion.div
+                className="p-1.5 rounded-lg bg-transparent group-hover:bg-white/10 transition-colors"
+                whileHover={{ scale: 1.15, rotate: 15 }}
+                whileTap={{ scale: 0.9 }}
+                transition={{ type: "spring", stiffness: 400 }}
+              >
+                <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                </svg>
+              </motion.div>
+              <motion.span 
+                className="group-data-[collapsible=icon]:hidden text-sm font-medium"
+                whileHover={{ x: 2 }}
+                transition={{ type: "spring", stiffness: 300 }}
+              >
+                Billing & Credits
+              </motion.span>
+            </Link>
+          </Button>
+        </motion.div>
 
-        {/* User Profile */}
+        {/* Enhanced User Profile */}
         {user && (
-          <div className="flex items-center gap-3">
-            <Avatar className="size-10 bg-white">
-              <AvatarFallback className="bg-white text-black font-semibold">
-                {user.name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1 group-data-[collapsible=icon]:hidden">
-              <div className="text-white font-medium text-sm">
-                {user.name || user.email}
-              </div>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleLogout}
-              className="text-gray-400 hover:text-white hover:bg-gray-900 group-data-[collapsible=icon]:w-full"
-              title="Sign Out"
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1, type: "spring" }}
+            whileHover={{ scale: 1.02 }}
+            className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-all duration-300 cursor-pointer"
+          >
+            <motion.div
+              whileHover={{ scale: 1.1, rotate: 5 }}
+              transition={{ type: "spring", stiffness: 300 }}
             >
-              <LogOut className="size-4" />
-            </Button>
-          </div>
+              <Avatar className="size-10 bg-white ring-2 ring-transparent hover:ring-white/20 transition-all">
+                <AvatarFallback className="bg-white text-black font-bold text-sm">
+                  {user.name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}
+                </AvatarFallback>
+              </Avatar>
+            </motion.div>
+            <div className="flex-1 group-data-[collapsible=icon]:hidden min-w-0">
+              <motion.div 
+                className="text-white font-semibold text-sm truncate"
+                whileHover={{ x: 2 }}
+                transition={{ type: "spring", stiffness: 300 }}
+              >
+                {user.name || user.email}
+              </motion.div>
+            </div>
+            <motion.div
+              whileHover={{ scale: 1.15, rotate: 10 }}
+              whileTap={{ scale: 0.9 }}
+              transition={{ type: "spring", stiffness: 400 }}
+            >
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleLogout}
+                className="text-gray-400 hover:text-white hover:bg-gray-900 group-data-[collapsible=icon]:w-full rounded-lg transition-colors"
+                title="Sign Out"
+              >
+                <LogOut className="size-4" />
+              </Button>
+            </motion.div>
+          </motion.div>
         )}
       </SidebarFooter>
     </Sidebar>

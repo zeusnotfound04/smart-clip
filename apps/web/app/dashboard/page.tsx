@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus,
@@ -9,6 +9,8 @@ import {
   CheckCircle,
   AlertCircle,
   Upload,
+  Film,
+  Sparkles,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -17,18 +19,20 @@ import { useAuth } from '@/lib/auth-context';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { apiClient, Project } from '@/lib/api-client';
 import { CreditsDisplay } from '@/components/credits-display';
+import Silk from '@/components/slik-background';
+import { useRouter } from 'next/navigation';
 
 
 
 // Helper functions
 const getFeatureIcon = (type: string) => {
   switch (type) {
-    case 'auto-subtitles': return '';
-    case 'smart-clipper': return '';
-    case 'split-streamer': return '';
-    case 'ai-script-generator': return '';
-    case 'fake-conversations': return '';
-    default: return '';
+    case 'auto-subtitles': return '📝';
+    case 'smart-clipper': return '✂️';
+    case 'split-streamer': return '🎬';
+    case 'ai-script-generator': return '🤖';
+    case 'fake-conversations': return '💬';
+    default: return '🎥';
   }
 };
 
@@ -57,8 +61,10 @@ const getStatusIcon = (status: string) => {
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     fetchProjects();
@@ -76,10 +82,36 @@ export default function DashboardPage() {
     }
   };
 
-  const handleCreateProject = () => {
-    // Navigate directly to choose-feature page (no video upload here)
-    window.location.href = '/choose-feature';
+  const handleUploadClick = () => {
+    router.push('/choose-feature');
   };
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    const files = Array.from(e.dataTransfer.files);
+    const videoFiles = files.filter(file => 
+      file.type.startsWith('video/') || 
+      file.name.match(/\.(mp4|mov|avi|webm|mkv)$/i)
+    );
+    
+    if (videoFiles.length > 0) {
+      // Store the file for the next page to use
+      // For now, redirect to choose feature page
+      router.push('/choose-feature');
+    }
+  }, [router]);
 
 
 
@@ -88,27 +120,18 @@ export default function DashboardPage() {
 
   return (
     <>
-      <div className="flex-1 flex flex-col min-h-screen bg-background text-foreground">
+      <div className="flex-1 flex flex-col min-h-screen relative overflow-hidden">
+        {/* Silk Background */}
+        <div className="absolute inset-0 z-0">
+          <Silk speed={3} scale={1.5} color="#121212" noiseIntensity={1.2} rotation={0.3} />
+        </div>
+        
+        {/* Main Content */}
+        <div className="relative z-10 flex-1 flex flex-col min-h-screen text-foreground">
         {/* Header */}
-        <header className="flex items-center gap-4 border-b p-4">
+        <header className="flex items-center justify-between gap-4 border-b p-4">
           <SidebarTrigger />
-          <div className="flex-1">
-            <motion.h1 
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-3xl font-bold"
-            >
-              Welcome back, {user?.name || 'User'}!
-            </motion.h1>
-            <motion.p 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className="text-muted-foreground text-sm"
-            >
-              Ready to create amazing content with AI?
-            </motion.p>
-          </div>
+          <div className="flex-1" />
           <CreditsDisplay />
         </header>
 
@@ -116,50 +139,178 @@ export default function DashboardPage() {
         <main className="flex-1 overflow-auto p-6 lg:p-8">
           <div className="max-w-6xl mx-auto space-y-12">
             
-            {/* Create Project Section */}
+            {/* Upload Section */}
             <motion.section
               initial={{ opacity: 0, y: 40 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
             >
-              <div className="text-center mb-8">
-                
-                <h2 className="text-3xl font-bold mb-2">
-                  Create New Project
-                </h2>
-              </div>
-              
               <div className="flex justify-center">
                 <motion.div
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                  className="w-full max-w-4xl"
+                  whileHover={{ scale: 1.01 }}
+                  transition={{ type: "spring", stiffness: 300 }}
                 >
-
-                  <Card 
-                    className="w-full max-w-md cursor-pointer hover:shadow-xl transition-all duration-300 border-2 border-dashed border-gray-400 hover:border-blue-400 group"
-                    onClick={handleCreateProject}
+                  <div
+                    className="relative cursor-pointer group"
+                    onClick={handleUploadClick}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
                   >
+                    {/* Glowing background effect */}
+                    <motion.div
+                      className="absolute -inset-1 bg-gradient-to-r from-blue-600 via-white to-black rounded-2xl opacity-75 blur-xl"
+                      animate={{
+                        opacity: isDragging ? 1 : [0.5, 0.8, 0.5],
+                        scale: isDragging ? 1.05 : [1, 1.02, 1],
+                      }}
+                      transition={{
+                        duration: 8,
+                        repeat: Infinity,
+                        ease: "easeInOut"
+                      }}
+                    />
                     
-                    <CardContent className="p-10 text-center relative z-10">
-                      <motion.div className="space-y-6">
-                        <motion.div
-                          className="w-20 h-20 mx-auto mb-6 rounded-full bg-blue-600 flex items-center justify-center group-hover:bg-blue-700 transition-colors"
-                          whileHover={{ scale: 1.05 }}
-                        >
-                          <Plus className="w-10 h-10 text-white" />
-                        </motion.div>
+                    {/* Main card */}
+                    <Card className={`relative border-2 border-dashed transition-all duration-300 bg-black/40 backdrop-blur-sm ${
+                      isDragging 
+                        ? 'border-blue-400 bg-blue-500/10 scale-105' 
+                        : 'border-gray-600 group-hover:border-blue-500'
+                    }`}>
+                      <CardContent className="p-12 lg:p-16">
+                        <div className="text-center space-y-6">
+                          {/* Icon with animation */}
+                          <motion.div
+                            className="relative mx-auto w-24 h-24 lg:w-32 lg:h-32"
+                            animate={{
+                              y: isDragging ? -15 : [0, -10, 0],
+                              scale: isDragging ? 1.1 : 1,
+                            }}
+                            transition={{
+                              duration: isDragging ? 0.3 : 5,
+                              repeat: isDragging ? 0 : Infinity,
+                              ease: "easeInOut"
+                            }}
+                          >
+                            {/* Glow effect behind icon */}
+                            <motion.div
+                              className="absolute inset-0 bg-blue-500/30 rounded-full blur-2xl"
+                              animate={{
+                                scale: isDragging ? 1.3 : [1, 1.2, 1],
+                                opacity: isDragging ? 1 : [0.5, 0.8, 0.5],
+                              }}
+                              transition={{
+                                duration: 6,
+                                repeat: Infinity,
+                                ease: "easeInOut"
+                              }}
+                            />
+                            
+                            {/* Icon container */}
+                            <div className="relative w-full h-full rounded-full bg-gradient-to-br from-blue-600 to-white flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                              <Upload className="w-12 h-12 lg:w-16 lg:h-16 text-black" />
+                            </div>
+                            
+                            {/* Sparkles */}
+                            <motion.div
+                              className="absolute -top-2 -right-2"
+                              animate={{
+                                rotate: [0, 360],
+                                scale: [1, 1.2, 1],
+                              }}
+                              transition={{
+                                duration: 8,
+                                repeat: Infinity,
+                                ease: "linear"
+                              }}
+                            >
+                              <Sparkles className="w-6 h-6 text-yellow-400" />
+                            </motion.div>
+                          </motion.div>
 
-                        <div className="space-y-4">
-                          <h3 className="text-2xl font-bold">
-                            Create New Project
-                          </h3>
-                          <p className="text-muted-foreground">
-                            Select an AI feature to get started
-                          </p>
+                          {/* Text content */}
+                          <div className="space-y-3">
+                            {/* Smart Clip Branding */}
+                            <motion.div
+                              initial={{ opacity: 0, y: -10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: 0.2 }}
+                              className="flex items-center justify-center mb-2"
+                            >
+                              <motion.span 
+                                className="text-2xl font-bold text-blue-400 tracking-wider uppercase relative"
+                                animate={{
+                                  textShadow: [
+                                    '0 0 10px rgba(59, 130, 246, 0.5)',
+                                    '0 0 20px rgba(59, 130, 246, 0.8)',
+                                    '0 0 30px rgba(59, 130, 246, 1)',
+                                    '0 0 20px rgba(59, 130, 246, 0.8)',
+                                    '0 0 10px rgba(59, 130, 246, 0.5)',
+                                  ],
+                                }}
+                                transition={{
+                                  duration: 3,
+                                  repeat: Infinity,
+                                  ease: "easeInOut"
+                                }}
+                              >
+                                Smart Clips
+                              </motion.span>
+                            </motion.div>
+
+                            <motion.h2 
+                              className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-blue-400 via-white to-blue-600 bg-clip-text text-transparent"
+                              animate={{
+                                backgroundPosition: ["0%", "100%", "0%"],
+                              }}
+                              transition={{
+                                duration: 10,
+                                repeat: Infinity,
+                                ease: "linear"
+                              }}
+                            >
+                              {isDragging ? 'Drop Your Video Here! ✨' : 'Upload Your Video'}
+                            </motion.h2>
+                            
+                            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+                              {isDragging 
+                                ? 'Release to start creating amazing clips' 
+                                : 'Drag and drop your video here or click to browse'}
+                            </p>
+                            
+                            <motion.div
+                              className="flex items-center justify-center gap-4 text-sm text-muted-foreground pt-4"
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              transition={{ delay: 0.5 }}
+                            >
+                              <div className="flex items-center gap-2">
+                                <Film className="w-4 h-4" />
+                                <span>MP4, MOV, AVI</span>
+                              </div>
+                              <span>•</span>
+                              <span>Max 500MB</span>
+                            </motion.div>
+                          </div>
+
+                          {/* Action button */}
+                          <motion.div
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                          >
+                            <Button
+                              size="lg"
+                              className="bg-gradient-to-r from-blue-600 to-black hover:from-blue-700 hover:to-gray-900 text-white font-semibold px-8 py-6 text-lg shadow-lg shadow-blue-500/50"
+                            >
+                              <Upload className="w-5 h-5 mr-2" />
+                              Choose Video
+                            </Button>
+                          </motion.div>
                         </div>
-                      </motion.div>
-                    </CardContent>
-                  </Card>
+                      </CardContent>
+                    </Card>
+                  </div>
                 </motion.div>
               </div>
             </motion.section>
@@ -323,7 +474,7 @@ export default function DashboardPage() {
                         transition={{ delay: 0.9 }}
                       >
                         <Button 
-                          onClick={handleCreateProject}
+                          onClick={handleUploadClick}
                           className="bg-blue-600 hover:bg-blue-700 text-white"
                         >
                           <Plus className="w-4 h-4 mr-2" />
@@ -337,6 +488,7 @@ export default function DashboardPage() {
             </motion.section>
           </div>
         </main>
+        </div>
       </div>
     </>
   );
