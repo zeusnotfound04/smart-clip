@@ -1,13 +1,15 @@
-import fetch from 'node-fetch';
+ import fetch from 'node-fetch';
 import { createClient } from 'redis';
 import crypto from 'crypto';
 import { HttpsProxyAgent } from 'https-proxy-agent';
+import youtubeDl from 'youtube-dl-exec';
 
 /**
  * Instagram Video Downloader Service
  * 
  * Features:
  * - Multiple API endpoints with automatic fallback
+ * - yt-dlp fallback for reliability
  * - Proxy rotation with Webshare proxies
  * - Redis caching (1-2 hour TTL)
  * - Rate limiting per proxy
@@ -59,19 +61,92 @@ const API_ENDPOINTS: APIEndpoint[] = [
     url: 'https://igvideodownloader.net/api/proxy',
     method: 'POST',
     headers: {
+      'accept': '*/*',
+      'accept-encoding': 'gzip, deflate, br, zstd',
+      'accept-language': 'en-GB,en;q=0.5',
       'content-type': 'application/json',
+      'cookie': 'vdm_did=e09fc974-47bc-44db-995a-45e100fbd8dc; uid=589e87d-ad254c47-a84111de-cde297ff%3D1769198434897',
       'origin': 'https://igvideodownloader.net',
+      'priority': 'u=1, i',
       'referer': 'https://igvideodownloader.net/',
-      'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      'sec-ch-ua': '"Not(A:Brand";v="8", "Chromium";v="144", "Brave";v="144"',
+      'sec-ch-ua-mobile': '?1',
+      'sec-ch-ua-platform': '"Android"',
+      'sec-fetch-dest': 'empty',
+      'sec-fetch-mode': 'cors',
+      'sec-fetch-site': 'same-origin',
+      'sec-gpc': '1',
+      'user-agent': 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Mobile Safari/537.36'
     },
-    bodyFormatter: (url: string) => JSON.stringify({ url }),
+    bodyFormatter: (url: string) => JSON.stringify({
+      url: '/media/parse',
+      data: {
+        origin: 'source',
+        link: url
+      },
+      token: ''
+    }),
     responseParser: (data: any) => {
-      if (data?.data?.resources?.[0]?.download_url) {
+      // Check for error response
+      if (data?.msg && data.msg.includes('parse error')) {
+        console.log('[Instagram Downloader] API returned error:', data.msg);
+        return null;
+      }
+      
+      // Find video resource
+      const videoResource = data?.data?.resources?.find((r: any) => r.type === 'video');
+      
+      if (videoResource?.download_url) {
         return {
-          downloadUrl: data.data.resources[0].download_url,
-          thumbnail: data.data.resources[0].thumbnail
+          downloadUrl: videoResource.download_url,
+          thumbnail: videoResource.thumbnail
         };
       }
+      
+      return null;
+    }
+  },
+  {
+    name: 'vidssave.com',
+    url: 'https://api.vidssave.com/api/contentsite_api/media/parse',
+    method: 'POST',
+    headers: {
+      'accept': '*/*',
+      'accept-language': 'en-GB,en;q=0.6',
+      'content-type': 'application/x-www-form-urlencoded',
+      'origin': 'https://vidssave.com',
+      'priority': 'u=1, i',
+      'referer': 'https://vidssave.com/',
+      'sec-ch-ua': '"Not(A:Brand";v="8", "Chromium";v="144", "Brave";v="144"',
+      'sec-ch-ua-mobile': '?1',
+      'sec-ch-ua-platform': '"Android"',
+      'sec-fetch-dest': 'empty',
+      'sec-fetch-mode': 'cors',
+      'sec-fetch-site': 'same-site',
+      'sec-gpc': '1',
+      'user-agent': 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Mobile Safari/537.36'
+    },
+    bodyFormatter: (url: string) => {
+      const encodedUrl = encodeURIComponent(url);
+      return `auth=20250901majwlqo&domain=api-ak.vidssave.com&origin=source&link=${encodedUrl}`;
+    },
+    responseParser: (data: any) => {
+      // Check for error or invalid status
+      if (!data?.status || data.status !== 1) {
+        console.log('[Instagram Downloader] vidssave.com returned error status:', data?.status);
+        return null;
+      }
+      
+      // Find video resource
+      const videoResource = data?.data?.resources?.find((r: any) => r.type === 'video');
+      
+      if (videoResource?.download_url) {
+        return {
+          downloadUrl: videoResource.download_url,
+          thumbnail: data.data.thumbnail
+        };
+      }
+      
       return null;
     }
   }
@@ -300,21 +375,42 @@ class InstagramDownloaderService {
   }
 
   /**
-   * Fetch download URL from API using proxy
+   * Fetch download URL from API - tries direct connection first, then proxy
    */
   private async fetchWithProxy(instagramUrl: string, proxy: ProxyConfig, retryAttempt: number): Promise<string> {
-    const proxyKey = `${proxy.host}:${proxy.port}`;
+    const endpoint = this.getCurrentEndpoint();
     
-    // Enforce rate limiting
+    // Try direct connection first (no proxy) on first attempt
+    if (retryAttempt === 0) {
+      console.log(`[Instagram Downloader] Attempt ${retryAttempt + 1} using ${endpoint.name} (direct connection)`);
+      
+      try {
+        const result = await this.fetchFromEndpoint(instagramUrl, endpoint, null);
+        console.log('[Instagram Downloader] Direct connection succeeded');
+        return result;
+      } catch (directError: any) {
+        console.log('[Instagram Downloader] Direct connection failed, will try with proxy:', directError.message);
+      }
+    }
+    
+    // Fallback to proxy
+    const proxyKey = `${proxy.host}:${proxy.port}`;
     await this.enforceRateLimit(proxyKey);
-
     const agent = this.createProxyAgent(proxy);
     
-    // Get current endpoint (automatically rotates on failures)
-    const endpoint = this.getCurrentEndpoint();
-
     console.log(`[Instagram Downloader] Attempt ${retryAttempt + 1} via ${proxy.city}, ${proxy.country} using ${endpoint.name}`);
+    
+    return await this.fetchFromEndpoint(instagramUrl, endpoint, agent);
+  }
 
+  /**
+   * Fetch from API endpoint with optional proxy agent
+   */
+  private async fetchFromEndpoint(
+    instagramUrl: string,
+    endpoint: APIEndpoint,
+    agent: HttpsProxyAgent | null
+  ): Promise<string> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.REQUEST_TIMEOUT);
 
@@ -348,13 +444,15 @@ class InstagramDownloaderService {
         data = { data: await response.text() };
       }
 
-      console.log(`[Instagram Downloader] API response from ${endpoint.name}:`, JSON.stringify(data).substring(0, 200));
+      // Log full response for debugging
+      console.log(`[Instagram Downloader] Full API response from ${endpoint.name}:`, JSON.stringify(data, null, 2));
 
       // Parse using endpoint-specific parser
       const parsed = endpoint.responseParser(data);
       
       if (!parsed || !parsed.downloadUrl) {
         this.recordEndpointFailure(endpoint.name);
+        console.log(`[Instagram Downloader] Failed to extract download URL. Response structure:`, JSON.stringify(data, null, 2));
         throw new Error(`No download URL found in response from ${endpoint.name}`);
       }
 
@@ -446,6 +544,39 @@ class InstagramDownloaderService {
       `Failed to download Instagram video after ${this.MAX_RETRIES} attempts. ` +
       `Last error: ${lastError?.message || 'Unknown error'}`
     );
+  }
+
+  /**
+   * Fallback method using yt-dlp
+   */
+  private async fetchWithYtDlp(instagramUrl: string): Promise<string> {
+    try {
+      const info = await youtubeDl(instagramUrl, {
+        dumpSingleJson: true,
+        noWarnings: true,
+        noCheckCertificates: true,
+        preferFreeFormats: true,
+      });
+
+      if (info.url) {
+        return info.url;
+      }
+
+      // If direct URL not available, get best format
+      if (info.formats && info.formats.length > 0) {
+        const sortedFormats = info.formats
+          .filter((f: any) => f.url && f.vcodec !== 'none')
+          .sort((a: any, b: any) => (b.height || 0) - (a.height || 0));
+
+        if (sortedFormats.length > 0) {
+          return sortedFormats[0].url;
+        }
+      }
+
+      throw new Error('No download URL found in yt-dlp response');
+    } catch (error: any) {
+      throw new Error(`yt-dlp extraction failed: ${error.message}`);
+    }
   }
 
   /**
