@@ -64,7 +64,7 @@ const navigationItems = [
     title: "Podcast Clipper",
     url: "/dashboard/podcast-clipper",
     icon: Mic,
-    badge: "Beta",
+    badge: null,
   },
   // {
   //   title: "Fake Conversations",
@@ -324,37 +324,145 @@ export function DashboardSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="border-t border-border p-4 bg-sidebar space-y-3">
-        {/* Enhanced Promotional Banner */}
+        {/* Premium Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8, type: "spring" }}
-          whileHover={{ scale: 1.03, y: -2 }}
-          whileTap={{ scale: 0.98 }}
+          transition={{ delay: 0.8, type: "spring", stiffness: 300 }}
           className="group-data-[collapsible=icon]:hidden"
         >
-          <Link href="/credits">
-            <div className="rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 p-4 cursor-pointer shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden group">
+          <Link href="/credits" className="block">
+            <motion.div 
+              className="relative rounded-2xl p-5 cursor-pointer overflow-hidden group"
+              style={{
+                background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)"
+              }}
+              whileHover={{ y: -2 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ type: "spring", stiffness: 400, damping: 17 }}
+            >
+              {/* Gradient border effect */}
               <motion.div
-                className="absolute inset-0 bg-white/10"
-                initial={{ x: '-100%' }}
-                whileHover={{ x: '100%' }}
-                transition={{ duration: 0.6 }}
+                className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100"
+                style={{
+                  background: "linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(147, 51, 234, 0.15))",
+                  padding: "1px"
+                }}
+                transition={{ duration: 0.3 }}
               />
-              <div className="flex items-center gap-2 mb-2 relative z-10">
-                <motion.span 
-                  className="text-base"
-                  animate={{ rotate: [0, 15, -15, 0] }}
-                  transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+              
+              {/* Animated shimmer */}
+              <motion.div
+                className="absolute inset-0 opacity-0"
+                style={{
+                  background: "linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.03), transparent)"
+                }}
+                animate={{
+                  x: ["-100%", "200%"],
+                  opacity: [0, 0.5, 0]
+                }}
+                transition={{
+                  duration: 3,
+                  repeat: Infinity,
+                  repeatDelay: 5,
+                  ease: "linear"
+                }}
+              />
+
+              {/* Content */}
+              <div className="relative z-10 space-y-2">
+                {/* Header with icon */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <motion.div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center"
+                      style={{
+                        background: "linear-gradient(135deg, #3b82f6, #8b5cf6)"
+                      }}
+                      whileHover={{ rotate: 5, scale: 1.05 }}
+                      transition={{ type: "spring", stiffness: 400 }}
+                    >
+                      <svg 
+                        className="w-4 h-4 text-white" 
+                        fill="none" 
+                        viewBox="0 0 24 24" 
+                        stroke="currentColor"
+                        strokeWidth={2.5}
+                      >
+                        <path 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          d="M13 10V3L4 14h7v7l9-11h-7z" 
+                        />
+                      </svg>
+                    </motion.div>
+                    <motion.h3 
+                      className="text-white font-semibold text-sm tracking-tight"
+                      initial={{ opacity: 0, x: -5 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.9 }}
+                    >
+                      Premium
+                    </motion.h3>
+                  </div>
+                  
+                  {/* Arrow indicator */}
+                  <motion.div
+                    className="text-gray-400 group-hover:text-white"
+                    animate={{ x: [0, 3, 0] }}
+                    transition={{ 
+                      duration: 1.5,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </motion.div>
+                </div>
+
+                {/* Description */}
+                <motion.p 
+                  className="text-gray-400 text-[11px] leading-relaxed"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 1 }}
                 >
-                  🚀
-                </motion.span>
-                <h3 className="text-white font-bold text-xs">Go Premium</h3>
+                  Unlock unlimited clips & advanced AI features
+                </motion.p>
+
+                {/* Feature pills */}
+                <div className="flex gap-1.5 pt-1">
+                  {[ "Webawave Pro"].map((feature, index) => (
+                    <motion.span
+                      key={feature}
+                      className="px-2 py-0.5 rounded-md bg-white/5 text-[9px] text-gray-300 font-medium border border-white/10"
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ 
+                        delay: 1.1 + index * 0.1,
+                        type: "spring",
+                        stiffness: 500
+                      }}
+                      whileHover={{ 
+                        scale: 1.05,
+                        backgroundColor: "rgba(255, 255, 255, 0.1)"
+                      }}
+                    >
+                      {feature}
+                    </motion.span>
+                  ))}
+                </div>
               </div>
-              <p className="text-white/95 text-[10px] leading-tight relative z-10">
-                Unlock unlimited clips and advanced AI features
-              </p>
-            </div>
+
+              {/* Glow effect */}
+              <motion.div
+                className="absolute -top-24 -right-24 w-48 h-48 rounded-full opacity-0 group-hover:opacity-20 blur-3xl"
+                style={{
+                  background: "radial-gradient(circle, #3b82f6, transparent)"
+                }}
+                transition={{ duration: 0.5 }}
+              />
+            </motion.div>
           </Link>
         </motion.div>
 

@@ -6,6 +6,7 @@ import { Video } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { apiClient } from '@/lib/api-client';
 import { AppHeader } from '@/components/shared/AppHeader';
+import Silk from '@/components/slik-background';
 import { DualVideoUploadPanel } from '@/components/split-streamer/DualVideoUploadPanel';
 import { CombinedVideoPreview } from '@/components/split-streamer/CombinedVideoPreview';
 import { LayoutConfigurationPanel } from '@/components/split-streamer/LayoutConfigurationPanel';
@@ -204,16 +205,29 @@ export default function SplitStreamerPage() {
   }, [projectData?.id, processingStage]);
 
   return (
-    <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden">
+    <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden relative">
+      {/* Silk Background */}
+      <div className="absolute inset-0 z-0">
+        <Silk
+          speed={5}
+          scale={1.5}
+          color="#2B2B2B"
+          noiseIntensity={1.5}
+          rotation={0}
+        />
+      </div>
+
       {/* Header */}
-      <AppHeader 
-        title="Split Streamer"
-        description="Combine webcam and gameplay videos into vertical mobile-friendly format"
-        icon={<Video className="w-6 h-6 text-white" />}
-      />
+      <div className="relative z-10">
+        <AppHeader 
+          title="Split Streamer"
+          description="Combine webcam and gameplay videos into vertical mobile-friendly format"
+          icon={<Video className="w-6 h-6 text-white" />}
+        />
+      </div>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-hidden">
+      <main className="flex-1 overflow-hidden relative z-10">
         <div className="h-full flex">
           {/* Upload Panel */}
           <motion.section

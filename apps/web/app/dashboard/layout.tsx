@@ -16,7 +16,7 @@ export default function DashboardLayout({
         <DashboardSidebar />
         <SidebarInset className="relative bg-background overflow-hidden">
           <div className="absolute inset-0 z-0 w-full h-full">
-            <Silk speed={3} scale={1.5} color="#1a1a2e" noiseIntensity={1.2} rotation={0.3} />
+            <Silk speed={3} scale={1.5} color="#2B2B2B" noiseIntensity={1.2} rotation={0.3} />
           </div>
           <div className="relative z-10 h-full">
             {children}

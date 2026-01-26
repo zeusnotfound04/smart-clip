@@ -21,6 +21,7 @@ import { motion } from "framer-motion";
 import { useAuth } from '@/lib/auth-context';
 import { DownloadButton } from '@/components/download-button';
 import { useRouter } from 'next/navigation';
+import Silk from '@/components/slik-background';
 
 // API Base URL - Remove trailing slashes to prevent double slashes in URLs
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001').replace(/\/+$/, '');
@@ -111,7 +112,6 @@ export default function AIScriptGenerator() {
   
   // Phase 1: Script Generation
   const [scriptPrompt, setScriptPrompt] = useState<string>('');
-  const [projectName, setProjectName] = useState<string>('');
   const [scriptOptions, setScriptOptions] = useState<ScriptGenerationOptions>({
     scriptLength: '30s',
     tone: 'conversational'
@@ -295,7 +295,7 @@ export default function AIScriptGenerator() {
       setProject(prev => ({
         ...prev,
         projectId: result.projectId,
-        projectName: projectName || 'Untitled Project',
+        projectName: 'AI Generated Video',
         script: result.script?.fullScript || result.script?.content || 'Script generated',
         scriptWordCount: result.script?.wordCount || 0,
         scriptDuration: result.script?.estimatedDuration || 30,
@@ -547,48 +547,49 @@ export default function AIScriptGenerator() {
   };
 
   const renderScriptPhase = () => (
-    <Card className="w-full max-w-4xl mx-auto">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <FileText className="w-6 h-6" />
-          Phase 1: Generate Script
-        </CardTitle>
-        <p className="text-muted-foreground">
-          Create an engaging script for your video using AI
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div>
-          <label className="text-sm font-medium mb-2 block">Project Name</label>
-          <Input
-            placeholder="Enter project name (optional)"
-            value={projectName}
-            onChange={(e) => setProjectName(e.target.value)}
-          />
-        </div>
-
-        <div>
-          <label className="text-sm font-medium mb-2 block">Script Prompt</label>
-          <Textarea
-            placeholder="Describe what your video should be about..."
-            value={scriptPrompt}
-            onChange={(e) => setScriptPrompt(e.target.value)}
-            rows={4}
-            className="resize-none"
-          />
-        </div>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="w-full max-w-4xl mx-auto"
+    >
+      <Card className="backdrop-blur-sm bg-[#2B2B2B]/95 border-gray-800 shadow-2xl">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-3 text-2xl">
+            <div className="w-10 h-10 rounded-lg bg-gray-800 border border-gray-700 flex items-center justify-center">
+              <FileText className="w-5 h-5 text-gray-300" />
+            </div>
+            <span className="text-white font-semibold">
+              Phase 1: Generate Script
+            </span>
+          </CardTitle>
+          <p className="text-gray-400 mt-2">
+            Create an engaging script for your video using AI
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div>
+            <label className="text-sm font-medium mb-2 block text-gray-300">Script Prompt</label>
+            <Textarea
+              placeholder="Describe what your video should be about... Be specific about the content, style, and target audience."
+              value={scriptPrompt}
+              onChange={(e) => setScriptPrompt(e.target.value)}
+              rows={5}
+              className="resize-none bg-black/40 border-gray-700 focus:border-blue-500 focus:ring-blue-500/20 text-gray-100 placeholder:text-gray-500"
+            />
+          </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="text-sm font-medium mb-2 block">Script Length</label>
+            <label className="text-sm font-medium mb-2 block text-gray-300">Script Length</label>
             <Select
               value={scriptOptions.scriptLength}
               onValueChange={(value) => setScriptOptions(prev => ({ ...prev, scriptLength: value as any }))}
             >
-              <SelectTrigger>
+              <SelectTrigger className="bg-black/40 border-gray-700 focus:border-blue-500 focus:ring-blue-500/20 text-gray-100">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-gray-900 border-gray-700">
                 <SelectItem value="10s">10 seconds</SelectItem>
                 <SelectItem value="15s">15 seconds</SelectItem>
                 <SelectItem value="30s">30 seconds</SelectItem>
@@ -599,15 +600,15 @@ export default function AIScriptGenerator() {
           </div>
 
           <div>
-            <label className="text-sm font-medium mb-2 block">Tone</label>
+            <label className="text-sm font-medium mb-2 block text-gray-300">Tone</label>
             <Select
               value={scriptOptions.tone}
               onValueChange={(value) => setScriptOptions(prev => ({ ...prev, tone: value as any }))}
             >
-              <SelectTrigger>
+              <SelectTrigger className="bg-black/40 border-gray-700 focus:border-blue-500 focus:ring-blue-500/20 text-gray-100">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-gray-900 border-gray-700">
                 <SelectItem value="conversational">Conversational</SelectItem>
                 <SelectItem value="professional">Professional</SelectItem>
                 <SelectItem value="dramatic">Dramatic</SelectItem>
@@ -619,25 +620,30 @@ export default function AIScriptGenerator() {
         </div>
 
         {project.script && (
-          <div className="mt-6 p-4 border rounded-lg bg-muted/50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3 }}
+            className="mt-6 p-6 border border-gray-700 rounded-lg bg-gradient-to-br from-green-950/20 to-emerald-900/20 backdrop-blur-sm"
+          >
             <div className="flex items-center gap-2 mb-3">
-              <CheckCircle className="w-5 h-5 text-green-500" />
-              <h3 className="font-medium">Generated Script</h3>
-              <Badge variant="secondary">
+              <CheckCircle className="w-5 h-5 text-green-400" />
+              <h3 className="font-medium text-gray-200">Generated Script</h3>
+              <Badge variant="secondary" className="bg-gray-800 text-gray-300 border-gray-700">
                 {project.scriptWordCount} words • ~{project.scriptDuration}s
               </Badge>
             </div>
-            <div className="bg-card p-4 rounded border max-h-48 overflow-y-auto">
-              <p className="whitespace-pre-wrap text-sm text-card-foreground">{project.script}</p>
+            <div className="bg-black/50 p-4 rounded-lg border border-gray-700 max-h-48 overflow-y-auto">
+              <p className="whitespace-pre-wrap text-sm text-gray-300">{project.script}</p>
             </div>
-          </div>
+          </motion.div>
         )}
 
-        <div className="flex gap-3">
+        <div className="flex gap-3 pt-4">
           <Button 
             onClick={handleGenerateScript}
             disabled={loading || !scriptPrompt.trim()}
-            className="flex-1"
+            className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg shadow-blue-500/20"
           >
             {loading ? (
               <>
@@ -656,6 +662,7 @@ export default function AIScriptGenerator() {
             <Button 
               onClick={() => setCurrentPhase('voice')}
               variant="outline"
+              className="bg-gray-800/50 border-gray-700 hover:bg-gray-700 text-gray-200"
             >
               Next: Choose Voice
               <ArrowRight className="w-4 h-4 ml-2" />
@@ -664,35 +671,46 @@ export default function AIScriptGenerator() {
         </div>
       </CardContent>
     </Card>
+    </motion.div>
   );
 
   const renderVoicePhase = () => (
-    <Card className="w-full max-w-4xl mx-auto">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Mic className="w-6 h-6" />
-          Phase 2: Choose Voice & Generate Audio
-        </CardTitle>
-        <p className="text-muted-foreground">
-          Select a Fish Audio voice for narration
-        </p>
-      </CardHeader>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="w-full max-w-4xl mx-auto"
+    >
+      <Card className="backdrop-blur-sm bg-[#2B2B2B]/95 border-gray-800 shadow-2xl">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-3 text-2xl">
+            <div className="w-10 h-10 rounded-lg bg-gray-800 border border-gray-700 flex items-center justify-center">
+              <Mic className="w-5 h-5 text-gray-300" />
+            </div>
+            <span className="text-white font-semibold">
+              Phase 2: Choose Voice & Generate Audio
+            </span>
+          </CardTitle>
+          <p className="text-gray-400 mt-2">
+            Select a Fish Audio voice for narration
+          </p>
+        </CardHeader>
       <CardContent className="space-y-6">
         {project.script && (
-          <div className="p-4 border rounded-lg bg-muted/50">
-            <h3 className="font-medium mb-2">Script Preview</h3>
-            <p className="text-sm text-muted-foreground mb-2">
+          <div className="p-6 border border-gray-700 rounded-lg bg-gradient-to-br from-blue-950/20 to-indigo-900/20 backdrop-blur-sm">
+            <h3 className="font-medium mb-2 text-gray-200">Script Preview</h3>
+            <p className="text-sm text-gray-400 mb-2">
               {project.scriptWordCount} words • ~{project.scriptDuration}s duration
             </p>
-            <div className="bg-card p-3 rounded border max-h-32 overflow-y-auto">
-              <p className="text-sm text-card-foreground">{project.script?.substring(0, 200)}...</p>
+            <div className="bg-black/50 p-3 rounded-lg border border-gray-700 max-h-32 overflow-y-auto">
+              <p className="text-sm text-gray-300">{project.script?.substring(0, 200)}...</p>
             </div>
           </div>
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div>
-            <label className="text-sm font-medium mb-2 block">Voice Selection</label>
+            <label className="text-sm font-medium mb-2 block text-gray-300">Voice Selection</label>
             <Select
               value={selectedVoice?.name || ''}
               onValueChange={(value) => {
@@ -702,10 +720,10 @@ export default function AIScriptGenerator() {
                 setSelectedVoice(voice || null);
               }}
             >
-              <SelectTrigger>
+              <SelectTrigger className="bg-black/40 border-gray-700 focus:border-purple-500 focus:ring-purple-500/20 text-gray-100">
                 <SelectValue placeholder={`Choose a voice (${availableVoices.length} available)`} />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-gray-900 border-gray-700">
                 {availableVoices.length > 0 ? (
                   availableVoices.map((voice) => (
                     <SelectItem key={voice.name} value={voice.name}>
@@ -723,7 +741,7 @@ export default function AIScriptGenerator() {
 
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium mb-2 block">
+              <label className="text-sm font-medium mb-2 block text-gray-300">
                 Speech Speed ({voiceSpeed}x)
               </label>
               <input
@@ -733,12 +751,12 @@ export default function AIScriptGenerator() {
                 step="0.25"
                 value={voiceSpeed}
                 onChange={(e) => setVoiceSpeed(parseFloat(e.target.value))}
-                className="w-full"
+                className="w-full accent-purple-600"
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium mb-2 block">
+              <label className="text-sm font-medium mb-2 block text-gray-300">
                 Pitch ({voicePitch > 0 ? '+' : ''}{voicePitch})
               </label>
               <input
@@ -748,31 +766,37 @@ export default function AIScriptGenerator() {
                 step="1"
                 value={voicePitch}
                 onChange={(e) => setVoicePitch(parseInt(e.target.value))}
-                className="w-full"
+                className="w-full accent-purple-600"
               />
             </div>
           </div>
         </div>
 
         {project.audioUrl && (
-          <div className="mt-6 p-4 border rounded-lg bg-muted/50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3 }}
+            className="mt-6 p-6 border border-gray-700 rounded-lg bg-gradient-to-br from-green-950/20 to-emerald-900/20 backdrop-blur-sm"
+          >
             <div className="flex items-center gap-2 mb-3">
-              <CheckCircle className="w-5 h-5 text-green-500" />
-              <h3 className="font-medium">Generated Audio</h3>
-              <Badge variant="secondary">
+              <CheckCircle className="w-5 h-5 text-green-400" />
+              <h3 className="font-medium text-gray-200">Generated Audio</h3>
+              <Badge variant="secondary" className="bg-gray-800 text-gray-300 border-gray-700">
                 {project.audioDuration}s duration
               </Badge>
             </div>
             <audio controls className="w-full">
               <source src={project.audioUrl} type="audio/mpeg" />
             </audio>
-          </div>
+          </motion.div>
         )}
 
-        <div className="flex gap-3">
+        <div className="flex gap-3 pt-4">
           <Button 
             onClick={() => setCurrentPhase('script')}
             variant="outline"
+            className="bg-gray-800/50 border-gray-700 hover:bg-gray-700 text-gray-200"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Script
@@ -781,7 +805,7 @@ export default function AIScriptGenerator() {
           <Button 
             onClick={handleGenerateAudio}
             disabled={generatingAudio || !selectedVoice}
-            className="flex-1"
+            className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg shadow-purple-500/20"
           >
             {generatingAudio ? (
               <>
@@ -800,6 +824,7 @@ export default function AIScriptGenerator() {
             <Button 
               onClick={() => setCurrentPhase('video')}
               variant="outline"
+              className="bg-gray-800/50 border-gray-700 hover:bg-gray-700 text-gray-200"
             >
               Next: Choose Video
               <ArrowRight className="w-4 h-4 ml-2" />
@@ -808,28 +833,39 @@ export default function AIScriptGenerator() {
         </div>
       </CardContent>
     </Card>
+    </motion.div>
   );
 
   const renderVideoPhase = () => (
-    <Card className="w-full max-w-4xl mx-auto">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Video className="w-6 h-6" />
-          Phase 3: Choose Background Video
-        </CardTitle>
-        <p className="text-muted-foreground">
-          Select a video from the library to use as background
-        </p>
-      </CardHeader>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="w-full max-w-4xl mx-auto"
+    >
+      <Card className="backdrop-blur-sm bg-[#2B2B2B]/95 border-gray-800 shadow-2xl">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-3 text-2xl">
+            <div className="w-10 h-10 rounded-lg bg-gray-800 border border-gray-700 flex items-center justify-center">
+              <Video className="w-5 h-5 text-gray-300" />
+            </div>
+            <span className="text-white font-semibold">
+              Phase 3: Choose Background Video
+            </span>
+          </CardTitle>
+          <p className="text-gray-400 mt-2">
+            Select a video from the library to use as background
+          </p>
+        </CardHeader>
       <CardContent className="space-y-6">
         {project.audioUrl && (
-          <div className="p-4 border rounded-lg bg-muted/50">
-            <h3 className="font-medium mb-2">Audio Preview</h3>
+          <div className="p-6 border border-gray-700 rounded-lg bg-gradient-to-br from-purple-950/20 to-indigo-900/20 backdrop-blur-sm">
+            <h3 className="font-medium mb-2 text-gray-200">Audio Preview</h3>
             <div className="flex items-center gap-4">
               <audio controls className="flex-1">
                 <source src={project.audioUrl} type="audio/mpeg" />
               </audio>
-              <Badge variant="secondary">
+              <Badge variant="secondary" className="bg-gray-800 text-gray-300 border-gray-700">
                 {project.audioDuration}s duration
               </Badge>
             </div>
@@ -837,55 +873,63 @@ export default function AIScriptGenerator() {
         )}
 
         {loadingVideos ? (
-          <div className="text-center py-8">
-            <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
-            <p className="text-muted-foreground">Loading video library...</p>
+          <div className="text-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-3 text-cyan-400" />
+            <p className="text-gray-400">Loading video library...</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {videoLibrary.map((video) => (
-              <Card 
+              <motion.div
                 key={video.id}
-                className={`cursor-pointer transition-colors ${
-                  selectedVideo?.id === video.id ? 'border-primary bg-primary/10 dark:bg-primary/20' : 'hover:bg-muted/50'
-                }`}
-                onClick={() => setSelectedVideo(video)}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
               >
-                <CardContent className="p-4">
-                  <div className="aspect-video bg-muted rounded mb-3 flex items-center justify-center">
-                    {video.thumbnailUrl ? (
-                      <img 
-                        src={video.thumbnailUrl} 
-                        alt={video.title}
-                        className="w-full h-full object-cover rounded"
-                      />
-                    ) : (
-                      <Video className="w-8 h-8 text-muted-foreground" />
-                    )}
-                  </div>
-                  <h3 className="font-medium text-sm mb-1">{video.title}</h3>
-                  <p className="text-xs text-muted-foreground mb-2">
-                    {formatDurationSeconds(video.duration || 0)}
-                  </p>
-                  {video.tags && Array.isArray(video.tags) && video.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {video.tags.slice(0, 2).map((tag, index) => (
-                        <Badge key={index} variant="secondary" className="text-xs">
-                          {tag}
-                        </Badge>
-                      ))}
+                <Card 
+                  className={`cursor-pointer transition-all duration-300 ${
+                    selectedVideo?.id === video.id 
+                      ? 'border-cyan-500 bg-gradient-to-br from-cyan-950/40 to-blue-900/30 shadow-lg shadow-cyan-500/20' 
+                      : 'border-gray-700 bg-gray-800/40 hover:bg-gray-700/50 hover:border-gray-600'
+                  }`}
+                  onClick={() => setSelectedVideo(video)}
+                >
+                  <CardContent className="p-4">
+                    <div className="aspect-video bg-black/50 rounded mb-3 flex items-center justify-center overflow-hidden border border-gray-700">
+                      {video.thumbnailUrl ? (
+                        <img 
+                          src={video.thumbnailUrl} 
+                          alt={video.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Video className="w-8 h-8 text-gray-500" />
+                      )}
                     </div>
-                  )}
-                </CardContent>
-              </Card>
+                    <h3 className="font-medium text-sm mb-1 text-gray-200">{video.title}</h3>
+                    <p className="text-xs text-gray-400 mb-2">
+                      {formatDurationSeconds(video.duration || 0)}
+                    </p>
+                    {video.tags && Array.isArray(video.tags) && video.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {video.tags.slice(0, 2).map((tag, index) => (
+                          <Badge key={index} variant="secondary" className="text-xs bg-gray-700 text-gray-300 border-gray-600">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
             ))}
           </div>
         )}
 
-        <div className="flex gap-3">
+        <div className="flex gap-3 pt-4">
           <Button 
             onClick={() => setCurrentPhase('voice')}
             variant="outline"
+            className="bg-gray-800/50 border-gray-700 hover:bg-gray-700 text-gray-200"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Voice
@@ -894,7 +938,7 @@ export default function AIScriptGenerator() {
           <Button 
             onClick={handlePrepareVideo}
             disabled={!selectedVideo || preparingVideo}
-            className="flex-1"
+            className="flex-1 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white shadow-lg shadow-cyan-500/20"
           >
             {preparingVideo ? (
               <>
@@ -911,58 +955,80 @@ export default function AIScriptGenerator() {
         </div>
       </CardContent>
     </Card>
+    </motion.div>
   );
 
   const renderProcessingPhase = () => (
-    <Card className="w-full max-w-4xl mx-auto">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Loader2 className="w-6 h-6 animate-spin" />
-          Processing Your Video
-        </CardTitle>
-        <p className="text-muted-foreground">
-          Combining audio and video to create your final output...
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="text-center py-8">
-          <div className="w-16 h-16 bg-primary/10 dark:bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          </div>
-          <h3 className="text-lg font-medium mb-2">Creating Your Video</h3>
-          <p className="text-muted-foreground mb-4">
-            This may take a few minutes depending on the video length
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.5 }}
+      className="w-full max-w-4xl mx-auto"
+    >
+      <Card className="backdrop-blur-sm bg-[#2B2B2B]/95 border-gray-800 shadow-2xl">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-3 text-2xl">
+            <div className="w-10 h-10 rounded-lg bg-gray-800 border border-gray-700 flex items-center justify-center">
+              <Loader2 className="w-5 h-5 animate-spin text-gray-300" />
+            </div>
+            <span className="text-white font-semibold">
+              Processing Your Video
+            </span>
+          </CardTitle>
+          <p className="text-gray-400 mt-2">
+            Combining audio and video to create your final output...
           </p>
-          <Progress value={85} className="w-full max-w-md mx-auto" />
-        </div>
-      </CardContent>
-    </Card>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="text-center py-12">
+            <div className="w-20 h-20 bg-gray-800/50 rounded-full flex items-center justify-center mx-auto mb-6 border border-gray-700">
+              <Loader2 className="w-10 h-10 animate-spin text-gray-300" />
+            </div>
+            <h3 className="text-lg font-medium mb-2 text-gray-200">Creating Your Video</h3>
+            <p className="text-gray-400 mb-6">
+              This may take a few minutes depending on the video length
+            </p>
+            <Progress value={85} className="w-full max-w-md mx-auto" />
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 
   const renderCompletePhase = () => (
-    <Card className="w-full max-w-4xl mx-auto">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <CheckCircle className="w-6 h-6 text-green-500" />
-          Video Ready!
-        </CardTitle>
-        <p className="text-muted-foreground">
-          Your video has been successfully generated and is ready for download
-        </p>
-      </CardHeader>
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.5 }}
+      className="w-full max-w-4xl mx-auto"
+    >
+      <Card className="backdrop-blur-sm bg-[#2B2B2B]/95 border-gray-800 shadow-2xl">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-3 text-2xl">
+            <div className="w-10 h-10 rounded-lg bg-gray-800 border border-gray-700 flex items-center justify-center">
+              <CheckCircle className="w-5 h-5 text-green-400" />
+            </div>
+            <span className="text-white font-semibold">
+              Video Ready!
+            </span>
+          </CardTitle>
+          <p className="text-gray-400 mt-2">
+            Your video has been successfully generated and is ready for download
+          </p>
+        </CardHeader>
       <CardContent className="space-y-6">
         {project.finalVideoUrl && (
           <div className="space-y-4">
             {project.isMockVideo ? (
-              <div className="w-full aspect-video bg-muted rounded-lg flex items-center justify-center border-2 border-dashed border-muted-foreground/25">
+              <div className="w-full aspect-video bg-gradient-to-br from-gray-900 to-black rounded-lg flex items-center justify-center border-2 border-dashed border-gray-700">
                 <div className="text-center space-y-3">
-                  <Video className="w-16 h-16 mx-auto text-muted-foreground/50" />
+                  <Video className="w-16 h-16 mx-auto text-gray-500" />
                   <div className="space-y-1">
-                    <h4 className="font-semibold text-lg">Mock Video Generated</h4>
-                    <p className="text-sm text-muted-foreground">
+                    <h4 className="font-semibold text-lg text-gray-200">Mock Video Generated</h4>
+                    <p className="text-sm text-gray-400">
                       Video generation completed successfully in development mode
                     </p>
-                    <Badge variant="secondary" className="mt-2">
+                    <Badge variant="secondary" className="mt-2 bg-gray-700 text-gray-300 border-gray-600">
                       Development Mode
                     </Badge>
                   </div>
@@ -971,7 +1037,7 @@ export default function AIScriptGenerator() {
             ) : (
               <video 
                 controls 
-                className="w-full rounded-lg"
+                className="w-full rounded-lg border border-gray-700"
                 src={project.finalVideoUrl}
               >
                 Your browser does not support video playbook.
@@ -984,7 +1050,7 @@ export default function AIScriptGenerator() {
                   <DownloadButton
                     s3Url={project.finalVideoUrl}
                     fileName={`${project.projectName || 'generated-video'}.mp4`}
-                    className="flex-1"
+                    className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg shadow-green-500/20"
                   >
                     Download Video
                   </DownloadButton>
@@ -994,8 +1060,7 @@ export default function AIScriptGenerator() {
                       const encodedName = encodeURIComponent(project.projectName || 'AI Generated Video');
                       router.push(`/dashboard/auto-subtitles?videoUrl=${encodedUrl}&videoName=${encodedName}`);
                     }}
-                    className="flex-1"
-                    variant="secondary"
+                    className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg shadow-blue-500/20"
                     disabled={!project.finalVideoUrl}
                   >
                     <Captions className="w-4 h-4 mr-2" />
@@ -1004,19 +1069,19 @@ export default function AIScriptGenerator() {
                 </>
               )}
               {project.isMockVideo && (
-                <Button disabled className="flex-1">
+                <Button disabled className="flex-1 bg-gray-800/50 border-gray-700 text-gray-400">
                   <Download className="w-4 h-4 mr-2" />
                   Download (Mock Mode)
                 </Button>
               )}
               
               <Button 
-                variant="outline" 
+                variant="outline"
+                className="bg-gray-800/50 border-gray-700 hover:bg-gray-700 text-gray-200"
                 onClick={() => {
                   setCurrentPhase('script');
                   setProject({ status: 'idle' });
                   setScriptPrompt('');
-                  setProjectName('');
                 }}
               >
                 Create New Video
@@ -1026,11 +1091,23 @@ export default function AIScriptGenerator() {
         )}
       </CardContent>
     </Card>
+    </motion.div>
   );
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Silk Background */}
+      <div className="absolute inset-0 z-0">
+        <Silk
+          speed={5}
+          scale={1.5}
+          color="#2B2B2B"
+          noiseIntensity={1.5}
+          rotation={0}
+        />
+      </div>
+      
+      <div className="relative z-10 container mx-auto px-4 py-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -1038,21 +1115,33 @@ export default function AIScriptGenerator() {
           className="space-y-8"
         >
           {/* Header */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-4">
             <SidebarTrigger />
-            <div className="flex items-center space-x-2">
-              <Wand2 className="h-8 w-8 text-primary" />
-              <h1 className="text-3xl font-bold text-foreground">
-                AI Video Generation
-              </h1>
-            </div>
-            <div></div>
+            <div className="flex-1"></div>
           </div>
           
-          <div className="text-center">
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+          <div className="text-center mb-12">
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="flex items-center justify-center gap-3 mb-4"
+            >
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-600 to-white flex items-center justify-center shadow-lg">
+                <Wand2 className="h-6 w-6 text-white" />
+              </div>
+              <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-400 via-white to-purple-400 bg-clip-text text-transparent">
+                AI Video Generation
+              </h1>
+            </motion.div>
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2, duration: 0.6 }}
+              className="text-lg text-gray-300 max-w-2xl mx-auto"
+            >
               Create complete videos with AI-generated scripts, narration, and background footage. Perfect for TikTok, YouTube, and social media.
-            </p>
+            </motion.p>
           </div>
 
           {/* Progress Indicator */}

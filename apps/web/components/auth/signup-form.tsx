@@ -22,8 +22,10 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/lib/auth-context';
 import { fadeInUp, scaleIn, staggerContainer, staggerItem } from '@/lib/utils';
+import { TermsOfServiceModal } from '@/components/terms-of-service-modal';
 
 // Step 1: Request OTP
 const requestOTPSchema = z.object({
@@ -38,6 +40,9 @@ const completeSignUpSchema = z.object({
   password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string().min(8, 'Password must be at least 8 characters'),
   otp: z.string().length(6, 'OTP must be 6 digits'),
+  tosAccepted: z.boolean().refine((val) => val === true, {
+    message: 'You must accept the Terms of Service to continue',
+  }),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
@@ -59,6 +64,7 @@ export function SignUpForm() {
   const [timeLeft, setTimeLeft] = useState(600); // 10 minutes in seconds
   const [canResend, setCanResend] = useState(false);
   const [formData, setFormData] = useState<{ name: string; email: string }>({ name: '', email: '' });
+  const [showTosModal, setShowTosModal] = useState(false);
   const router = useRouter();
   const { signUp } = useAuth();
 
@@ -78,6 +84,7 @@ export function SignUpForm() {
       password: '',
       confirmPassword: '',
       otp: '',
+      tosAccepted: false,
     },
   });
 
@@ -164,7 +171,7 @@ export function SignUpForm() {
     setError(null);
 
     try {
-      await signUp(data.name, data.email, data.password, data.otp);
+      await signUp(data.name, data.email, data.password, data.otp, data.tosAccepted);
       router.push('/dashboard');
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Something went wrong');
@@ -527,6 +534,34 @@ export function SignUpForm() {
                       )}
                     />
 
+                    <FormField
+                      control={completeSignUpForm.control}
+                      name="tosAccepted"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel className="text-sm text-white cursor-pointer">
+                              I agree to the{' '}
+                              <button
+                                type="button"
+                                onClick={() => setShowTosModal(true)}
+                                className="text-primary hover:text-primary/80 underline font-semibold"
+                              >
+                                Terms of Service
+                              </button>
+                            </FormLabel>
+                            <FormMessage />
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+
                     <Button
                       type="submit"
                       className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg"
@@ -570,6 +605,11 @@ export function SignUpForm() {
           </div>
         </CardContent>
       </Card>
+
+      <TermsOfServiceModal 
+        open={showTosModal} 
+        onOpenChange={setShowTosModal}
+      />
     </motion.div>
   );
 }

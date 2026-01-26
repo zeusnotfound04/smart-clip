@@ -7,6 +7,7 @@ import { ProtectedRoute } from '@/components/protected-route';
 import { useAuth } from '@/lib/auth-context';
 import { apiClient } from '@/lib/api-client';
 import { staggerContainer, staggerItem } from '@/lib/utils';
+import Silk from '@/components/slik-background';
 
 // Import types
 import { 
@@ -389,8 +390,19 @@ export default function DashboardSmartClipperPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-background">
-        <div className="container mx-auto px-4 py-8">
+      <div className="min-h-screen bg-background relative">
+        {/* Silk Background */}
+        <div className="absolute inset-0 z-0">
+          <Silk
+            speed={5}
+            scale={1.5}
+            color="#2B2B2B"
+            noiseIntensity={1.5}
+            rotation={0}
+          />
+        </div>
+
+        <div className="container mx-auto px-4 py-8 relative z-10">
           <motion.div
             variants={staggerContainer}
             initial="initial"

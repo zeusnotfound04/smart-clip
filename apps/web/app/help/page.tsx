@@ -275,7 +275,7 @@ export default function HelpPage() {
                       <Mail className="w-6 h-6 text-purple-600" />
                     </div>
                     <h3 className="font-semibold mb-2">Email Support</h3>
-                    <p className="text-sm text-muted-foreground">support@smartclips.ai</p>
+                    <p className="text-sm text-muted-foreground">smart@smartclips.net</p>
                   </CardContent>
                 </Card>
               </div>
@@ -405,7 +405,7 @@ export default function HelpPage() {
                         <div className="space-y-2 text-sm">
                           <div className="flex items-center gap-2">
                             <Mail className="w-4 h-4 text-muted-foreground" />
-                            <span>support@smartclips.ai</span>
+                            <span>smart@smartclips.net</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <MessageCircle className="w-4 h-4 text-muted-foreground" />

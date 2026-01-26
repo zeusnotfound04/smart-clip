@@ -46,6 +46,10 @@ model User {
   password                String?
   isAdmin                 Boolean                  @default(false) @map("is_admin")
   
+  // Terms of Service
+  tosAccepted             Boolean                  @default(false) @map("tos_accepted")
+  tosAcceptedAt           DateTime?                @map("tos_accepted_at")
+  
   // Credits and Subscription fields
   credits                 Int                      @default(10)
   totalCreditsUsed        Int                      @default(0) @map("total_credits_used")
