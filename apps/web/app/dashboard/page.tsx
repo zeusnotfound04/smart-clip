@@ -85,6 +85,7 @@ export default function DashboardPage() {
   const [videoUrl, setVideoUrl] = useState('');
   const [isValidatingUrl, setIsValidatingUrl] = useState(false);
   const [urlError, setUrlError] = useState<string | null>(null);
+  const [urlSuccess, setUrlSuccess] = useState(false);
   const [currentPlatformIndex, setCurrentPlatformIndex] = useState(0);
   const [platformFade, setPlatformFade] = useState(true);
 
@@ -169,8 +170,13 @@ export default function DashboardPage() {
         throw new Error(result.error || 'Invalid URL');
       }
 
-      // URL is valid, redirect to choose-feature with the URL
-      router.push(`/choose-feature?url=${encodeURIComponent(videoUrl)}`);
+      // Store the validated URL in localStorage for feature pages to use
+      localStorage.setItem('pendingVideoUrl', videoUrl);
+      localStorage.setItem('pendingVideoName', result.title || 'Imported Video');
+      
+      // Show success message
+      setUrlError(null);
+      // You could add a success state here if you want to show a success message
     } catch (error) {
       setUrlError(error instanceof Error ? error.message : 'Invalid video URL');
     } finally {
@@ -379,6 +385,7 @@ export default function DashboardPage() {
                                     onChange={(e) => {
                                       setVideoUrl(e.target.value);
                                       setUrlError(null);
+                                      setUrlSuccess(false);
                                     }}
                                     onKeyPress={handleKeyPress}
                                     disabled={isValidatingUrl}
@@ -423,6 +430,17 @@ export default function DashboardPage() {
                                   className="text-xs text-red-400 text-left"
                                 >
                                   {urlError}
+                                </motion.p>
+                              )}
+
+                              {urlSuccess && (
+                                <motion.p
+                                  initial={{ opacity: 0, y: -10 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  className="text-xs text-green-400 text-left flex items-center gap-1"
+                                >
+                                  <CheckCircle className="w-3 h-3" />
+                                  Video ready! Choose a feature below to get started.
                                 </motion.p>
                               )}
 
