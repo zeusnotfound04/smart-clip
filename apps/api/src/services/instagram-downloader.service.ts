@@ -134,6 +134,7 @@ const API_ENDPOINTS: APIEndpoint[] = [
       // Check for error or invalid status
       if (!data?.status || data.status !== 1) {
         console.log('[Instagram Downloader] vidssave.com returned error status:', data?.status);
+        console.log('[Instagram Downloader] vidssave.com full error response:', JSON.stringify(data, null, 2));
         return null;
       }
       
@@ -146,6 +147,10 @@ const API_ENDPOINTS: APIEndpoint[] = [
           thumbnail: data.data.thumbnail
         };
       }
+      
+      // Log when video resource not found
+      console.log('[Instagram Downloader] vidssave.com: No video resource found in response');
+      console.log('[Instagram Downloader] Available resources:', data?.data?.resources?.map((r: any) => r.type));
       
       return null;
     }
@@ -439,20 +444,25 @@ class InstagramDownloaderService {
       
       if (contentType.includes('application/json')) {
         data = await response.json();
+      } else if (contentType.includes('text/html')) {
+        const text = await response.text();
+        console.log(`[Instagram Downloader] ${endpoint.name} returned HTML instead of JSON:`, text.substring(0, 500));
+        throw new Error(`${endpoint.name} returned HTML instead of JSON - possible blocking or rate limit`);
       } else {
-        // Handle HTML/text response
+        // Handle other text response
         data = { data: await response.text() };
       }
 
-      // Log full response for debugging
-      console.log(`[Instagram Downloader] Full API response from ${endpoint.name}:`, JSON.stringify(data, null, 2));
+      // Log full response for debugging (limit to first 2000 chars to avoid spam)
+      const dataStr = JSON.stringify(data, null, 2);
+      console.log(`[Instagram Downloader] API response from ${endpoint.name} (${dataStr.length} chars):`, 
+        dataStr.length > 2000 ? dataStr.substring(0, 2000) + '...[truncated]' : dataStr);
 
       // Parse using endpoint-specific parser
       const parsed = endpoint.responseParser(data);
       
       if (!parsed || !parsed.downloadUrl) {
         this.recordEndpointFailure(endpoint.name);
-        console.log(`[Instagram Downloader] Failed to extract download URL. Response structure:`, JSON.stringify(data, null, 2));
         throw new Error(`No download URL found in response from ${endpoint.name}`);
       }
 

@@ -74,40 +74,17 @@ const navigationItems = [
   // },
   {
     title: "Smart Clipper",
-    url: "/dashboard/features/smart-clipper",
+    url: "/dashboard/smart-clipper",
     icon: Scissors,
     badge: null,
   },
   {
     title: "Split Streamer",
-    url: "/dashboard/features/split-streamer",
+    url: "/dashboard/split-streamer",
     icon: Columns2,
     badge: null,
   },
-  // {
-  //   title: "Video Enhancement",
-  //   url: "/dashboard/features/video-enhancement",
-  //   icon: Video,
-  //   badge: null,
-  // },
-  // {
-  //   title: "Projects",
-  //   url: "/dashboard/projects",
-  //   icon: Briefcase,
-  //   badge: null,
-  // },
-  // {
-  //   title: "Videos",
-  //   url: "/dashboard/videos",
-  //   icon: Play,
-  //   badge: null,
-  // },
-  // {
-  //   title: "Workspaces",
-  //   url: "/dashboard/workspaces",
-  //   icon: Layers,
-  //   badge: null,
-  // },
+
 ];
 
 const bottomNavigation = [
@@ -115,11 +92,6 @@ const bottomNavigation = [
     title: "Settings",
     url: "/settings",
     icon: Settings,
-  },
-  {
-    title: "Help",
-    url: "/dashboard/help",
-    icon: HelpCircle,
   },
 ];
 

@@ -33,7 +33,7 @@ const coreFeatures = [
     title: 'Split Streamer', 
     description: 'Split long videos into multiple clips automatically',
     icon: Video,
-    href: '/dashboard/features/split-streamer',
+    href: '/dashboard/split-streamer',
     gradient: 'from-purple-500 to-pink-500'
   },
   {
@@ -41,7 +41,7 @@ const coreFeatures = [
     title: 'Smart Clipper',
     description: 'Extract highlights and key moments using AI',
     icon: Scissors,
-    href: '/dashboard/features/smart-clipper',
+    href: '/dashboard/smart-clipper',
     gradient: 'from-green-500 to-teal-500'
   },
   {
