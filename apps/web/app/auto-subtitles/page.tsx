@@ -76,11 +76,27 @@ function AutoSubtitlesContent() {
     return null;
   }
 
-  // Auto-process video from URL parameters (when redirected from AI script generator)
+  // Auto-process video from URL parameters or localStorage
   useEffect(() => {
-    const videoUrl = searchParams.get('videoUrl');
-    const videoName = searchParams.get('videoName');
+    // Check URL parameters first (priority)
+    let videoUrl = searchParams.get('videoUrl');
+    let videoName = searchParams.get('videoName');
     const autoProcess = searchParams.get('autoProcess');
+    
+    // If no URL in params, check localStorage
+    if (!videoUrl) {
+      const pendingUrl = localStorage.getItem('pendingVideoUrl');
+      const pendingName = localStorage.getItem('pendingVideoName');
+      
+      if (pendingUrl) {
+        videoUrl = pendingUrl;
+        videoName = pendingName || 'Imported Video';
+        
+        // Clear the pending URL from localStorage after retrieving it
+        localStorage.removeItem('pendingVideoUrl');
+        localStorage.removeItem('pendingVideoName');
+      }
+    }
     
     if (videoUrl && !isAutoProcessing && videos.length === 0) {
       setIsAutoProcessing(true);

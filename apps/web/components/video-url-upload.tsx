@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,6 +38,23 @@ export function VideoUrlUpload({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [platform, setPlatform] = useState<string | null>(null);
+  const [hasCheckedLocalStorage, setHasCheckedLocalStorage] = useState(false);
+
+  // Check for pending URL from localStorage on mount
+  useEffect(() => {
+    if (hasCheckedLocalStorage) return;
+    
+    const pendingUrl = localStorage.getItem('pendingVideoUrl');
+    if (pendingUrl && !url) {
+      setUrl(pendingUrl);
+      setHasCheckedLocalStorage(true);
+      // Clear it from localStorage
+      localStorage.removeItem('pendingVideoUrl');
+      localStorage.removeItem('pendingVideoName');
+    } else {
+      setHasCheckedLocalStorage(true);
+    }
+  }, [hasCheckedLocalStorage, url]);
 
   const handleValidateUrl = async () => {
     if (!url.trim()) {
