@@ -6,6 +6,7 @@ import { Scissors } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { apiClient } from '@/lib/api-client';
 import { AppHeader } from '@/components/shared/AppHeader';
+import Silk from '@/components/slik-background';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -335,16 +336,29 @@ export default function PodcastClipperPage() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden">
+    <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden relative">
+      {/* Silk Background */}
+      <div className="absolute inset-0 z-0">
+        <Silk
+          speed={5}
+          scale={1.5}
+          color="#2B2B2B"
+          noiseIntensity={1.5}
+          rotation={0}
+        />
+      </div>
+
       {/* Header */}
-      <AppHeader 
-        title="Podcast Clipper"
-        description="Create viral short-form clips with AI-powered subtitles"
-        icon={<Scissors className="w-6 h-6 text-white" />}
-      />
+      <div className="relative z-10">
+        <AppHeader 
+          title="Podcast Clipper"
+          description="Create viral short-form clips with AI-powered subtitles"
+          icon={<Scissors className="w-6 h-6 text-white" />}
+        />
+      </div>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto p-6">
+      <main className="flex-1 overflow-y-auto p-6 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

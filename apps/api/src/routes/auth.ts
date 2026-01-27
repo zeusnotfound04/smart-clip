@@ -22,6 +22,9 @@ const signUpSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   otp: z.string().length(6, 'OTP must be 6 digits'),
+  tosAccepted: z.boolean().refine((val) => val === true, {
+    message: 'You must accept the Terms of Service to create an account',
+  }),
 });
 
 const signInSchema = z.object({
@@ -116,8 +119,9 @@ router.post('/verify-otp', async (req: Request, res: Response) => {
 
 router.post('/signup', async (req: Request, res: Response) => {
   try {
-    const { name, email, password, otp } = signUpSchema.parse(req.body);
+    const { name, email, password, otp, tosAccepted } = signUpSchema.parse(req.body);
 
+    // Verify email first
     const verification = await prisma.emailVerification.findFirst({
       where: {
         email,
@@ -137,6 +141,7 @@ router.post('/signup', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Verification code has expired. Please request a new one.' });
     }
 
+    // Check if user already exists
     const existingUser = await prisma.user.findUnique({
       where: { email }
     });
@@ -145,21 +150,31 @@ router.post('/signup', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'User with this email already exists' });
     }
 
+    // Ensure TOS is accepted
+    if (!tosAccepted) {
+      return res.status(400).json({ error: 'You must accept the Terms of Service to create an account' });
+    }
+
     const hashedPassword = await hashPassword(password);
 
+    // Create user with TOS acceptance
     const user = await prisma.user.create({
       data: {
         name,
         email,
         password: hashedPassword,
-        emailVerified: new Date(),
+        emailVerified: new Date(), // Mark email as verified
+        tosAccepted: true,
+        tosAcceptedAt: new Date(),
       }
     });
 
+    // Clean up verification record
     await prisma.emailVerification.deleteMany({
       where: { email }
     });
 
+    // Send welcome email
     try {
       await EmailService.sendWelcomeEmail({ to: email, name });
     } catch (emailError) {
@@ -176,6 +191,7 @@ router.post('/signup', async (req: Request, res: Response) => {
         isAdmin: user.isAdmin,
         credits: user.credits,
         emailVerified: user.emailVerified,
+        tosAccepted: user.tosAccepted,
       },
       token
     });
@@ -200,6 +216,11 @@ router.post('/signin', async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
+    // Check if email is verified
+    if (!user.emailVerified) {
+      return res.status(401).json({ error: 'Please verify your email before signing in' });
+    }
+
     const isValidPassword = await comparePassword(password, user.password);
 
     if (!isValidPassword) {
@@ -215,6 +236,8 @@ router.post('/signin', async (req: Request, res: Response) => {
         email: user.email,
         isAdmin: user.isAdmin,
         credits: user.credits,
+        emailVerified: user.emailVerified,
+        tosAccepted: user.tosAccepted,
       },
       token
     });

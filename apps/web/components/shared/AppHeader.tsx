@@ -22,7 +22,7 @@ export function AppHeader({
   const router = useRouter();
 
   return (
-    <header className="flex items-center gap-4 border-b p-4 bg-background/95 backdrop-blur-sm">
+    <header className="flex items-center gap-4 border-b border-gray-800/50 p-4 bg-transparent backdrop-blur-sm">
       <SidebarTrigger />
       <Button
         variant="ghost"

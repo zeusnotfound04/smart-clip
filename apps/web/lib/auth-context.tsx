@@ -8,7 +8,7 @@ interface AuthContextType {
   loading: boolean;
   session: { accessToken: string | null } | null;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (name: string, email: string, password: string, otp: string) => Promise<void>;
+  signUp: (name: string, email: string, password: string, otp: string, tosAccepted?: boolean) => Promise<void>;
   signOut: () => void;
 }
 
@@ -51,8 +51,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(result.data.user);
   }, []);
 
-  const signUp = useCallback(async (name: string, email: string, password: string, otp: string) => {
-    const result = await apiClient.signUp(name, email, password, otp);
+  const signUp = useCallback(async (name: string, email: string, password: string, otp: string, tosAccepted: boolean = true) => {
+    const result = await apiClient.signUp(name, email, password, otp, tosAccepted);
     setUser(result.data.user);
   }, []);
 

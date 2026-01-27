@@ -5,8 +5,7 @@ import { motion } from 'framer-motion';
 import { Subtitles } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { apiClient } from '@/lib/api-client';
-import { AppHeader } from '@/components/shared/AppHeader';
-import { VideoUploadPanel } from '@/components/auto-subtitles/VideoUploadPanel';
+import { AppHeader } from '@/components/shared/AppHeader';import Silk from '@/components/slik-background';import { VideoUploadPanel } from '@/components/auto-subtitles/VideoUploadPanel';
 import { VideoPreviewArea } from '@/components/auto-subtitles/VideoPreviewArea';
 import { SubtitleConfigurationPanel } from '@/components/auto-subtitles/SubtitleConfigurationPanel';
 import { ProgressOverlay } from '@/components/auto-subtitles/ProgressOverlay';
@@ -481,16 +480,29 @@ export default function AutoSubtitlesPage() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden">
+    <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden relative">
+      {/* Silk Background */}
+      <div className="absolute inset-0 z-0">
+        <Silk
+          speed={5}
+          scale={1.5}
+          color="#2B2B2B"
+          noiseIntensity={1.5}
+          rotation={0}
+        />
+      </div>
+
       {/* Header with Logo Integration */}
-      <AppHeader 
-        title="Auto Subtitles"
-        description="Generate accurate subtitles using AI speech recognition heloo bhai"
-        icon={<Subtitles className="w-6 h-6 text-white" />}
-      />
+      <div className="relative z-10">
+        <AppHeader 
+          title="Auto Subtitles"
+          description="Generate accurate subtitles using AI speech recognition heloo bhai"
+          icon={<Subtitles className="w-6 h-6 text-white" />}
+        />
+      </div>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-hidden">
+      <main className="flex-1 overflow-hidden relative z-10">
         <div className="h-full flex">
           {/* Upload Panel */}
           <motion.section
