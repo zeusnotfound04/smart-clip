@@ -74,6 +74,27 @@ export function VideoPreviewArea({
     return url.includes('drive.google.com');
   };
 
+  // Convert Google Drive export/download URLs to viewing URLs
+  const normalizeGoogleDriveUrl = (url: string) => {
+    try {
+      // If it's already a viewing or preview URL, return as-is
+      if (url.includes('/file/d/') || url.includes('/preview')) {
+        return url;
+      }
+      
+      // Extract file ID from uc?export=download format
+      const exportMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+      if (exportMatch && exportMatch[1]) {
+        const fileId = exportMatch[1];
+        return `https://drive.google.com/file/d/${fileId}/view`;
+      }
+      
+      return url;
+    } catch (e) {
+      return url;
+    }
+  };
+
   const isTikTokUrl = (url: string | null) => {
     if (!url) return false;
     return url.includes('tikcdn.io') || 
@@ -323,13 +344,25 @@ export function VideoPreviewArea({
               {/* Video Container */}
               <div className="relative flex-1 bg-black rounded-t-lg overflow-hidden flex items-center justify-center">
                 {(() => {
-                  const isYouTube = isYouTubeUrl(videoPreviewUrl);
-                  const isTwitter = isTwitterUrl(videoPreviewUrl);
-                  const isGoogleDrive = isGoogleDriveUrl(videoPreviewUrl);
+                  // Normalize Google Drive URLs first
+                  let normalizedUrl = videoPreviewUrl;
+                  if (videoPreviewUrl && isGoogleDriveUrl(videoPreviewUrl)) {
+                    normalizedUrl = normalizeGoogleDriveUrl(videoPreviewUrl);
+                    if (normalizedUrl !== videoPreviewUrl) {
+                      console.log('[VideoPreviewArea] Normalized Google Drive URL:');
+                      console.log('   From:', videoPreviewUrl);
+                      console.log('   To:', normalizedUrl);
+                    }
+                  }
+
+                  const isYouTube = isYouTubeUrl(normalizedUrl);
+                  const isTwitter = isTwitterUrl(normalizedUrl);
+                  const isGoogleDrive = isGoogleDriveUrl(normalizedUrl);
                   const shouldUseIframe = ((isYouTube || isTwitter || isGoogleDrive) && !subtitledVideoUrl);
                   
                   console.log('VideoPreviewArea rendering decision:');
                   console.log('   - videoPreviewUrl:', videoPreviewUrl);
+                  console.log('   - normalizedUrl:', normalizedUrl);
                   console.log('   - subtitledVideoUrl:', subtitledVideoUrl);
                   console.log('   - isYouTube:', isYouTube);
                   console.log('   - isTwitter (tweet URL check):', isTwitter);
@@ -343,13 +376,13 @@ export function VideoPreviewArea({
                     let platformLabel;
                     
                     if (isYouTube) {
-                      embedUrl = getYouTubeEmbedUrl(videoPreviewUrl!);
+                      embedUrl = getYouTubeEmbedUrl(normalizedUrl!);
                       platformLabel = 'YouTube Preview';
                     } else if (isTwitter) {
-                      embedUrl = getTwitterEmbedUrl(videoPreviewUrl!);
+                      embedUrl = getTwitterEmbedUrl(normalizedUrl!);
                       platformLabel = 'Tweet Preview - Video will be extracted';
                     } else if (isGoogleDrive) {
-                      embedUrl = getGoogleDrivePreviewUrl(videoPreviewUrl!);
+                      embedUrl = getGoogleDrivePreviewUrl(normalizedUrl!);
                       platformLabel = 'Google Drive Preview';
                     }
                     

@@ -126,9 +126,11 @@ export function VideoUploadPanel({
         let downloadUrl;
         
         if (isGoogleDrive) {
-          // For Google Drive: use original URL for preview, direct URL for download
+          // For Google Drive: use original viewing URL for preview in iframe, direct URL for download
           previewUrl = result.videoInfo.originalUrl || url;
           downloadUrl = directVideoUrl; // Direct download link for S3 upload
+          console.log('[Google Drive] Preview URL (for iframe):', previewUrl);
+          console.log('[Google Drive] Download URL (for S3):', downloadUrl);
         } else if (needsProxy) {
           // For Twitter/Instagram/TikTok: use proxy for both preview and download
           const proxyUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/video-url-upload/proxy?url=${encodeURIComponent(directVideoUrl)}`;
