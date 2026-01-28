@@ -26,7 +26,7 @@ export interface ProxyConfig {
 export interface ProxyLease {
   proxy: ProxyConfig;
   leaseId: string;
-  agent: HttpsProxyAgent;
+  agent: llsx;
 }
 
 interface ProxyStats {

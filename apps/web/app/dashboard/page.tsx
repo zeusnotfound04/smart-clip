@@ -69,10 +69,10 @@ const formatRelativeTime = (dateString: string) => {
 
 const getStatusIcon = (status: string) => {
   switch (status) {
-    case 'completed': return <CheckCircle className="w-4 h-4 text-green-500" />;
+    case 'completed':  return <CheckCircle className="w-4 h-4 text-green-500" />;
     case 'processing': return <Clock className="w-4 h-4 text-yellow-500" />;
-    case 'failed': return <AlertCircle className="w-4 h-4 text-red-500" />;
-    default: return <Clock className="w-4 h-4 text-gray-500" />;
+    case 'failed':     return <AlertCircle className="w-4 h-4 text-red-500" />;
+    default:           return <Clock className="w-4 h-4 text-gray-500" />;
   }
 };
 
@@ -167,18 +167,50 @@ export default function DashboardPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || 'Invalid URL');
+        // Store URL anyway and let feature page handle the download
+        localStorage.setItem('pendingVideoUrl', videoUrl);
+        localStorage.setItem('pendingVideoName', 'Video from URL');
+        
+        // Navigate even if validation failed - feature page will handle errors
+        setUrlError(null);
+        setUrlSuccess(true);
+        
+        setTimeout(() => {
+          router.push('/choose-feature');
+        }, 500);
+        return;
       }
 
-      // Store the validated URL in localStorage for feature pages to use
-      localStorage.setItem('pendingVideoUrl', videoUrl);
-      localStorage.setItem('pendingVideoName', result.title || 'Imported Video');
+      // Store the direct video URL (not the original tweet/post URL)
+      const directVideoUrl = result.videoInfo?.url || result.url || videoUrl;
+      localStorage.setItem('pendingVideoUrl', directVideoUrl);
+      localStorage.setItem('pendingVideoName', result.videoInfo?.title || result.title || 'Imported Video');
       
-      // Show success message
+      // Also store the original URL for reference
+      if (result.videoInfo?.originalUrl && result.videoInfo.originalUrl !== directVideoUrl) {
+        localStorage.setItem('pendingOriginalUrl', videoUrl);
+      }
+      
+      // Show success and navigate to choose feature
       setUrlError(null);
-      // You could add a success state here if you want to show a success message
+      setUrlSuccess(true);
+      
+      // Navigate to choose-feature page after a brief delay
+      setTimeout(() => {
+        router.push('/choose-feature');
+      }, 500);
     } catch (error) {
-      setUrlError(error instanceof Error ? error.message : 'Invalid video URL');
+      // Store URL anyway and let feature page handle the download
+      localStorage.setItem('pendingVideoUrl', videoUrl);
+      localStorage.setItem('pendingVideoName', 'Video from URL');
+      
+      // Navigate even if validation failed
+      setUrlError(null);
+      setUrlSuccess(true);
+      
+      setTimeout(() => {
+        router.push('/choose-feature');
+      }, 500);
     } finally {
       setIsValidatingUrl(false);
     }
@@ -526,7 +558,7 @@ export default function DashboardPage() {
                   whileHover={{ scale: 1.05, y: -3 }}
                   transition={{ type: "spring", stiffness: 300 }}
                 >
-                  <Link href="/auto-subtitles">
+                  <Link href="/dashboard/auto-subtitles">
                     <Card className="h-full bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border-blue-500/30 hover:border-blue-500 transition-all cursor-pointer group">
                       <CardContent className="p-4 text-center">
                         <motion.div
@@ -565,7 +597,7 @@ export default function DashboardPage() {
                   whileHover={{ scale: 1.05, y: -3 }}
                   transition={{ type: "spring", stiffness: 300 }}
                 >
-                  <Link href="/ai-script-generator">
+                  <Link href="/dashboard/ai-script-generator">
                     <Card className="h-full bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-purple-500/30 hover:border-purple-500 transition-all cursor-pointer group">
                       <CardContent className="p-4 text-center">
                         <motion.div

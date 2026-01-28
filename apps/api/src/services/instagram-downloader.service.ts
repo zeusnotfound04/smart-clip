@@ -57,6 +57,101 @@ interface InstagramAPIResponse {
 // Multiple API endpoints for redundancy (more endpoints can be added)
 const API_ENDPOINTS: APIEndpoint[] = [
   {
+    name: 'imginn.com',
+    url: 'https://imginn.com/p/{postId}/',
+    method: 'GET',
+    headers: {
+      'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+      'accept-language': 'en-GB,en;q=0.6',
+      'cache-control': 'max-age=0',
+      'sec-ch-ua': '"Not(A:Brand";v="8", "Chromium";v="144", "Brave";v="144"',
+      'sec-ch-ua-mobile': '?1',
+      'sec-ch-ua-platform': '"Android"',
+      'sec-fetch-dest': 'document',
+      'sec-fetch-mode': 'navigate',
+      'sec-fetch-site': 'same-origin',
+      'sec-fetch-user': '?1',
+      'sec-gpc': '1',
+      'upgrade-insecure-requests': '1',
+      'user-agent': 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Mobile Safari/537.36'
+    },
+    bodyFormatter: (url: string) => {
+      // For imginn, we don't need body, but we need to convert URL
+      // This will be handled in fetchFromEndpoint
+      return null;
+    },
+    responseParser: (data: any) => {
+      try {
+        // imginn.com returns HTML, parse it to extract video URL
+        if (typeof data !== 'string') {
+          console.log('[Instagram Downloader] imginn.com expected HTML string, got:', typeof data);
+          return null;
+        }
+
+        // Pattern 1: Look for download link with class "download"
+        // Example: <a download rel="noreferrer" href="https://scontent-iad3-2.cdninstagram.com/o1/v/t2/f2/m86/...mp4?..." class="download">
+        const downloadLinkMatch = data.match(/<a[^>]*class="download"[^>]*href="([^"]+)"/i);
+        if (downloadLinkMatch && downloadLinkMatch[1]) {
+          // Remove &dl=1 parameter if present and decode HTML entities
+          let url = downloadLinkMatch[1].replace(/&dl=1$/, '');
+          url = url.replace(/&#38;/g, '&').replace(/&amp;/g, '&');
+          console.log('[Instagram Downloader] Found video URL in download link');
+          return {
+            downloadUrl: url
+          };
+        }
+
+        // Pattern 2: Look for data-src attribute in media-wrap
+        // Example: <div class="media-wrap proxy-video" ... data-src="https://...mp4?...">
+        const dataSrcMatch = data.match(/class="[^"]*media-wrap[^"]*"[^>]*data-src="([^"]+)"/i);
+        if (dataSrcMatch && dataSrcMatch[1]) {
+          let url = dataSrcMatch[1].replace(/&#38;/g, '&').replace(/&amp;/g, '&');
+          console.log('[Instagram Downloader] Found video URL in data-src attribute');
+          return {
+            downloadUrl: url
+          };
+        }
+
+        // Pattern 3: Look for <video> tag with src
+        const videoTagMatch = data.match(/<video[^>]*src="([^"]+)"/i);
+        if (videoTagMatch && videoTagMatch[1]) {
+          let url = videoTagMatch[1].replace(/&#38;/g, '&').replace(/&amp;/g, '&');
+          console.log('[Instagram Downloader] Found video URL in <video> tag');
+          return {
+            downloadUrl: url
+          };
+        }
+
+        // Pattern 4: Look for meta property og:video
+        const ogVideoMatch = data.match(/<meta\s+property="og:video"\s+content="([^"]+)"/i);
+        if (ogVideoMatch && ogVideoMatch[1]) {
+          let url = ogVideoMatch[1].replace(/&#38;/g, '&').replace(/&amp;/g, '&');
+          console.log('[Instagram Downloader] Found video URL in og:video meta tag');
+          return {
+            downloadUrl: url
+          };
+        }
+
+        // Pattern 5: Look for direct .mp4 URLs in HTML
+        const mp4Match = data.match(/https?:\/\/[^\s"'<>]+\.mp4[^\s"'<>]*/i);
+        if (mp4Match && mp4Match[0]) {
+          let url = mp4Match[0].replace(/&#38;/g, '&').replace(/&amp;/g, '&');
+          console.log('[Instagram Downloader] Found .mp4 URL in HTML');
+          return {
+            downloadUrl: url
+          };
+        }
+
+        console.log('[Instagram Downloader] No video URL found in imginn.com HTML');
+        console.log('[Instagram Downloader] HTML preview:', data.substring(0, 1000));
+        return null;
+      } catch (error: any) {
+        console.error('[Instagram Downloader] Error parsing imginn.com response:', error.message);
+        return null;
+      }
+    }
+  },
+  {
     name: 'igvideodownloader.net',
     url: 'https://igvideodownloader.net/api/proxy',
     method: 'POST',
@@ -156,6 +251,40 @@ const API_ENDPOINTS: APIEndpoint[] = [
     }
   }
 ];
+
+/**
+ * Extract post ID from Instagram URL
+ * Supports:
+ * - https://www.instagram.com/reels/DT-Y6xukuwG/
+ * - https://www.instagram.com/p/DT-Y6xukuwG/
+ * - https://instagram.com/reel/DT-Y6xukuwG/
+ */
+function extractPostId(instagramUrl: string): string {
+  try {
+    const urlObj = new URL(instagramUrl);
+    const path = urlObj.pathname;
+    
+    // Match patterns: /reels/{id}/ or /p/{id}/ or /reel/{id}/
+    const match = path.match(/\/(reels?|p)\/([a-zA-Z0-9_-]+)/);
+    
+    if (match && match[2]) {
+      return match[2];
+    }
+    
+    throw new Error('Could not extract post ID from Instagram URL');
+  } catch (error: any) {
+    throw new Error(`Invalid Instagram URL: ${error.message}`);
+  }
+}
+
+/**
+ * Convert Instagram URL to imginn.com URL
+ * Example: https://www.instagram.com/reels/DT-Y6xukuwG/ -> https://imginn.com/p/DT-Y6xukuwG/
+ */
+function convertToImginnUrl(instagramUrl: string): string {
+  const postId = extractPostId(instagramUrl);
+  return `https://imginn.com/p/${postId}/`;
+}
 
 // Webshare proxy pool
 const PROXY_POOL: ProxyConfig[] = [
@@ -312,9 +441,9 @@ class InstagramDownloaderService {
   /**
    * Create proxy agent
    */
-  private createProxyAgent(proxy: ProxyConfig): HttpsProxyAgent {
+  private createProxyAgent(proxy: ProxyConfig): HttpsProxyAgent<string> {
     const proxyUrl = `http://${proxy.username}:${proxy.password}@${proxy.host}:${proxy.port}`;
-    return new HttpsProxyAgent(proxyUrl);
+    return new HttpsProxyAgent<string>(proxyUrl);
   }
 
   /**
@@ -414,15 +543,22 @@ class InstagramDownloaderService {
   private async fetchFromEndpoint(
     instagramUrl: string,
     endpoint: APIEndpoint,
-    agent: HttpsProxyAgent | null
+    agent: HttpsProxyAgent<string> | null
   ): Promise<string> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.REQUEST_TIMEOUT);
 
     try {
+      // For imginn.com, convert Instagram URL to imginn URL
+      let targetUrl = endpoint.url;
+      if (endpoint.name === 'imginn.com') {
+        targetUrl = convertToImginnUrl(instagramUrl);
+        console.log(`[Instagram Downloader] Converted to imginn URL: ${targetUrl}`);
+      }
+      
       const requestBody = endpoint.bodyFormatter(instagramUrl);
       
-      const response = await fetch(endpoint.url, {
+      const response = await fetch(targetUrl, {
         method: endpoint.method,
         headers: endpoint.headers,
         body: endpoint.method === 'POST' ? requestBody : undefined,
@@ -442,7 +578,10 @@ class InstagramDownloaderService {
       let data: any;
       const contentType = response.headers.get('content-type') || '';
       
-      if (contentType.includes('application/json')) {
+      // imginn.com returns HTML, which is expected
+      if (endpoint.name === 'imginn.com' && contentType.includes('text/html')) {
+        data = await response.text();
+      } else if (contentType.includes('application/json')) {
         data = await response.json();
       } else if (contentType.includes('text/html')) {
         const text = await response.text();
@@ -561,7 +700,7 @@ class InstagramDownloaderService {
    */
   private async fetchWithYtDlp(instagramUrl: string): Promise<string> {
     try {
-      const info = await youtubeDl(instagramUrl, {
+      const info: any = await youtubeDl(instagramUrl, {
         dumpSingleJson: true,
         noWarnings: true,
         noCheckCertificates: true,

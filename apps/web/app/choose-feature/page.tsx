@@ -61,8 +61,17 @@ function ChooseFeaturePageContent() {
   const searchParams = useSearchParams();
   const [hoveredFeature, setHoveredFeature] = useState<string | null>(null);
   const [createProjectLoading, setCreateProjectLoading] = useState(false);
+  const [pendingVideoName, setPendingVideoName] = useState<string | null>(null);
 
-  // No video required - feature selection first
+  // Check if there's a pending video URL
+  useEffect(() => {
+    const videoName = localStorage.getItem('pendingVideoName');
+    if (videoName) {
+      setPendingVideoName(videoName);
+    }
+  }, []);
+
+  // Navigate to feature page - localStorage will be handled by the feature page
   const handleFeatureSelect = async (feature: any) => {
     try {
       setCreateProjectLoading(true);
@@ -111,6 +120,19 @@ function ChooseFeaturePageContent() {
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               Select an AI feature to process your video and create amazing content
             </p>
+            
+            {/* Show pending video indicator */}
+            {pendingVideoName && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="mt-6 inline-flex items-center gap-2 px-4 py-2 bg-blue-500/20 border border-blue-500/50 rounded-full text-sm"
+              >
+                <CheckCircle className="w-4 h-4 text-green-400" />
+                <span className="text-white/90">Video ready: <strong>{pendingVideoName}</strong></span>
+              </motion.div>
+            )}
           </motion.div>
         </header>
 

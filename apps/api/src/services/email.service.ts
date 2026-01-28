@@ -88,41 +88,47 @@ export class EmailService {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Email Verification</title>
 </head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
-  <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f5;">
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #0a0a0a;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #0a0a0a;">
     <tr>
-      <td align="center" style="padding: 40px 0;">
-        <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); overflow: hidden;">
-          <!-- Header with gradient -->
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" style="width: 100%; max-width: 600px; border-collapse: collapse; background-color: #1a1a1a; border-radius: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4); overflow: hidden; border: 1px solid #2a2a2a;">
+          <!-- Header with Logo -->
           <tr>
-            <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 60px; text-align: center;">
-              <img src="${this.APP_URL}/logo.png" alt="${this.APP_NAME}" style="height: 60px; margin-bottom: 20px; border-radius: 8px;" />
-              <h1 style="color: #ffffff; font-size: 28px; font-weight: 700; margin: 0; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">Email Verification</h1>
+            <td style="background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%); padding: 50px 40px; text-align: center;">
+              <div style="margin-bottom: 24px;">
+                <img src="https://smartclips.nano-mail.me/logo.png" alt="smartClips Logo" style="max-width: 200px; height: auto; display: block; margin: 0 auto;" />
+              </div>
+              <h1 style="color: #ffffff; font-size: 32px; font-weight: 700; margin: 0; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);">Email Verification</h1>
             </td>
           </tr>
           
           <!-- Content -->
           <tr>
-            <td style="padding: 50px 60px;">
-              ${name ? `<p style="color: #333333; font-size: 16px; line-height: 1.6; margin: 0 0 20px;">Hi ${name},</p>` : ''}
+            <td style="padding: 50px 40px;">
+              ${name ? `<p style="color: #e5e7eb; font-size: 18px; line-height: 1.6; margin: 0 0 20px;">Hi <strong style="color: #60a5fa;">${name}</strong>,</p>` : ''}
               
-              <p style="color: #333333; font-size: 16px; line-height: 1.6; margin: 0 0 30px;">
-                Thank you for signing up with <strong>${this.APP_NAME}</strong>! To complete your registration, please verify your email address using the code below:
+              <p style="color: #d1d5db; font-size: 16px; line-height: 1.7; margin: 0 0 30px;">
+                Thank you for signing up with <strong style="color: #60a5fa;">${this.APP_NAME}</strong>! To complete your registration, please verify your email address using the code below:
               </p>
               
               <!-- OTP Box -->
-              <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 30px; text-align: center; margin: 30px 0;">
-                <p style="color: #ffffff; font-size: 14px; font-weight: 500; margin: 0 0 15px; text-transform: uppercase; letter-spacing: 1px;">Your Verification Code</p>
-                <div style="background-color: #ffffff; border-radius: 8px; padding: 20px; display: inline-block;">
-                  <span style="color: #667eea; font-size: 36px; font-weight: 700; letter-spacing: 8px; font-family: 'Courier New', monospace;">${otp}</span>
+              <div style="background: linear-gradient(135deg, #2a2a2a 0%, #1f1f1f 100%); border-radius: 16px; padding: 40px; text-align: center; margin: 40px 0; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);">
+                <p style="color: #a1a1aa; font-size: 14px; font-weight: 600; margin: 0 0 20px; text-transform: uppercase; letter-spacing: 2px;">Your Verification Code</p>
+                <div style="background-color: #18181b; border-radius: 12px; padding: 24px 32px; display: inline-block; border: 2px solid #3f3f46;">
+                  <span style="color: #ffffff; font-size: 48px; font-weight: 700; letter-spacing: 12px; font-family: 'Courier New', monospace;">${otp}</span>
                 </div>
+                <p style="color: #a1a1aa; font-size: 13px; margin: 20px 0 0; opacity: 0.9;">Enter this code to verify your email</p>
               </div>
               
-              <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 30px 0 0; padding: 20px; background-color: #f8f9fa; border-radius: 8px; border-left: 4px solid #667eea;">
-                <strong>Important:</strong> This code will expire in 10 minutes for security reasons.
-              </p>
+              <div style="background-color: #27272a; border-left: 4px solid #52525b; border-radius: 8px; padding: 20px; margin: 30px 0;">
+                <p style="color: #fbbf24; font-size: 14px; line-height: 1.6; margin: 0; display: flex; align-items: start;">
+                  <span style="font-size: 20px; margin-right: 10px;">⚠️</span>
+                  <span><strong>Important:</strong> This code will expire in <strong>10 minutes</strong> for security reasons.</span>
+                </p>
+              </div>
               
-              <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 20px 0 0;">
+              <p style="color: #9ca3af; font-size: 14px; line-height: 1.7; margin: 30px 0 0;">
                 If you didn't request this verification code, please ignore this email or contact our support team if you have concerns.
               </p>
             </td>
@@ -130,10 +136,10 @@ export class EmailService {
           
           <!-- Footer -->
           <tr>
-            <td style="background-color: #f8f9fa; padding: 30px 60px; border-top: 1px solid #e9ecef;">
-              <p style="color: #999999; font-size: 12px; line-height: 1.6; margin: 0; text-align: center;">
+            <td style="background-color: #0f172a; padding: 30px 40px; border-top: 1px solid #2a2a2a;">
+              <p style="color: #6b7280; font-size: 12px; line-height: 1.6; margin: 0; text-align: center;">
                 © ${new Date().getFullYear()} ${this.APP_NAME}. All rights reserved.<br/>
-                This is an automated email, please do not reply.
+                <span style="color: #4b5563;">This is an automated email, please do not reply.</span>
               </p>
             </td>
           </tr>
@@ -158,84 +164,105 @@ export class EmailService {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Welcome to ${this.APP_NAME}</title>
 </head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
-  <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f5;">
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #0a0a0a;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #0a0a0a;">
     <tr>
-      <td align="center" style="padding: 40px 0;">
-        <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); overflow: hidden;">
-          <!-- Header with gradient -->
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" style="width: 100%; max-width: 600px; border-collapse: collapse; background-color: #1a1a1a; border-radius: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4); overflow: hidden; border: 1px solid #2a2a2a;">
+          <!-- Header with Logo -->
           <tr>
-            <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 60px; text-align: center;">
-              <img src="${this.APP_URL}/logo.png" alt="${this.APP_NAME}" style="height: 60px; margin-bottom: 20px; border-radius: 8px;" />
-              <h1 style="color: #ffffff; font-size: 32px; font-weight: 700; margin: 0; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">Welcome to ${this.APP_NAME}! </h1>
+            <td style="background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%); padding: 50px 40px; text-align: center;">
+              <div style="margin-bottom: 24px;">
+                <img src="https://smartclips.nano-mail.me/logo.png" alt="smartClips Logo" style="max-width: 200px; height: auto; display: block; margin: 0 auto;" />
+              </div>
+              <h1 style="color: #ffffff; font-size: 36px; font-weight: 700; margin: 0; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);">Welcome to ${this.APP_NAME}! 🎉</h1>
             </td>
           </tr>
           
           <!-- Content -->
           <tr>
-            <td style="padding: 50px 60px;">
-              <p style="color: #333333; font-size: 18px; line-height: 1.6; margin: 0 0 20px;">
-                Hi <strong>${name}</strong>,
+            <td style="padding: 50px 40px;">
+              <p style="color: #e5e7eb; font-size: 20px; line-height: 1.6; margin: 0 0 20px;">
+                Hi <strong style="color: #60a5fa;">${name}</strong>,
               </p>
               
-              <p style="color: #333333; font-size: 16px; line-height: 1.6; margin: 0 0 20px;">
-                Your email has been successfully verified! Welcome to the ${this.APP_NAME} family. We're thrilled to have you on board! 
+              <p style="color: #d1d5db; font-size: 16px; line-height: 1.7; margin: 0 0 20px;">
+                Your email has been successfully verified! Welcome to the ${this.APP_NAME} family. We're thrilled to have you on board! 🚀
               </p>
               
-              <p style="color: #333333; font-size: 16px; line-height: 1.6; margin: 0 0 30px;">
+              <p style="color: #d1d5db; font-size: 16px; line-height: 1.7; margin: 0 0 30px;">
                 With ${this.APP_NAME}, you can create amazing video clips with AI-powered features. Here's what you can do:
               </p>
               
               <!-- Features List -->
-              <div style="background-color: #f8f9fa; border-radius: 12px; padding: 30px; margin: 30px 0;">
-                <div style="margin-bottom: 20px;">
-                  <span style="font-size: 24px; margin-right: 10px;"></span>
-                  <strong style="color: #333333; font-size: 16px;">AI-Powered Clip Generation</strong>
-                  <p style="color: #666666; font-size: 14px; margin: 5px 0 0 34px;">Automatically generate engaging clips from your videos</p>
+              <div style="background-color: #18181b; border-radius: 16px; padding: 32px; margin: 32px 0; border: 1px solid #3f3f46;">
+                <div style="margin-bottom: 24px; display: flex; align-items: start;">
+                  <div style="background: linear-gradient(135deg, #52525b 0%, #3f3f46 100%); width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-right: 16px; flex-shrink: 0;">
+                    <span style="font-size: 24px;">✂️</span>
+                  </div>
+                  <div>
+                    <strong style="color: #e5e7eb; font-size: 17px; display: block; margin-bottom: 8px;">AI-Powered Clip Generation</strong>
+                    <p style="color: #9ca3af; font-size: 14px; margin: 0; line-height: 1.6;">Automatically generate engaging clips from your videos</p>
+                  </div>
                 </div>
                 
-                <div style="margin-bottom: 20px;">
-                  <span style="font-size: 24px; margin-right: 10px;"></span>
-                  <strong style="color: #333333; font-size: 16px;">Smart Video Processing</strong>
-                  <p style="color: #666666; font-size: 14px; margin: 5px 0 0 34px;">Advanced video editing and processing tools</p>
+                <div style="margin-bottom: 24px; display: flex; align-items: start;">
+                  <div style="background: linear-gradient(135deg, #52525b 0%, #3f3f46 100%); width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-right: 16px; flex-shrink: 0;">
+                    <span style="font-size: 24px;">🎬</span>
+                  </div>
+                  <div>
+                    <strong style="color: #e5e7eb; font-size: 17px; display: block; margin-bottom: 8px;">Smart Video Processing</strong>
+                    <p style="color: #9ca3af; font-size: 14px; margin: 0; line-height: 1.6;">Advanced video editing and processing tools</p>
+                  </div>
                 </div>
                 
-                <div style="margin-bottom: 20px;">
-                  <span style="font-size: 24px; margin-right: 10px;"></span>
-                  <strong style="color: #333333; font-size: 16px;">Auto Subtitles</strong>
-                  <p style="color: #666666; font-size: 14px; margin: 5px 0 0 34px;">Generate accurate subtitles automatically</p>
+                <div style="margin-bottom: 24px; display: flex; align-items: start;">
+                  <div style="background: linear-gradient(135deg, #52525b 0%, #3f3f46 100%); width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-right: 16px; flex-shrink: 0;">
+                    <span style="font-size: 24px;">📝</span>
+                  </div>
+                  <div>
+                    <strong style="color: #e5e7eb; font-size: 17px; display: block; margin-bottom: 8px;">Auto Subtitles</strong>
+                    <p style="color: #9ca3af; font-size: 14px; margin: 0; line-height: 1.6;">Generate accurate subtitles automatically</p>
+                  </div>
                 </div>
                 
-                <div>
-                  <span style="font-size: 24px; margin-right: 10px;"></span>
-                  <strong style="color: #333333; font-size: 16px;">Free Credits</strong>
-                  <p style="color: #666666; font-size: 14px; margin: 5px 0 0 34px;">Start with 10 free credits to try our features</p>
+                <div style="display: flex; align-items: start;">
+                  <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-right: 16px; flex-shrink: 0;">
+                    <span style="font-size: 24px;">🎁</span>
+                  </div>
+                  <div>
+                    <strong style="color: #e5e7eb; font-size: 17px; display: block; margin-bottom: 8px;">Free Credits</strong>
+                    <p style="color: #9ca3af; font-size: 14px; margin: 0; line-height: 1.6;">Start with <strong style="color: #10b981;">10 free credits</strong> to try our features</p>
+                  </div>
                 </div>
               </div>
               
               <!-- CTA Button -->
-              <div style="text-align: center; margin: 40px 0;">
-                <a href="${this.APP_URL}/dashboard" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 6px rgba(102, 126, 234, 0.3);">
+              <div style="text-align: center; margin: 48px 0 32px;">
+                <a href="${this.APP_URL}/dashboard" style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: #ffffff; text-decoration: none; padding: 18px 48px; border-radius: 12px; font-size: 17px; font-weight: 600; box-shadow: 0 8px 16px rgba(37, 99, 235, 0.4); transition: all 0.3s;">
                   Get Started Now →
                 </a>
               </div>
               
-              <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 30px 0 0;">
-                Need help getting started? Check out our <a href="${this.APP_URL}/help" style="color: #667eea; text-decoration: none;">Help Center</a> or reach out to our support team.
-              </p>
+              <div style="background-color: #1e293b; border-radius: 12px; padding: 24px; margin: 32px 0; border-left: 4px solid #3b82f6;">
+                <p style="color: #d1d5db; font-size: 14px; line-height: 1.7; margin: 0;">
+                  <strong style="color: #60a5fa;">Need help getting started?</strong><br/>
+                  Check out our <a href="${this.APP_URL}/help" style="color: #60a5fa; text-decoration: none; font-weight: 500;">Help Center</a> or reach out to our support team.
+                </p>
+              </div>
             </td>
           </tr>
           
           <!-- Footer -->
           <tr>
-            <td style="background-color: #f8f9fa; padding: 30px 60px; border-top: 1px solid #e9ecef;">
-              <p style="color: #999999; font-size: 12px; line-height: 1.6; margin: 0 0 10px; text-align: center;">
+            <td style="background-color: #0f172a; padding: 30px 40px; border-top: 1px solid #2a2a2a;">
+              <p style="color: #6b7280; font-size: 12px; line-height: 1.6; margin: 0 0 12px; text-align: center;">
                 © ${new Date().getFullYear()} ${this.APP_NAME}. All rights reserved.
               </p>
-              <p style="color: #999999; font-size: 12px; line-height: 1.6; margin: 0; text-align: center;">
-                <a href="${this.APP_URL}" style="color: #667eea; text-decoration: none; margin: 0 10px;">Website</a> |
-                <a href="${this.APP_URL}/help" style="color: #667eea; text-decoration: none; margin: 0 10px;">Help Center</a> |
-                <a href="${this.APP_URL}/settings" style="color: #667eea; text-decoration: none; margin: 0 10px;">Settings</a>
+              <p style="color: #4b5563; font-size: 12px; line-height: 1.6; margin: 0; text-align: center;">
+                <a href="${this.APP_URL}" style="color: #60a5fa; text-decoration: none; margin: 0 12px;">Website</a> |
+                <a href="${this.APP_URL}/help" style="color: #60a5fa; text-decoration: none; margin: 0 12px;">Help Center</a> |
+                <a href="${this.APP_URL}/settings" style="color: #60a5fa; text-decoration: none; margin: 0 12px;">Settings</a>
               </p>
             </td>
           </tr>

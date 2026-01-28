@@ -115,37 +115,71 @@ export default function AutoSubtitlesPage() {
     fetchLanguages();
   }, []);
 
-  // Handle auto-upload from AI script generator
+  // Handle auto-upload from AI script generator or pendingVideoUrl from dashboard
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const videoUrl = urlParams.get('videoUrl');
-    const videoName = urlParams.get('videoName');
+    let videoUrl = urlParams.get('videoUrl');
+    let videoName = urlParams.get('videoName');
     
-    if (videoUrl && videoUrl.includes('s3.') && !videoData) {
-      console.log('Auto-uploading S3 video from AI script generator');
+    // Check localStorage for pending video URL if not in URL params
+    if (!videoUrl) {
+      const pendingUrl = localStorage.getItem('pendingVideoUrl');
+      const pendingName = localStorage.getItem('pendingVideoName');
+      
+      if (pendingUrl) {
+        videoUrl = pendingUrl;
+        videoName = pendingName || 'Imported Video';
+        
+        // Clear localStorage after retrieving
+        localStorage.removeItem('pendingVideoUrl');
+        localStorage.removeItem('pendingVideoName');
+      }
+    }
+    
+    if (videoUrl && !videoData) {
+      console.log('Auto-uploading video');
       console.log('   - URL:', videoUrl);
       console.log('   - Name:', videoName);
       
+      // Check if it's a platform video URL that needs proxying
+      const isTwitterVideo = videoUrl.includes('video.twimg.com') || videoUrl.includes('twimg.com');
+      const isInstagram = videoUrl.includes('cdninstagram.com') || videoUrl.includes('instagram');
+      const isTikTok = videoUrl.includes('tiktokcdn.com') || videoUrl.includes('tiktok');
+      const isRumble = videoUrl.includes('rumble.com');
+      const isKick = videoUrl.includes('kick.com');
+      const isTwitch = videoUrl.includes('twitch.tv') || videoUrl.includes('ttvnw.net');
+      const needsProxy = isTwitterVideo || isInstagram || isTikTok || isRumble || isKick || isTwitch;
+      
       // Set video data as URL preview to trigger upload
-      const s3VideoData: VideoData = {
-        id: `s3-${Date.now()}`,
-        name: decodeURIComponent(videoName || 'AI Generated Video'),
+      const urlVideoData: VideoData = {
+        id: `url-${Date.now()}`,
+        name: decodeURIComponent(videoName || 'Imported Video'),
         size: 0,
         filePath: decodeURIComponent(videoUrl),
         videoUrl: decodeURIComponent(videoUrl),
         isUrlPreview: true,
         urlData: {
           url: decodeURIComponent(videoUrl),
-          platform: 'S3',
+          platform: videoUrl.includes('s3.') ? 'S3' : 'URL',
         }
       };
       
-      setVideoData(s3VideoData);
-      setVideoPreviewUrl(decodeURIComponent(videoUrl));
+      setVideoData(urlVideoData);
+      
+      // Use proxy for platform videos that need it to avoid CORS issues
+      if (needsProxy) {
+        const proxyUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/video-url-upload/proxy?url=${encodeURIComponent(videoUrl)}`;
+        setVideoPreviewUrl(proxyUrl);
+      } else {
+        setVideoPreviewUrl(decodeURIComponent(videoUrl));
+      }
+      
       setUploadStage('configuring');
       
       // Clear URL params after loading
-      window.history.replaceState({}, '', '/dashboard/auto-subtitles');
+      if (urlParams.has('videoUrl')) {
+        window.history.replaceState({}, '', '/dashboard/auto-subtitles');
+      }
     }
   }, []);
 
