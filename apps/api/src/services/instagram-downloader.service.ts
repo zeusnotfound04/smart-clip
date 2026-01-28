@@ -61,19 +61,21 @@ const API_ENDPOINTS: APIEndpoint[] = [
     url: 'https://imginn.com/p/{postId}/',
     method: 'GET',
     headers: {
-      'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-      'accept-language': 'en-GB,en;q=0.6',
+      'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+      'accept-encoding': 'gzip, deflate, br',
+      'accept-language': 'en-US,en;q=0.9',
       'cache-control': 'max-age=0',
-      'sec-ch-ua': '"Not(A:Brand";v="8", "Chromium";v="144", "Brave";v="144"',
-      'sec-ch-ua-mobile': '?1',
-      'sec-ch-ua-platform': '"Android"',
+      'dnt': '1',
+      'referer': 'https://imginn.com/',
+      'sec-ch-ua': '"Chromium";v="144", "Google Chrome";v="144", "Not-A.Brand";v="99"',
+      'sec-ch-ua-mobile': '?0',
+      'sec-ch-ua-platform': '"Windows"',
       'sec-fetch-dest': 'document',
       'sec-fetch-mode': 'navigate',
       'sec-fetch-site': 'same-origin',
       'sec-fetch-user': '?1',
-      'sec-gpc': '1',
       'upgrade-insecure-requests': '1',
-      'user-agent': 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Mobile Safari/537.36'
+      'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36'
     },
     bodyFormatter: (url: string) => {
       // For imginn, we don't need body, but we need to convert URL
@@ -564,13 +566,24 @@ class InstagramDownloaderService {
         body: endpoint.method === 'POST' ? requestBody : undefined,
         // @ts-ignore
         agent,
-        signal: controller.signal
+        signal: controller.signal,
+        redirect: 'follow', // Follow redirects
+        // @ts-ignore - node-fetch specific options
+        follow: 10, // Max redirects
       });
 
       clearTimeout(timeoutId);
 
       if (!response.ok) {
         this.recordEndpointFailure(endpoint.name);
+        
+        // Special handling for Cloudflare or rate limiting
+        if (response.status === 403) {
+          console.log(`[Instagram Downloader] ${endpoint.name} returned 403 - likely blocked by Cloudflare/rate limit`);
+        } else if (response.status === 429) {
+          console.log(`[Instagram Downloader] ${endpoint.name} returned 429 - rate limited`);
+        }
+        
         throw new Error(`API responded with ${response.status}: ${response.statusText}`);
       }
 
@@ -686,13 +699,35 @@ class InstagramDownloaderService {
       }
     }
 
-    // All retries failed
-    this.recordFailure();
+    // All retries failed with API endpoints, try yt-dlp as last resort
+    console.log('[Instagram Downloader] All API endpoints failed, trying yt-dlp fallback...');
     
-    throw new Error(
-      `Failed to download Instagram video after ${this.MAX_RETRIES} attempts. ` +
-      `Last error: ${lastError?.message || 'Unknown error'}`
-    );
+    try {
+      const downloadUrl = await this.fetchWithYtDlp(instagramUrl);
+      
+      const result: DownloadResult = {
+        downloadUrl,
+        cached: false
+      };
+
+      // Cache the result
+      await this.setCached(instagramUrl, result);
+      
+      // Record success
+      this.recordSuccess();
+
+      console.log('[Instagram Downloader] Successfully extracted download URL via yt-dlp');
+      return result;
+    } catch (ytDlpError: any) {
+      console.error('[Instagram Downloader] yt-dlp fallback also failed:', ytDlpError.message);
+      this.recordFailure();
+      
+      throw new Error(
+        `Failed to download Instagram video after ${this.MAX_RETRIES} attempts with API endpoints and yt-dlp fallback. ` +
+        `Last API error: ${lastError?.message || 'Unknown error'}. ` +
+        `yt-dlp error: ${ytDlpError.message}`
+      );
+    }
   }
 
   /**

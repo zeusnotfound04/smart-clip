@@ -17,6 +17,12 @@ export const proxyVideo = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Video URL is required' });
     }
 
+    // Prevent double-proxying: check if URL is already a proxy URL
+    if (url.includes('localhost') || url.includes('/api/video-url-upload/proxy')) {
+      console.error('[Video Proxy] Attempted to proxy a proxy URL:', url);
+      return res.status(400).json({ error: 'Cannot proxy a proxy URL' });
+    }
+
     console.log('[Video Proxy] Proxying request for:', url);
 
     // Determine platform and set appropriate headers
@@ -34,17 +40,17 @@ export const proxyVideo = async (req: AuthRequest, res: Response) => {
     // Platform-specific headers
     if (isInstagram) {
       headers['Referer'] = 'https://www.instagram.com/';
-      headers['Origin'] = 'https://www.instagram.com';
+      // Don't set Origin header - it causes CORS issues
       headers['sec-ch-ua'] = '"Not(A:Brand";v="8", "Chromium";v="144"';
       headers['sec-ch-ua-mobile'] = '?0';
       headers['sec-ch-ua-platform'] = '"Windows"';
       headers['sec-fetch-dest'] = 'video';
-      headers['sec-fetch-mode'] = 'cors';
+      headers['sec-fetch-mode'] = 'no-cors';
       headers['sec-fetch-site'] = 'cross-site';
       console.log('[Video Proxy] Using Instagram-specific headers');
     } else if (isTwitter) {
       headers['Referer'] = 'https://twitter.com/';
-      headers['Origin'] = 'https://twitter.com';
+      // Don't set Origin header - it causes CORS issues
       console.log('[Video Proxy] Using Twitter-specific headers');
     }
 

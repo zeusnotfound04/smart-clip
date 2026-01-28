@@ -73,6 +73,43 @@ export function VideoPreviewArea({
     if (!url) return false;
     return url.includes('drive.google.com');
   };
+
+  const isTikTokUrl = (url: string | null) => {
+    if (!url) return false;
+    return url.includes('tikcdn.io') || 
+           url.includes('tiktokcdn.com') || 
+           url.includes('muscdn.com') ||
+           (url.includes('tiktok.com') && url.includes('.mp4'));
+  };
+
+  const isInstagramUrl = (url: string | null) => {
+    if (!url) return false;
+    // Only proxy actual Instagram CDN URLs, not page URLs
+    return url.includes('cdninstagram.com') || 
+           url.includes('scontent') ||
+           (url.includes('instagram') && (url.includes('.mp4') || url.includes('.m3u8')));
+  };
+
+  const needsProxy = (url: string | null) => {
+    if (!url) return false;
+    // Don't proxy Instagram/TikTok page URLs - only CDN video URLs
+    const isPageUrl = (url.includes('instagram.com/p/') || 
+                      url.includes('instagram.com/reel') || 
+                      url.includes('tiktok.com/') && !url.includes('.mp4'));
+    
+    if (isPageUrl) return false;
+    
+    return isTikTokUrl(url) || isInstagramUrl(url) || url.includes('video.twimg.com');
+  };
+
+  const getProxiedUrl = (url: string) => {
+    // Don't proxy if already a proxy URL (prevent double-proxying)
+    if (url.includes('/api/video-url-upload/proxy')) {
+      return url;
+    }
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    return `${apiUrl}/api/video-url-upload/proxy?url=${encodeURIComponent(url)}`;
+  };
   
   // Convert Google Drive URL to preview URL
   const getGoogleDrivePreviewUrl = (url: string) => {
@@ -151,9 +188,16 @@ export function VideoPreviewArea({
   // HLS support for streaming videos (Kick, Twitch, etc.)
   useEffect(() => {
     const video = videoRef.current;
-    const videoUrl = subtitledVideoUrl || videoPreviewUrl;
+    let videoUrl = subtitledVideoUrl || videoPreviewUrl;
     
     if (!video || !videoUrl) return;
+
+    // Use proxy for TikTok, Instagram, and Twitter videos
+    if (needsProxy(videoUrl) && !subtitledVideoUrl) {
+      console.log('[VideoPreviewArea] URL needs proxy:', videoUrl);
+      videoUrl = getProxiedUrl(videoUrl);
+      console.log('[VideoPreviewArea] Using proxied URL:', videoUrl);
+    }
     
     // Check if URL is an HLS stream (.m3u8)
     const isHlsStream = videoUrl.includes('.m3u8');
@@ -330,10 +374,19 @@ export function VideoPreviewArea({
                     );
                   } else {
                     console.log('Using video element');
+                    // Determine the actual video URL to use
+                    let actualVideoUrl = subtitledVideoUrl || videoPreviewUrl || undefined;
+                    
+                    // Use proxy for TikTok, Instagram, and Twitter videos (only if not already subtitled)
+                    if (actualVideoUrl && !subtitledVideoUrl && needsProxy(actualVideoUrl)) {
+                      actualVideoUrl = getProxiedUrl(actualVideoUrl);
+                      console.log('Using proxied URL for video element:', actualVideoUrl);
+                    }
+                    
                     return (
                       <video
                         ref={videoRef}
-                        src={subtitledVideoUrl || videoPreviewUrl || undefined}
+                        src={actualVideoUrl}
                         className="w-full h-full object-cover"
                         muted={isMuted}
                         style={{ objectFit: 'contain' }}
